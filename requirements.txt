@@ -1,0 +1,23 @@
+# Core dependencies for S.O.N.I.C. (SIP Observation and Network Inspection Console)
+scapy>=2.4.5
+dspy-ai>=2.4.0
+pydantic>=2.0.0
+tqdm>=4.64.0
+
+# Optional but recommended for enhanced analysis
+ollama>=0.1.0
+
+# MCP Server Integration
+fastmcp>=0.2.0
+
+# Optional: Cloud LLM Provider SDKs
+# Uncomment if using Anthropic Claude:
+# anthropic>=0.18.0
+
+# Uncomment if using OpenAI GPT:
+# openai>=1.0.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+black>=22.0.0
+flake8>=5.0.0

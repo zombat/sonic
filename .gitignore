@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Packet captures (sensitive data) - commented out to allow sample files
+# *.pcap
+# *.pcapng
+# *.cap
+
+# Logs
+*.log
+logs/
+
+# AI model cache
+.dspy_cache/
+.ollama/
+
+# Test outputs
+test_results/
+coverage/
+.coverage
+.pytest_cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Packet capture files (sensitive data)
+*.pcap
+*.pcapng
+*.cap
+samples/*.pcap
+samples/*.pcapng
+samples/*.cap
+
+# Analysis output files (may contain sensitive IPs, phone numbers, etc.)
+*_packet_analysis.md
+*_sample.md
+test_output.md
+*_20??????_??????_*.md
+*.pcap.md
+*.pcapng.md
+*.cap.md
+*.pcaptxt.md
+*_capture*.md
+!TEST_CAPTURE.md
+
+# Database backups (may contain user data)
+backups/
+*.sql
+*.sql.gz
+*.sql.gz.gpg
+
+# Upload directory (user-submitted files)
+uploads/*
+
+# Keep empty directory marker
+!.gitkeep
+*.pcapng

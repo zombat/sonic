@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "sonic-voip-analyzer": {
+      "command": "python3",
+      "args": ["/absolute/path/to/sonic/mcp_server.py"],
+      "env": {
+        "SONIC_LLM_PROVIDER": "ollama"
+      }
+    }
+  }
+}
+
+// Optional: Use cloud provider
+// {
+//   "mcpServers": {
+//     "sonic-voip-analyzer": {
+//       "command": "python3",
+//       "args": ["/absolute/path/to/sonic/mcp_server.py"],
+//       "env": {
+//         "SONIC_LLM_PROVIDER": "anthropic",
+//         "ANTHROPIC_API_KEY": "your-api-key-here"
+//       }
+//     }
+//   }
+// }
