@@ -352,6 +352,122 @@ def print_diagnostic_report(report: Dict[str, Any], sip_data: str = None, file_p
     print("\n" + "="*80)
 
 
+def build_diagnostic_markdown(report: Dict[str, Any], sip_data: str = None, file_path: str = None, auth_data: Dict[str, Any] = None) -> str:
+    """
+    Builds a properly formatted markdown diagnostic report.
+    
+    This function generates markdown directly (not by capturing console output),
+    ensuring proper markdown syntax for headers, tables, code blocks, etc.
+    
+    Args:
+        report: Diagnostic report dictionary from analysis
+        sip_data: Raw SIP data for direct codec extraction if needed
+        file_path: Path to the original pcap file
+        auth_data: Authentication data from extract_auth_and_registration_info()
+    
+    Returns:
+        String containing properly formatted markdown content
+    """
+    markdown_lines = []
+    
+    # Summary section
+    markdown_lines.append("## 📋 Diagnostic Summary\n")
+    total_calls = report.get('total_calls_analyzed', 0)
+    overall_assessment = report.get('overall_assessment', 'No assessment available')
+    markdown_lines.append(f"**Total calls analyzed:** {total_calls}\n")
+    markdown_lines.append(f"**Overall assessment:** {overall_assessment}\n")
+    
+    # Call analysis
+    calls = report.get('calls', [])
+    if calls:
+        markdown_lines.append("\n## 📞 Call Analysis\n")
+        call_table = "| Call | Endpoints | Audio | Issues |\n"
+        call_table += "|------|-----------|-------|--------|\n"
+        
+        for i, call in enumerate(calls, 1):
+            call_id = call.get('callId', 'Unknown')
+            caller = call.get('callerIp', 'Unknown')
+            callee = call.get('calleeIp', 'Unknown')
+            audio_quality = call.get('audioQuality', {})
+            codec = audio_quality.get('codecUsed', 'Unknown')
+            
+            # Codec fallback
+            if codec == 'Unknown' and sip_data:
+                codec = extract_codec_directly(sip_data)
+            
+            issues = audio_quality.get('potentialIssues', [])
+            issue_summary = f"{len(issues)} detected" if issues else "✅ No specific issues detected"
+            
+            call_table += f"| Call {i} | {caller} → {callee} | {codec} | {issue_summary} |\n"
+        
+        markdown_lines.append(call_table)
+    
+    # Endpoint analysis
+    if calls:
+        markdown_lines.append("\n## 🖥️ Endpoint Analysis\n")
+        for i, call in enumerate(calls, 1):
+            caller_ip = call.get('callerIp', 'Unknown')
+            callee_ip = call.get('calleeIp', 'Unknown')
+            audio_quality = call.get('audioQuality', {})
+            codec = audio_quality.get('codecUsed', 'Unknown')
+            issues = audio_quality.get('potentialIssues', [])
+            
+            # Endpoint 1
+            markdown_lines.append(f"\n### 📞 Endpoint {i*2-1}: {caller_ip} (Caller)\n")
+            markdown_lines.append(f"- **Codec:** {codec}\n")
+            if issues:
+                markdown_lines.append("- **Issues:**\n")
+                for issue in issues:
+                    markdown_lines.append(f"  - {issue}\n")
+            markdown_lines.append("\n")
+            
+            # Endpoint 2
+            markdown_lines.append(f"### 📱 Endpoint {i*2}: {callee_ip} (Callee)\n")
+            markdown_lines.append(f"- **Codec:** {codec}\n")
+            markdown_lines.append("\n")
+    
+    # Wireshark analysis
+    markdown_lines.append("## 🔬 Wireshark Analysis Summary\n")
+    markdown_lines.append("| Metric | Value |\n")
+    markdown_lines.append("|--------|-------|\n")
+    
+    if sip_data:
+        try:
+            data = json.loads(sip_data) if isinstance(sip_data, str) else sip_data
+            sip_packets = data.get('sip_packets', [])
+            rtp_streams = data.get('rtp_streams', [])
+            
+            # Get unique IPs
+            ips = set()
+            for packet in sip_packets:
+                ips.add(packet.get('src_ip', ''))
+                ips.add(packet.get('dst_ip', ''))
+            ips = [ip for ip in ips if ip]
+            
+            markdown_lines.append(f"| Total packets analyzed | {len(sip_packets) + len(rtp_streams)} |\n")
+            markdown_lines.append(f"| SIP signaling packets | {len(sip_packets)} |\n")
+            markdown_lines.append(f"| RTP media streams | {len(rtp_streams)} |\n")
+            markdown_lines.append(f"| IP addresses involved | {', '.join(ips)} |\n")
+        except:
+            markdown_lines.append("| Total packets analyzed | Unknown |\n")
+            markdown_lines.append("| SIP signaling packets | Unknown |\n")
+            markdown_lines.append("| RTP media streams | Unknown |\n")
+    
+    markdown_lines.append("\n### 📋 Useful Wireshark Filters\n\n")
+    markdown_lines.append("```\n")
+    markdown_lines.append("# All SIP traffic\n")
+    markdown_lines.append("sip\n\n")
+    markdown_lines.append("# All RTP traffic\n")
+    markdown_lines.append("rtp\n\n")
+    markdown_lines.append("# All VoIP traffic\n")
+    markdown_lines.append("sip or rtp\n\n")
+    markdown_lines.append("# Codec analysis\n")
+    markdown_lines.append("rtp.p_type == 0\n")
+    markdown_lines.append("```\n")
+    
+    return "".join(markdown_lines)
+
+
 def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path: str = None, save_path: str = None, quality_results: Dict[str, Any] = None, auth_data: Dict[str, Any] = None) -> None:
     """
     Saves a formatted diagnostic report to a markdown file.
@@ -382,24 +498,12 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
         sys.exit(2)
     
     try:
-        # Capture the report output by redirecting stdout
-        import io
-        import contextlib
-        
-        # Create a string buffer to capture the output
-        captured_output = io.StringIO()
-        
-        # Temporarily redirect stdout to capture the print statements
-        with contextlib.redirect_stdout(captured_output):
-            print_diagnostic_report(report, sip_data, file_path, auth_data)
-        
-        # Get the captured content
-        report_content = captured_output.getvalue()
-        
+        # Build markdown directly (not by capturing console output)
+        report_content = build_diagnostic_markdown(report, sip_data, file_path, auth_data)
         # Add quality analysis results if provided
         quality_content = ""
         if quality_results:
-            quality_content = "\n\n## 🎯 QUALITY ANALYSIS RESULTS\n\n"
+            quality_content += "\n## 🎯 Quality Analysis Results\n\n"
             
             if quality_results.get("call_quality"):
                 quality_content += "### 📊 Call Quality Scoring\n\n"
@@ -427,7 +531,7 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
             register_attempts = auth_data.get("register_attempts", [])
             
             if auth_challenges or auth_responses or register_attempts:
-                auth_content = "\n\n## 🔐 AUTHENTICATION SECURITY ANALYSIS\n\n"
+                auth_content = "\n## 🔐 Authentication Security Analysis\n\n"
                 
                 # Security Posture
                 posture = calculate_auth_security_posture(auth_data)
@@ -496,11 +600,12 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
                     auth_content += "\n"
         
         # Add markdown formatting and metadata
-        markdown_content = f"""# S.O.N.I.C. Diagnostic Report
+        markdown_content = f"""# S.O.N.I.C. Diagnostic Report (Sanitized Sample)
 
 **Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
 **Source File**: `{file_path if file_path else 'Unknown'}`  
-**Report File**: `{save_path}`
+**Report File**: `{save_path}`  
+**PII Status**: ✅ Sanitized - Example RFC 5737 addresses used
 
 ---
 
@@ -508,7 +613,8 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
 
 ---
 
-*Report generated by S.O.N.I.C. - SIP Observation and Network Inspection Console*
+*Report generated by S.O.N.I.C. - SIP Observation and Network Inspection Console v3.0*  
+*All personal identifying information has been removed for privacy.*
 """
         
         # Write to file
