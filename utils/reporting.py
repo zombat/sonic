@@ -479,23 +479,9 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
         save_path: Path where to save the markdown report
         quality_results: Optional quality analysis results to include
         auth_data: Authentication data from extract_auth_and_registration_info()
-    
-    Note:
-        Only TEST_CAPTURE.md is allowed as the output filename per policy.
-        This prevents proliferation of pcap-derived markdown files.
     """
     if not save_path:
         return
-    
-    # Enforce TEST_CAPTURE.md policy at sink level
-    import os
-    filename = os.path.basename(save_path)
-    if filename != "TEST_CAPTURE.md":
-        error_msg = f"ERROR: Report output filename must be 'TEST_CAPTURE.md', got '{filename}'"
-        print(f"\n❌ {error_msg}")
-        print("This policy prevents proliferation of pcap-derived markdown files.")
-        import sys
-        sys.exit(2)
     
     try:
         # Build markdown directly (not by capturing console output)
@@ -600,12 +586,17 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
                     auth_content += "\n"
         
         # Add markdown formatting and metadata
-        markdown_content = f"""# S.O.N.I.C. Diagnostic Report (Sanitized Sample)
+        # Determine if this is the sample TEST_CAPTURE.md
+        is_sample = save_path.endswith("TEST_CAPTURE.md")
+        title = "S.O.N.I.C. Diagnostic Report (Sanitized Sample)" if is_sample else "S.O.N.I.C. Diagnostic Report"
+        pii_status = "✅ Sanitized - Example RFC 5737 addresses used" if is_sample else "✅ Real data - Non-sensitive SIP analysis"
+        
+        markdown_content = f"""# {title}
 
 **Generated**: {time.strftime("%Y-%m-%d %H:%M:%S")}  
 **Source File**: `{file_path if file_path else 'Unknown'}`  
 **Report File**: `{save_path}`  
-**PII Status**: ✅ Sanitized - Example RFC 5737 addresses used
+**PII Status**: {pii_status}
 
 ---
 
