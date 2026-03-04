@@ -180,7 +180,7 @@ class AuthenticationMetrics(BaseModel):
         populate_by_name = True
 
 
-
+class SipDiagnosticReport(BaseModel):
     """
     Comprehensive SIP diagnostic report focused on call quality issues.
     

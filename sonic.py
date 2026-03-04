@@ -65,7 +65,7 @@ Providers:
     
     parser.add_argument(
         "--save_file",
-        help="Path to save the diagnostic report as a markdown file. Only TEST_CAPTURE.md is allowed (default)."
+        help="Path to save the diagnostic report as a markdown file."
     )
     
     parser.add_argument(
@@ -145,13 +145,9 @@ Providers:
     
     args = parser.parse_args()
     
-    # Enforce single allowed report filename policy
+    # Set default save_file if not provided
     if not args.save_file:
         args.save_file = "TEST_CAPTURE.md"
-
-    if os.path.basename(args.save_file) != "TEST_CAPTURE.md":
-        print("\n❌ Invalid --save_file. Only TEST_CAPTURE.md is allowed.")
-        sys.exit(2)
     
     # Handle quality-only mode
     if args.quality_only:
