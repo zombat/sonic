@@ -105,33 +105,30 @@ python3 sonic.py --file capture.pcapng --model combined --save_file TEST_CAPTURE
 
 **Note**: All reports must be saved as `TEST_CAPTURE.md` (enforced policy to prevent pcap-derived markdown proliferation).
 
-## 🌐 NetClaw Integration (v3.0)
+## 🌐 Agentic Platform Integrations
 
-S.O.N.I.C. is now available as **MCP Server #38** in [NetClaw](https://github.com/automateyournetwork/netclaw) — an autonomous network engineering agent powered by Claude.
+S.O.N.I.C. integrates seamlessly with agentic platforms via its built-in MCP server. It was designed with this kind of pipeline-driven network automation in mind.
 
-**Capabilities via NetClaw:**
-- 📞 VoIP call quality analysis integrated with network troubleshooting
-- 🔒 SIP authentication security auditing via Claude analysis
-- 📊 Batch VoIP quality reports across multiple sites
-- 🔗 Unified workflow: Capture → Analyze (S.O.N.I.C.) → Remediate (NetClaw)
-- 🎯 Slack-native VoIP diagnostics with severity-based alerting
+**Supported platforms:**
+- [NetClaw](https://github.com/automateyournetwork/netclaw) / [OpenClaw](https://github.com/automateyournetwork/openclaw) — register S.O.N.I.C. as a VoIP triage tool in your agent's toolset
+- **Claude Desktop / Cline** — MCP client config, analyze captures through natural language
+- **Claude Code / skills-based clients** — install skills with `sonic --init-skills`
 
-**Integration Guide**: See [NETCLAW_SONIC_INTEGRATION_GUIDE.md](NETCLAW_SONIC_INTEGRATION_GUIDE.md) for:
-- Complete installation instructions
-- MCP server configuration
-- Skill file creation for NetClaw
-- Standard workflows (call quality investigation, auth audit, codec assessment)
-- Testing and validation procedures
+**Integration Guide**: See [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for:
+- How the MCP server integration works
+- Step-by-step NetClaw / OpenClaw setup (4 steps)
+- Skills-based client installation (`--init-skills`)
+- Full MCP tool reference
 
 **Quick NetClaw Workflow:**
 ```
-User uploads voip-issue.pcap to Slack
+User reports one-way audio on Chicago branch
     ↓
-NetClaw detects SIP/RTP traffic
+NetClaw routes to VoIP_Triage_Bot agent
     ↓
-Invokes S.O.N.I.C. via MCP (sonic_analyze_pcap)
+Agent invokes S.O.N.I.C. via MCP (analyze_pcap)
     ↓
-Returns: MOS score, auth grade, recommendations
+Returns: MOS score, auth grade, NAT diagnosis
     ↓
 NetClaw suggests next actions: Check QoS, apply codec change, create CR
 ```
@@ -471,6 +468,7 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
 
 - **Claude Desktop** - Anthropic's desktop application
 - **Cline** - VSCode AI coding and analysis assistant
+- **Claude Code / skills-based clients** - Install S.O.N.I.C. skills with `sonic --init-skills`
 - **Any MCP-compatible client** - Custom integrations
 
 ### Quick Setup for Claude Desktop
