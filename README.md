@@ -85,7 +85,7 @@ ollama pull mistral:7b       # Best available local model for detailed insights
 ### Quality-Only Analysis (No API Keys Required)
 ```bash
 # Run quality metrics without LLM analysis - completely offline
-python3 sonic.py --file capture.pcapng --quality-only --save_file TEST_CAPTURE.md
+python3 sonic.py --file capture.pcapng --quality-only --save_file my_capture_report.md
 
 # Includes: Call quality scoring, MOS analysis, network metrics, call tracking
 # NO API keys or LLM required!
@@ -94,16 +94,16 @@ python3 sonic.py --file capture.pcapng --quality-only --save_file TEST_CAPTURE.m
 ### Basic LLM Analysis (Local Ollama)
 ```bash
 # Analyze with local mistral:7b (best available)
-python3 sonic.py --file capture.pcapng --model detailed --save_file TEST_CAPTURE.md
+python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_report.md
 
 # Fast analysis with qwen2.5:0.5b
-python3 sonic.py --file capture.pcapng --model fast --save_file TEST_CAPTURE.md
+python3 sonic.py --file capture.pcapng --model fast --save_file my_capture_report.md
 
 # Combined analysis (fast + detailed)
-python3 sonic.py --file capture.pcapng --model combined --save_file TEST_CAPTURE.md
+python3 sonic.py --file capture.pcapng --model combined --save_file my_capture_report.md
 ```
 
-**Note**: All reports must be saved as `TEST_CAPTURE.md` (enforced policy to prevent pcap-derived markdown proliferation).
+**Note**: `--save_file` defaults to `TEST_CAPTURE.md` when not provided. Use any filename you like for real captures (e.g. `--save_file my_capture_report.md`). `TEST_CAPTURE.md` in the repository is a sanitized sample report generated from the included sample captures.
 
 ## 🌐 Agentic Platform Integrations
 
@@ -429,25 +429,7 @@ S.O.N.I.C. supports multiple LLM providers for analysis. **Local Ollama is recom
 ```bash
 # Install Ollama and pull models (see above)
 # Run with default local provider
-python3 sonic.py --file capture.pcapng --model detailed --save_file TEST_CAPTURE.md
-```
-
-**Optional: Cloud Providers**
-**Optional: Cloud Providers**
-```bash
-# Option 1: Environment Variables
-export SONIC_LLM_PROVIDER=anthropic  # or openai, azure
-export ANTHROPIC_API_KEY=sk-ant-api03-...
-# OR
-export OPENAI_API_KEY=sk-...
-
-# Option 2: Command Line
-python3 sonic.py --file capture.pcapng --provider anthropic --save_file TEST_CAPTURE.md
-python3 sonic.py --file capture.pcapng --provider openai --save_file TEST_CAPTURE.md
-
-# Option 3: Local OpenAI-compatible endpoint
-export OPENAI_BASE_URL=http://localhost:8000/v1
-python3 sonic.py --file capture.pcapng --provider openai --save_file TEST_CAPTURE.md
+python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_report.md
 ```
 
 ### Advanced Options

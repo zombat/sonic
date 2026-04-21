@@ -11,6 +11,7 @@ Version: 3.0 (Modular Architecture)
 Last Updated: 2025-07-15
 """
 
+import os
 import sys
 import time
 import json
@@ -21,6 +22,33 @@ from analyzers.endpoint_analysis import print_endpoint_analysis
 from analyzers.overlap_dialing import print_overlap_dialing_analysis
 from analyzers.call_tracking import extract_and_analyze_call_tracking, print_call_tracking_analysis
 from utils.sip_converter import convert_sip_data_for_tracking
+
+# Known sample filenames shipped with the repository (relative basenames).
+# Add new entries here whenever a new sample capture is committed under samples/.
+_KNOWN_SAMPLE_FILES = {"MG-SIP-1.pcapng"}
+
+
+def is_sample_capture(file_path: str) -> bool:
+    """Return True if the input capture file is a shipped sample.
+
+    Sample detection is based on the *input* file path, not the output filename:
+      - The path contains a 'samples' directory component, or
+      - The basename matches a known sample shipped with the repo.
+
+    This keeps "Sanitized Sample" labeling tied to what data was analysed,
+    not to what the report file happens to be called.
+    """
+    if not file_path:
+        return False
+    # Normalise separators so the check works on any OS
+    normalised = file_path.replace("\\", "/")
+    parts = normalised.split("/")
+    # Check for a 'samples' directory component anywhere in the path
+    if "samples" in parts:
+        return True
+    # Check against the allowlist of known sample basenames
+    basename = os.path.basename(file_path)
+    return basename in _KNOWN_SAMPLE_FILES
 
 
 def print_diagnostic_report(report: Dict[str, Any], sip_data: str = None, file_path: str = None, auth_data: Dict[str, Any] = None) -> None:
@@ -586,8 +614,8 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
                     auth_content += "\n"
         
         # Add markdown formatting and metadata
-        # Determine if this is the sample TEST_CAPTURE.md
-        is_sample = save_path.endswith("TEST_CAPTURE.md")
+        # Determine if this is a sanitized sample capture (based on input file, not output filename)
+        is_sample = is_sample_capture(file_path)
         title = "S.O.N.I.C. Diagnostic Report (Sanitized Sample)" if is_sample else "S.O.N.I.C. Diagnostic Report"
         pii_status = "✅ Sanitized - Example RFC 5737 addresses used" if is_sample else "✅ Real data - Non-sensitive SIP analysis"
         
