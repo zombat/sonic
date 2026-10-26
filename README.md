@@ -46,6 +46,13 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Fallback Support**: Pure Python scapy extraction when tshark unavailable
 - **Error Recovery**: Comprehensive format conversion and parsing strategies
 
+### 🛰️ Network and VPN Detectors (No LLM)
+- **IPsec / VPN**: IKEv1 and IKEv2 outcomes, NOTIFY errors, retransmissions, rekeys, ESP flows, NAT-T, and an encrypted or cleartext verdict per peer pair
+- **GRE / DMVPN**: GRE keys and tunnels, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles
+- **Routing health**: BGP, OSPF and EIGRP adjacency checks, mismatched parameters, resets and a failover timeline
+- **Reachability**: ICMP echo loss, RTT and outage windows, ICMP errors, ARP without replies, top talkers
+- See the Network and VPN Detectors section below
+
 ## 📋 Prerequisites
 
 ### System Dependencies
@@ -90,6 +97,21 @@ python3 sonic.py --file capture.pcapng --quality-only --save_file my_capture_rep
 # Includes: Call quality scoring, MOS analysis, network metrics, call tracking
 # NO API keys or LLM required!
 ```
+
+### Network / VPN Analysis (No LLM)
+```bash
+# Run every non-SIP detector that applies (IPsec, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP)
+python3 sonic.py --file wan-link.pcap --network-only
+
+# VPN detectors only, judging traffic between the hub and spoke WAN addresses, JSON on stdout
+python3 sonic.py --file wan-link.pcap --network-only --detectors ipsec,gre_nhrp \
+    --peers 192.0.2.1,198.51.100.2 --json
+
+# Write the report as JSON instead of markdown
+python3 sonic.py --file wan-link.pcap --network-only --save_file wan-report.json
+```
+
+The report goes to `--save_file`, or to `<capture>.network.md` when none is given. A path ending in `.json` writes the full JSON report.
 
 ### Basic LLM Analysis (Local Ollama)
 ```bash
@@ -301,6 +323,51 @@ S.O.N.I.C.'s current diagnostic coverage:
 
 This comprehensive issue tracking ensures S.O.N.I.C. continues to evolve and address the most critical VoIP diagnostic needs.
 ````markdown
+## 🛰️ Network and VPN Detectors
+
+S.O.N.I.C. also reads captures that are not VoIP. The network detectors decode the packets and return structured, JSON-serializable findings. They need no LLM and no API key. Each detector reports a `status` (`ok`, `warning`, `problem` or `not_present`), a one-sentence `verdict`, and a list of `issues` with a stable `code`, a plain `message` and the Wireshark frame numbers to look at.
+
+One call runs every detector that applies. The report lists the protocols it found (`protocols_present`), which detectors ran (`detectors_run`), every issue, and one `timeline` of events in time order. When SIP is present, the existing SIP quality scoring (the same path as `quick_quality_check`) runs unchanged and is attached under `sip`.
+
+Extraction follows the SIP path: tshark first, scapy when tshark is missing. Both backends produce the same records and the tests hold them to identical reports. tshark is read as a stream, so memory stays flat on large captures.
+
+### IPsec / VPN (`ipsec`)
+- **IKE negotiation per IKE SA**: IKEv2 IKE_SA_INIT and IKE_AUTH, IKEv1 Main, Aggressive and Quick Mode. The outcome is one of `established`, `failed` (with the NOTIFY name, for example `NO_PROPOSAL_CHOSEN`), `no_response` (requests retransmitted with no reply), `auth_no_response`, `auth_likely_failed`, `authenticated_no_esp`, `sa_init_only`.
+- **Rekeys**: CREATE_CHILD_SA exchanges and ESP SPI changes.
+- **ESP flows** per SPI and direction: packets, bytes, missing sequence numbers, duplicates (possible replay), out-of-order packets, one-way ESP.
+- **NAT-T**: IKE on UDP 4500 (told apart from ESP-in-UDP by the 4-byte non-ESP marker), ESP-in-UDP flows, keepalives, NAT detection payloads.
+- **Encryption verdict** (`encryption_verdict`): for each peer pair, every packet between the same two addresses is protected (ESP, IKE, NAT-T keepalive) or cleartext (ICMP, GRE without ESP, TCP/UDP payload, OSPF, ...). The verdict reads like `all inter-site traffic encrypted: 2 peer pair(s), 480 ESP packets, no cleartext between the same endpoints` or `cleartext seen: icmp 198.51.100.2->192.0.2.1 4 packets`. Pass `peers` to judge all traffic between a given set of addresses.
+
+### GRE / DMVPN (`gre_nhrp`)
+- GRE tunnels per outer address pair: packets, GRE keys, inner protocols, and a key that differs by direction.
+- NHRP registration requests and replies, with the result (`registered`, `refused` with the CIE code, `unanswered`).
+- Hub and spoke roles, inferred from who registers with whom.
+- Resolution requests and replies (the NBMA address each answer maps to), Traffic Indications (the DMVPN Phase 3 redirect), Error Indications with their codes, and spoke-to-spoke tunnels.
+- A `dmvpn_phase_hint`: `phase3`, `phase2_or_phase3`, `hub_and_spoke_only` or `unknown`.
+
+### Routing health (`routing`)
+- **BGP** (TCP 179): TCP SYN without answer or refused with RST, OPEN details (AS, hold time, router ID), established and down transitions, UPDATE prefix counts, End-of-RIB, NOTIFICATION code and subcode decoded with a plain hint (for example Hold Timer Expired, OPEN Message Error / Bad Peer AS), gaps longer than the hold time, a peer silent at capture end, flaps.
+- **OSPF** (IP 89): routers grouped per link, hello and dead intervals, network mask, area, authentication type, stub flag and DB Description MTU compared between neighbors, DR/BDR changes, one-way neighbors, duplicate router IDs, hello gaps past the dead interval, neighbors dropped and re-added.
+- **EIGRP** (IP 88): K-values and AS compared between speakers, hold time, goodbye messages, INIT updates (adjacency starts and restarts), Queries and SIA-Queries, a speaker silent past its hold time.
+- Routing protocols carried inside GRE (for example EIGRP or BGP over a DMVPN tunnel without IPsec) are analyzed on the tunnel addresses and marked `over_gre`.
+- A `failover_timeline` puts these events in order, so a router failure and the reconvergence after it can be read off.
+
+### Reachability (`reachability`) and conversations (`conversations`)
+- ICMP and ICMPv6 echo matching per source and destination: sent, answered, loss percent, RTT min/avg/max, and outage windows (consecutive unanswered requests, with recovery time and duration).
+- ICMP errors with decoded codes (host unreachable, port unreachable, fragmentation needed, TTL exceeded) and the destination they refer to.
+- ARP requests that never got a reply, gratuitous ARP, and one address claimed by two MAC addresses.
+- Protocols by packet and byte count, top conversations and top talkers.
+
+### What packets cannot show
+- A verdict covers only what crossed the capture point. Capture on the underlay (WAN) link to prove encryption; a capture on the tunnel interface shows decrypted traffic.
+- IKEv2 IKE_AUTH is encrypted, so `AUTHENTICATION_FAILED` is never visible. S.O.N.I.C. reports `established` only when ESP follows, and flags a small IKE_AUTH response with no ESP as `auth_likely_failed`, labelled as a heuristic.
+- ESP with NULL encryption cannot be told apart from encrypted ESP without the keys.
+- With IPsec tunnel protection, GRE, NHRP and the routing protocols travel inside ESP and are not visible on the WAN.
+- OSPFv3, IS-IS and IPv6 routing are not decoded. EIGRP speakers are grouped per link by unicast exchange or a shared /24.
+
+### Test fixtures
+`tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call.
+
 ## 🏗️ Architecture
 
 ### Data Extraction Pipeline
@@ -535,6 +602,45 @@ Show available providers and current configuration.
 Claude: What LLM providers does S.O.N.I.C. support?
 ```
 
+#### `analyze_network_pcap`
+Deterministic analysis of any capture (no LLM): IPsec/IKE/ESP, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP and conversations. Start here on a capture that is not only VoIP.
+
+**Parameters**:
+- `file_path` (required): Absolute path to pcap/pcapng file
+- `detectors` (optional): Subset of `ipsec`, `gre_nhrp`, `routing`, `reachability`, `conversations` (default: all)
+- `peers` (optional): IP addresses whose mutual traffic the encryption verdict judges
+- `display_filter` (optional): Wireshark display filter applied first (needs tshark)
+- `max_packets` (optional): Read at most this many frames
+- `include_sip` (optional): Run the SIP quality scoring when SIP is present (default: true)
+- `max_items` (optional): Cap on each list in the result (default: 25)
+
+**Example**:
+```
+Claude: Analyze /captures/hub-wan.pcap with analyze_network_pcap
+```
+
+#### `analyze_vpn_pcap`
+Proves from packets whether inter-site traffic is encrypted and whether the IPsec and DMVPN overlay formed. Returns `encryption_verdict` (`encrypted`, `cleartext_seen`, `no_esp`, `not_present`), `verdict`, `negotiation_verdict` and `overlay_verdict` first.
+
+**Parameters**: `file_path`, and optional `peers`, `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Is the traffic between 192.0.2.1 and 198.51.100.2 encrypted in /captures/hub-wan.pcap?
+```
+
+#### `analyze_routing_pcap`
+BGP, OSPF and EIGRP health plus reachability. Returns the routing `verdict`, `reachability_verdict`, a `failover_timeline` and `ping_outages` first.
+
+**Parameters**: `file_path`, and optional `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Did OSPF reconverge after R3 failed? Use /captures/r1-r3.pcap
+```
+
+Each tool's description (what an MCP client shows the agent) explains its inputs, outputs, verdict values and limits, so an agent can learn the tool from the tool itself.
+
 ### Setup for Cline (VSCode)
 
 1. Install the Cline extension in VSCode
@@ -611,6 +717,15 @@ python3 sonic.py --file samples/MG-SIP-1.pcapng --quality-only
 
 # Run detailed analysis
 python3 sonic.py --file samples/MG-SIP-1.pcapng --model combined --save_file test_report.md
+```
+
+Network detector tests (no LLM, no network access; the MCP test starts the server over stdio):
+
+```bash
+python3 -m pytest -q test_network_detectors.py test_network_mcp.py
+
+# Rebuild the fixtures (identical bytes on every run)
+python3 tests/fixtures/generate_fixtures.py
 ```
 
 ## 🤝 Contributing
