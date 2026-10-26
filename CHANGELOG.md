@@ -5,6 +5,30 @@ All notable changes to S.O.N.I.C. (SIP Observation and Network Inspection Consol
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-10-25
+
+### Added
+- 🛰️ **Network and VPN detectors** (deterministic, no LLM)
+  - IPsec / VPN: IKEv1 and IKEv2 outcomes per IKE SA, cleartext NOTIFY errors (NO_PROPOSAL_CHOSEN and others), retransmissions without reply, rekeys, ESP flows with sequence gaps and duplicates, NAT-T, and an encrypted or cleartext verdict per peer pair
+  - GRE / NHRP (DMVPN): GRE tunnels and keys, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles, spoke-to-spoke tunnels
+  - Routing health: BGP sessions (OPEN, NOTIFICATION decoded, resets, End-of-RIB, refused TCP 179), OSPF per link (timer, mask, area, auth, MTU mismatches, one-way neighbors, DR/BDR), EIGRP (K-value and AS mismatches, goodbyes, hold time expiry), routing over GRE, and a failover timeline
+  - Reachability: ICMP echo loss, RTT and outage windows, ICMP errors with decoded codes, ARP without replies, duplicate IPs, protocol and conversation summary
+  - One entry point (`analyzers/network_orchestrator.py`) that reads the capture once, runs every detector that applies, and runs the existing SIP quality path unchanged when SIP is present
+- 🌐 **New MCP tools**: `analyze_network_pcap`, `analyze_vpn_pcap`, `analyze_routing_pcap`, with descriptions written so an agent learns each tool from the tool itself; the server now sends instructions naming which tool fits which capture
+- 🔧 **CLI mode** `--network-only`, with `--detectors`, `--peers`, `--display-filter`, `--max-packets` and `--json`; the report is written as markdown or JSON
+- 🧪 **Tests and fixtures**: `test_network_detectors.py` (every detector on both the tshark and scapy backends, backend parity, entry point behaviour), `test_network_mcp.py` (the tool functions and a real MCP stdio handshake), and 14 small deterministic fixtures from `tests/fixtures/generate_fixtures.py`
+
+### Changed
+- MCP server name is now "S.O.N.I.C. VoIP and Network Analyzer"; the existing five tools are unchanged
+- `run_phase2_tests.sh` checks the new MCP tools and runs the network detector tests
+- `.gitignore` allows the synthetic fixtures under `tests/fixtures/`
+
+### Technical
+- **Extraction**: `extractors/network.py` streams tshark field output (`-T fields`) so memory stays flat, checks which tshark fields exist and reports missing ones, and falls back to scapy with byte-level parsers that produce the same records
+- **Report schema**: `sonic.network_report/1`; every section has `status`, `verdict` and `issues` with stable codes and Wireshark frame numbers
+
+---
+
 ## [3.0.0] - 2026-03-04
 
 ### Added
