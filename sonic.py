@@ -41,6 +41,9 @@ Examples:
   %(prog)s --file capture.pcapng --provider anthropic --model detailed             # Use Claude
   %(prog)s --file capture.pcapng --provider openai --model combined                # Use GPT-4o
   %(prog)s --file capture.pcapng --quality-only                                    # Quality metrics only (no AI)
+  %(prog)s --file wan.pcap --network-only                                          # IPsec/GRE/NHRP/BGP/OSPF/EIGRP/ICMP detectors (no AI)
+  %(prog)s --file wan.pcap --network-only --detectors ipsec,gre_nhrp --json        # VPN detectors only, JSON on stdout
+  %(prog)s --file wan.pcap --network-only --save_file wan-report.json              # write the report as JSON
 
 Providers:
   ollama     - Local inference (free, default) - requires Ollama installed
@@ -93,6 +96,42 @@ Providers:
         help="Run only quality analysis (MOS + Quality Scoring) without AI model analysis"
     )
     
+    # Network detectors (deterministic, no LLM)
+    parser.add_argument(
+        "--network-only",
+        action="store_true",
+        help="Run the non-SIP network detectors (IPsec/IKE/ESP, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP, "
+             "conversations) without any AI model. Writes the report to --save_file "
+             "(default: <capture>.network.md; a path ending in .json writes JSON)."
+    )
+
+    parser.add_argument(
+        "--detectors",
+        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, routing, reachability, conversations"
+    )
+
+    parser.add_argument(
+        "--peers",
+        help="Comma-separated VPN endpoint IPs for the encrypted/cleartext verdict (--network-only)"
+    )
+
+    parser.add_argument(
+        "--display-filter",
+        help="Wireshark display filter applied before the network detectors run (needs tshark)"
+    )
+
+    parser.add_argument(
+        "--max-packets",
+        type=int,
+        help="Read at most this many frames in --network-only mode"
+    )
+
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="With --network-only, print the full report as JSON on stdout instead of the summary"
+    )
+
     # Multi-provider LLM support
     parser.add_argument(
         "--provider",
@@ -144,7 +183,12 @@ Providers:
     )
     
     args = parser.parse_args()
-    
+
+    # Handle network-only mode (its default report path is next to the capture)
+    if args.network_only:
+        run_network_only_analysis(args)
+        return
+
     # Set default save_file if not provided
     if not args.save_file:
         args.save_file = "TEST_CAPTURE.md"
@@ -296,6 +340,51 @@ def run_quality_only_analysis(file_path: str, save_file: str, enable_mos: bool =
     
     print("\n" + "="*80)
     print("✅ Quality analysis completed successfully!")
+
+
+def _split_csv(value):
+    """Split a comma-separated CLI value into a list (None stays None)."""
+    if not value:
+        return None
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def run_network_only_analysis(args):
+    """
+    Run the deterministic network detectors (no LLM) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.network_orchestrator import analyze_network_capture
+    from utils.network_reporting import print_network_summary, save_network_report
+
+    report = analyze_network_capture(
+        args.file,
+        detectors=_split_csv(args.detectors),
+        peers=_split_csv(args.peers),
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ Network analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.network.md"
+    try:
+        save_network_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_network_summary(report)
+        if save_path:
+            print(f"\n💾 Network report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):
