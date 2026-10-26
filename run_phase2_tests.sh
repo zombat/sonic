@@ -34,7 +34,8 @@ with open('mcp_server.py', 'r') as f:
     tree = ast.parse(f.read())
 funcs = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
 tools = ['analyze_pcap', 'quick_quality_check', 'list_llm_providers', 
-         'analyze_batch_pcaps', 'analyze_pcap_partial_streaming']
+         'analyze_batch_pcaps', 'analyze_pcap_partial_streaming',
+         'analyze_network_pcap', 'analyze_vpn_pcap', 'analyze_routing_pcap']
 for tool in tools:
     status = "✓" if tool in funcs else "✗"
     print(f"{status} {tool}")
@@ -157,6 +158,15 @@ if python3 -c "import pytest" >/dev/null 2>&1; then
     python3 -m pytest -q test_auth_diagnostics.py
 else
     python3 -m unittest -q test_auth_diagnostics.py
+fi
+echo ""
+
+# Test 8: Network detectors (IPsec, GRE/NHRP, routing, reachability) and their MCP tools
+echo "✅ TEST 8: Network Detector Test Modules"
+if python3 -c "import pytest" >/dev/null 2>&1; then
+    python3 -m pytest -q test_network_detectors.py test_network_mcp.py
+else
+    python3 -m unittest -q test_network_detectors.py test_network_mcp.py
 fi
 echo ""
 
