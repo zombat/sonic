@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🧭 **MCP guidance built into the server** (`utils/agent_guide.py`)
+  - Instructions in the initialize result, under 2 KB: which tool answers which question, the order of a typical investigation, which tools call an LLM, result shape, size limits and what packets cannot show
+  - Every tool has a title and annotations (read-only, not destructive; deterministic tools idempotent and closed world, LLM tools open world), and a description that says when to use it, what it needs, what it costs and what it returns
+  - Prompts `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call`
+  - Resources `sonic://guide/overview` and `sonic://guide/<topic>` (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`)
+- 🎓 **Agent Skill by progressive disclosure**: `python3 sonic.py --create-skill [DIR]` and `python3 mcp_server.py --create-skill [DIR]` (default `.claude/skills/sonic`) write a short `SKILL.md` and one `reference/` file per area. Tool parameters, detectors and issue codes, CLI options and LLM providers are generated from the live code. Each file carries a marker; a `SKILL.md` or reference file without it is never replaced, files are written atomically, and a rerun leaves unchanged files alone
+- 🔑 **Anthropic with a passthrough key** (`utils/credentials.py`): API keys come from the process environment (an MCP client's `env` block passes one through), then from a dotenv file named by `--env-file PATH` (`sonic.py`, `mcp_server.py`) or `SONIC_ENV_FILE`. The file is parsed as literal data, only `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `AZURE_OPENAI_KEY` are kept, and a value is never copied into the environment
+- 🙈 **Keys never shown**: redacted by value (and `sk-ant-...` by pattern) from every MCP tool result, CLI output, log records, saved reports and the prompts sent to the LLM (`RedactingLM`); `list_llm_providers` reports only `configured` and the source (`environment` or the env file path)
+- 🧪 `test_credentials.py`: parser, precedence, redaction of every output path with dummy keys, the CLI and a real MCP stdio session
+- 🧪 `test_mcp_guidance.py`: instructions, annotations, descriptions, prompts and resources, the skill's frontmatter, size, coverage, refusal and idempotence, both entry points, and a real MCP stdio session
 - Zero-cleartext audit (`cleartext_audit` detector, `audit_cleartext_pcap` MCP tool): every frame against an allowlist (default ESP, IKE on UDP 500/4500, NAT-T keepalives; tokens for ARP, ICMP, routing, GRE, link-local layer 2, ports and protocols, each scopable to addresses), reported by protocol and address pair with frame numbers, and a pass or fail result
 - IKEv2 exchange decoding: proposals offered and chosen by name with weak algorithms flagged, KE groups and INVALID_KE_PAYLOAD retries, NAT_DETECTION hashes recomputed from the wire and the move to UDP 4500, DPD liveness checks, IKE SA collisions, cleartext INVALID_SPI / INVALID_IKE_SPI, ESP on a stale SPI after a rekey, and a diagnosis code per IKE SA (proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing, udp_4500_blocked, no_reply, liveness_lost, peer_lost_sa, ...)
 - DMVPN Phase 3 sequence proof (`dmvpn_phase3` detector): per redirected flow the ordered steps via hub, redirect, resolution request, resolution reply and direct data, with the first missing step and why; hub-relayed traffic with no redirect; resolution thrashing; and, given the hubs, encrypted spoke-to-spoke shortcuts when NHRP is inside ESP
@@ -18,9 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
+- Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
+- Tool descriptions: the returns, limits and examples moved into the text an MCP client sees (fastmcp drops docstring sections such as `Returns:` from the description)
+- `analyzers/network_orchestrator.py` keeps its detectors in one registry, `DETECTOR_CLASSES`
+- `sonic.py` builds its parser in `build_parser()`; `--file` is still required for every mode except `--create-skill`
+- INTEGRATION_GUIDE.md and README.md describe `--create-skill` in place of the `--init-skills` command they named, which did not exist
 - The extractor hands the IKE bytes from tshark (`udp.payload`) to the same parser scapy uses, so IKE fields match by construction; records gain the TCP MSS of SYNs, BGP capability codes, OSPF DBD flags and sequence, and an `llc` label for CDP/STP frames
 - Synthetic IKEv2 fixtures carry real NAT detection hashes
-- MCP tool descriptions put outputs and limits before `Args:`, the part clients show
+
+### Fixed
+- The MCP server's stdout carries only JSON-RPC (`utils/protocol_stdout.py`). Before serving it keeps the real stdout for the protocol and points descriptor 1 and `sys.stdout` at stderr, so the SIP, network, extractor and reporting prints (and child processes) no longer corrupt the stdio channel; the CLI's output is unchanged. `test_mcp_stdio.py` runs a real stdio session, calls the SIP and network tools on a sample capture and parses every byte written to stdout through the server's exit
+- Every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) and every LLM path behind them uses one provider: the call's `provider`, else `SONIC_LLM_PROVIDER`, else `ollama` (`llm_config.resolve_provider`). The batch and streaming tools used to default to `anthropic`, and `SONIC_LLM_PROVIDER` changed none of them; `list_llm_providers` reports the resolved provider as `current_config.provider`
+- `sonic.py --model-name NAME` now runs the LLM analysis on that model (one pass in the fast, detailed, deep and combined modes, and in batch and streaming); it was parsed and ignored. It is refused with `--model all`
+- `analyze_pcap_partial_streaming` (and `--stream --partial`) failed on every call: `ai/partial_streaming.py` imported `utils.serialization`, which never existed. It now converts the quality and MOS results with `utils.credentials.redact`, the converter every MCP tool result already goes through. `test_mcp_stdio.py` calls the tool over a real stdio session with only the streaming LLM stubbed (`tests/stub_llm_mcp_server.py`)
+- `sonic.py --api-key` is removed: it was never used, and a key typed on the command line lands in shell history and `ps` output. Keys come from the environment, then from the file `--env-file` or `SONIC_ENV_FILE` names
+
+---
 
 ## [3.1.0] - 2026-10-25
 

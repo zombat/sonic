@@ -15,8 +15,11 @@ from extractors.tshark import extract_sip_data
 from analyzers.call_quality_scoring import CallQualityScorer
 from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer
 from ai.streaming_analysis import run_combined_analysis_streaming
+from llm_config import resolve_provider
 from extractors.auth_info import extract_auth_and_registration_info
-from utils.serialization import ResultSerializer
+# redact() is the converter every MCP tool result goes through: dataclasses and enums
+# become plain JSON types, and every known API key is redacted.
+from utils.credentials import redact
 
 
 def run_partial_analysis_streaming(
@@ -24,7 +27,8 @@ def run_partial_analysis_streaming(
     provider: str = None,
     on_token: Optional[Callable[[str], None]] = None,
     on_progress: Optional[Callable[[str], None]] = None,
-    on_partial_result: Optional[Callable[[Dict[str, Any]], None]] = None
+    on_partial_result: Optional[Callable[[Dict[str, Any]], None]] = None,
+    model_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Streams LLM analysis while returning quality metrics immediately.
@@ -40,7 +44,8 @@ def run_partial_analysis_streaming(
     
     Args:
         file_path: Path to pcap file
-        provider: LLM provider
+        provider: LLM provider (default: llm_config.resolve_provider)
+        model_name: Run the LLM on this model instead of the provider's default (optional)
         on_token: Callback for LLM tokens
         on_progress: Callback for progress messages
         on_partial_result: Callback when quality/MOS complete (before LLM)
@@ -58,6 +63,7 @@ def run_partial_analysis_streaming(
         ...     on_partial_result=partial_cb
         ... )
     """
+    provider = resolve_provider(provider)
     start_time = time.time()
     
     if on_progress:
@@ -99,7 +105,7 @@ def run_partial_analysis_streaming(
     
     llm_start = time.time()
     llm_result = run_combined_analysis_streaming(
-        sip_data, file_path, provider, on_token=on_token
+        sip_data, file_path, provider, on_token=on_token, model_name=model_name
     )
     llm_time = time.time() - llm_start
     
@@ -135,7 +141,7 @@ def _run_quality(sip_data: str, file_path: str) -> Dict[str, Any]:
             file_path,
             auth_data=auth_data,
         )
-        return ResultSerializer.convert_result(result)
+        return redact(result)
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -145,6 +151,6 @@ def _run_mos(sip_data: str, file_path: str) -> Dict[str, Any]:
     try:
         analyzer = AdvancedRTPMOSAnalyzer()
         result = analyzer.analyze_rtp_streams(sip_data, file_path)
-        return ResultSerializer.convert_result(result)
+        return redact(result)
     except Exception as e:
         return {"status": "error", "error": str(e)}

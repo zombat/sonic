@@ -50,11 +50,30 @@ from analyzers.routing_health import RoutingDetector
 from extractors.network import open_network_records
 
 REPORT_SCHEMA = "sonic.network_report/1"
-# Run by default: each one reports not_present when its protocols are absent.
-DETECTOR_NAMES = ["ipsec", "gre_nhrp", "dmvpn_phase3", "routing", "reachability", "conversations"]
-# Run only when asked for: an assertion and a measurement that need the caller's intent.
+# The detector registry: name -> class, in report order. DETECTOR_NAMES, the
+# validation of a detectors list, and the generated agent guide all read it.
+DETECTOR_CLASSES = {
+    "ipsec": IPsecDetector,
+    "gre_nhrp": GreNhrpDetector,
+    "dmvpn_phase3": DmvpnPhase3Detector,
+    "routing": RoutingDetector,
+    "reachability": ReachabilityDetector,
+    "conversations": ConversationDetector,
+    "cleartext_audit": CleartextAuditDetector,
+    "convergence": ConvergenceDetector,
+}
+# Run only when named: an assertion and a measurement that need the caller's intent.
 OPTIONAL_DETECTORS = ["cleartext_audit", "convergence"]
-ALL_DETECTORS = DETECTOR_NAMES + OPTIONAL_DETECTORS
+# Run by default: each one reports not_present when its protocols are absent.
+DETECTOR_NAMES = [name for name in DETECTOR_CLASSES if name not in OPTIONAL_DETECTORS]
+ALL_DETECTORS = list(DETECTOR_CLASSES)
+# The options each detector's constructor takes (from analyze_network_capture's options).
+DETECTOR_OPTIONS = {
+    "dmvpn_phase3": ["hubs"],
+    "routing": ["expected_mss"],
+    "cleartext_audit": ["allow"],
+    "convergence": ["event_time", "failed_peer", "hold_time", "silence_s"],
+}
 VPN_DETECTORS = ["ipsec", "gre_nhrp", "dmvpn_phase3"]
 ROUTING_DETECTORS = ["routing", "reachability"]
 OPTION_NAMES = {"allow", "hubs", "expected_mss", "event_time", "failed_peer", "hold_time", "silence_s"}
@@ -139,20 +158,13 @@ def _sip_quality(file_path: str) -> Dict[str, Any]:
 
 
 def _build_detectors(names: List[str], peers: Optional[List[str]], options: Dict[str, Any]):
-    builders = {
-        "ipsec": lambda: IPsecDetector(peers=peers),
-        "gre_nhrp": GreNhrpDetector,
-        "dmvpn_phase3": lambda: DmvpnPhase3Detector(hubs=options.get("hubs")),
-        "routing": lambda: RoutingDetector(expected_mss=options.get("expected_mss")),
-        "reachability": ReachabilityDetector,
-        "conversations": ConversationDetector,
-        "cleartext_audit": lambda: CleartextAuditDetector(allow=options.get("allow")),
-        "convergence": lambda: ConvergenceDetector(event_time=options.get("event_time"),
-                                                   failed_peer=options.get("failed_peer"),
-                                                   hold_time=options.get("hold_time"),
-                                                   silence_s=options.get("silence_s")),
-    }
-    return [builders[name]() for name in names]
+    detectors = []
+    for name in names:
+        kwargs = {key: options.get(key) for key in DETECTOR_OPTIONS.get(name, [])}
+        if name == "ipsec":
+            kwargs["peers"] = peers
+        detectors.append(DETECTOR_CLASSES[name](**kwargs))
+    return detectors
 
 
 def _check_options(options: Dict[str, Any]) -> Optional[str]:
