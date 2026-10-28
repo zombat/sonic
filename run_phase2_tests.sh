@@ -35,7 +35,8 @@ with open('mcp_server.py', 'r') as f:
 funcs = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
 tools = ['analyze_pcap', 'quick_quality_check', 'list_llm_providers', 
          'analyze_batch_pcaps', 'analyze_pcap_partial_streaming',
-         'analyze_network_pcap', 'analyze_vpn_pcap', 'analyze_routing_pcap']
+         'analyze_network_pcap', 'analyze_vpn_pcap', 'analyze_routing_pcap',
+         'audit_cleartext_pcap', 'analyze_convergence_pcap']
 for tool in tools:
     status = "✓" if tool in funcs else "✗"
     print(f"{status} {tool}")
