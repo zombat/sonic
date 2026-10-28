@@ -398,7 +398,7 @@ class TestNetworkOrchestrator(unittest.TestCase):
 
     def test_detector_selection_and_auto_detection(self):
         report = analyze_network_capture(fixture("bgp_session.pcap"), include_sip=False)
-        self.assertEqual(report["detectors_run"], ["routing", "conversations"])
+        self.assertEqual(report["detectors_run"], ["routing", "tcp", "conversations"])  # BGP rides on TCP
         self.assertIn("ipsec", report["detectors_not_present"])
         self.assertEqual(report["protocols_present"], ["bgp", "tcp"])
         only = analyze_network_capture(fixture("bgp_session.pcap"), detectors=["routing"])
