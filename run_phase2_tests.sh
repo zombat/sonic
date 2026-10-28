@@ -170,12 +170,12 @@ else
 fi
 echo ""
 
-# Test 9: Agent guidance (MCP instructions, tool annotations, prompts, resources, --create-skill) and key redaction
+# Test 9: Agent guidance (MCP instructions, tool annotations, prompts, resources, --create-skill), key redaction and a stdout that carries only JSON-RPC
 echo "✅ TEST 9: Agent Guidance and Skill Test Module"
 if python3 -c "import pytest" >/dev/null 2>&1; then
-    python3 -m pytest -q test_mcp_guidance.py test_credentials.py
+    python3 -m pytest -q test_mcp_guidance.py test_credentials.py test_mcp_stdio.py
 else
-    python3 -m unittest -q test_mcp_guidance.py test_credentials.py
+    python3 -m unittest -q test_mcp_guidance.py test_credentials.py test_mcp_stdio.py
 fi
 echo ""
 

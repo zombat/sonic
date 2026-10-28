@@ -627,6 +627,9 @@ def main(argv=None) -> int:
         parser.error(str(exc))
     if args.create_skill:
         return create_skill_command(args.create_skill)
+    # stdout is the protocol channel from here on: every print goes to stderr.
+    from utils.protocol_stdout import reserve_stdout_for_protocol
+    reserve_stdout_for_protocol()
     mcp.run()
     return 0
 

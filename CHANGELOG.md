@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sonic.py` builds its parser in `build_parser()`; `--file` is still required for every mode except `--create-skill`
 - INTEGRATION_GUIDE.md and README.md describe `--create-skill` in place of the `--init-skills` command they named, which did not exist
 
+### Fixed
+- The MCP server's stdout carries only JSON-RPC (`utils/protocol_stdout.py`). Before serving it keeps the real stdout for the protocol and points descriptor 1 and `sys.stdout` at stderr, so the SIP, network, extractor and reporting prints (and child processes) no longer corrupt the stdio channel; the CLI's output is unchanged. `test_mcp_stdio.py` runs a real stdio session, calls the SIP and network tools on a sample capture and parses every byte written to stdout through the server's exit
+
 ---
 
 ## [3.1.0] - 2026-10-25
