@@ -164,9 +164,9 @@ echo ""
 # Test 8: Network detectors (IPsec, GRE/NHRP, routing, reachability) and their MCP tools
 echo "✅ TEST 8: Network Detector Test Modules"
 if python3 -c "import pytest" >/dev/null 2>&1; then
-    python3 -m pytest -q test_network_detectors.py test_network_mcp.py
+    python3 -m pytest -q test_network_detectors.py test_dataplane_detectors.py test_network_mcp.py
 else
-    python3 -m unittest -q test_network_detectors.py test_network_mcp.py
+    python3 -m unittest -q test_network_detectors.py test_dataplane_detectors.py test_network_mcp.py
 fi
 echo ""
 

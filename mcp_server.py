@@ -6,7 +6,8 @@ FastMCP server exposing S.O.N.I.C. VoIP analysis and the deterministic network
 detectors (IPsec/IKE/ESP, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP) as tools for AI
 assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
-Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap.
+Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap,
+analyze_data_plane_pcap, correlate_pcaps, merge_pcap_timelines.
 
 Usage:
     python3 mcp_server.py
@@ -43,10 +44,13 @@ from analyzers.call_quality_scoring import CallQualityScorer
 from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer
 from llm_config import list_available_providers
 from analyzers.network_orchestrator import (
+    analyze_data_plane_capture,
     analyze_network_capture,
     analyze_routing_capture,
     analyze_vpn_capture,
 )
+from analyzers.correlate import correlate_captures
+from analyzers.timeline import merge_timelines
 
 # Create MCP server
 mcp = FastMCP(
@@ -310,6 +314,7 @@ def analyze_network_pcap(
     max_packets: Optional[int] = None,
     include_sip: bool = True,
     max_items: int = 25,
+    options: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Analyze any packet capture (not only VoIP) and return deterministic findings as JSON.
@@ -337,6 +342,23 @@ def analyze_network_pcap(
       - "reachability": ICMP echo loss/RTT per source->destination pair with outage
         windows, ICMP unreachable/TTL-exceeded with decoded codes, ARP with no reply,
         duplicate IPs.
+      - "path_mtu": ICMP Fragmentation Needed / Packet Too Big (router, next-hop MTU,
+        the probe frame it refers to), PMTUD black holes (large DF probes or TCP
+        segments that vanished with no ICMP while smaller ones got through), IP
+        fragments (complete, incomplete, overlapping), reassembly timeouts.
+      - "esp_overhead": per ESP SA, packet sizes against cipher families (AES-GCM,
+        AES-CBC with SHA1/SHA2, 3DES, NULL), inner size bounds, overhead in tunnel and
+        transport-over-GRE mode, tunnel MTU fit, ESP fragmented after encryption.
+        Estimates from sizes only; ESP is encrypted.
+      - "tcp": per connection: SYN without SYN-ACK, refused, retransmissions (fast or
+        timeout), gaps, duplicate ACKs, zero window, window full, RSTs, MSS/window
+        scale, RTT and RFC 6298 RTO, and a verdict (no_answer, refused,
+        receiver_buffer_exhausted, loss_on_path, receive_window_limited, reset, healthy).
+      - "tls": ClientHello SNI, versions, suites, ALPN, groups; ServerHello choice;
+        TLS 1.2 certificate (subject, issuer, validity at capture time); cleartext
+        alerts; an optional baseline (see options).
+      - "qos": DSCP per flow, GRE inner vs outer DSCP, ESP outer DSCP per SA, RTP
+        streams with loss, RFC 3550 jitter, DSCP and an E-model MOS estimate, ECN CE.
       - "conversations": protocol mix by packets and bytes, top conversations, top talkers.
 
     Args:
@@ -353,6 +375,9 @@ def analyze_network_pcap(
         include_sip: When SIP is present, also run the existing SIP quality scoring
             (no LLM) and attach it under "sip". For full SIP call analysis use analyze_pcap.
         max_items: Cap on the length of each list in the result (default 25).
+        options: Optional per-detector settings: {"esp_overhead": {"transport_mtu": 1500,
+            "tunnel_mtu": 1400, "gre_header_bytes": 8}, "tls": {"baseline": {...}}} with the
+            baseline keys of analyze_data_plane_pcap's tls_baseline.
 
     Returns:
         {"status": "success", "overall_status": "ok"|"warning"|"problem"|"not_present",
@@ -383,6 +408,7 @@ def analyze_network_pcap(
             max_packets=max_packets,
             include_sip=include_sip,
             max_items=max_items,
+            options=options,
         )
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
@@ -494,6 +520,219 @@ def analyze_routing_pcap(
     try:
         return analyze_routing_capture(file_path, display_filter=display_filter,
                                        max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool()
+def analyze_data_plane_pcap(
+    file_path: str,
+    tls_baseline: Optional[Dict[str, Any]] = None,
+    transport_mtu: int = 1500,
+    tunnel_mtu: Optional[int] = None,
+    gre_header_bytes: int = 8,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Look into the data plane of one capture: path MTU and fragmentation, ESP overhead,
+    TCP health per connection, TLS handshakes against a baseline, and QoS markings with
+    RTP quality. Deterministic, no LLM; one read of the capture.
+
+    It runs the "path_mtu", "esp_overhead", "tcp", "tls" and "qos" detectors of
+    analyze_network_pcap and puts one verdict per detector first:
+
+      - path_mtu_verdict: Fragmentation Needed / Packet Too Big with the next-hop MTU and
+        the probe frame, PMTUD black holes ("DF probes up to 1400 answered, 1500 vanished
+        with no ICMP; path MTU between 1400 and 1499"), fragments complete/incomplete.
+      - esp_overhead_verdict: per ESP SA the cipher families its sizes fit (an estimate:
+        ESP is encrypted), the overhead in tunnel and transport-over-GRE mode, whether a
+        tunnel_mtu packet still fits transport_mtu once encrypted, outer ESP fragments.
+      - tcp_verdict: per connection one of no_answer, refused, receiver_buffer_exhausted
+        ("the endpoint's receive buffer is exhausted"), loss_on_path, receive_window_limited,
+        reset, healthy, with retransmission/gap/dup-ACK/zero-window counts and frames.
+      - tls_verdict: versions negotiated and baseline failures. In TLS 1.3 the certificate
+        is encrypted and reported as not visible; in TLS 1.2 it is read.
+      - qos_verdict: marked flows, GRE marking copied or lost, ESP DSCP per SA, RTP streams
+        with loss, jitter, DSCP and a MOS estimate.
+
+    Every section has "issues" (stable codes such as PMTU_BLACK_HOLE, PMTU_FRAG_NEEDED,
+    ESP_OUTER_FRAGMENTED, ESP_EXCEEDS_TRANSPORT_MTU, TCP_NO_ANSWER, TCP_ZERO_WINDOW,
+    TCP_LOSS, TLS_BASELINE_VERSION, TLS_ALERT, QOS_RTP_NOT_EF, QOS_GRE_DSCP_NOT_COPIED),
+    Wireshark frame numbers, and "limits": what this capture cannot show.
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file.
+        tls_baseline: Optional TLS policy, for example {"versions": ["TLS1.3"]} or
+            {"min_version": "TLS1.2", "cipher_suites": ["TLS_AES_128_GCM_SHA256", "0x1302"],
+            "require_sni": true, "alpn": ["h2"], "require_forward_secrecy": true,
+            "forbid_weak_offers": true}. Without it, versions below TLS 1.2 and weak
+            chosen suites are still flagged.
+        transport_mtu: MTU of the link that carries ESP (default 1500).
+        tunnel_mtu: The tunnel's ip mtu (for example 1400): checks that a full-size inner
+            packet still fits transport_mtu after encryption.
+        gre_header_bytes: GRE header inside ESP in transport mode: 8 with a tunnel key
+            (default, usual for DMVPN), 4 without.
+        display_filter: Optional Wireshark display filter applied first (needs tshark).
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (default 25).
+
+    Returns:
+        {"status": "success", "overall_status", "path_mtu_verdict", "esp_overhead_verdict",
+         "tcp_verdict", "tls_verdict", "qos_verdict", "path_mtu": {...}, "esp_overhead": {...},
+         "tcp": {"connections": [...]}, "tls": {"sessions": [...]}, "qos": {...}, "issues",
+         "timeline", "capture"} or {"status": "error", "error"}.
+
+    Limits: verdicts cover only what crossed this capture point (an ICMP dropped before
+    it is invisible, so a black hole means "no ICMP seen here"); ESP cipher and mode are
+    estimates; QUIC, DTLS and STARTTLS are not decoded; RTP latency needs two capture
+    points (use correlate_pcaps).
+
+    Example:
+        analyze_data_plane_pcap("/captures/br1-wan.pcap", tunnel_mtu=1400)
+        analyze_data_plane_pcap("/captures/dmz.pcap", tls_baseline={"versions": ["TLS1.3"]})
+    """
+    try:
+        return analyze_data_plane_capture(file_path, tls_baseline=tls_baseline, transport_mtu=transport_mtu,
+                                          tunnel_mtu=tunnel_mtu, gre_header_bytes=gre_header_bytes,
+                                          display_filter=display_filter, max_packets=max_packets,
+                                          max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool()
+def correlate_pcaps(
+    captures: List[Dict[str, Any]],
+    window_s: float = 2.0,
+    max_packets_held: int = 200000,
+    clock_offsets_s: Optional[Dict[str, float]] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Follow the same packets through two or more captures taken at different points
+    (inside and outside of a NAT router, WAN1 and WAN2, before and after a firewall)
+    and report what happened between them. Deterministic, no LLM.
+
+    Packets are recognised by fields NAT leaves alone: ESP SPI and sequence number,
+    TCP sequence/acknowledgement numbers with flags, length and a payload hash, UDP
+    length and payload hash, ICMP echo sequence with IP identification, else IP
+    identification and length. GRE carrying IPv4 is matched on the inner packet.
+
+    Reports:
+      - nat: each translation, for example {"at_inside": "10.0.0.10:40000",
+        "at_outside": "203.0.113.5:61000", "remote": "198.51.100.80:443",
+        "kind": "source NAT with port/id translation", "packets"}.
+      - connections: per conversation, linked across captures through NAT, a verdict:
+        "reply_lost" (for example "the SYN-ACK was last seen at outside and never
+        reached inside"), "partial_loss", "asymmetric" ("out through wan1, back
+        through wan2"), "seen_only_at" (a probe seen before a device but never after
+        it: an ACL, a route or a drop), "ok".
+      - transit: per capture pair, packets matched, time between sightings (one-way
+        delay plus clock offset), TTL decrement (routed hops between the points).
+      - dscp_changes: the same packet carrying a different DSCP at two points.
+
+    Memory is bounded: captures are merged by timestamp and streamed; a packet waits at
+    most window_s for its copy and at most max_packets_held packets wait at once (the
+    oldest are evicted early and counted in matching.evicted_early).
+
+    Args:
+        captures: Two or more {"path": "/abs/file.pcap", "label": "inside"}; labels must be
+            unique. List them in path order when they lie on one path.
+        window_s: Seconds a packet waits for its copy in another capture (default 2.0, max 60).
+        max_packets_held: Cap on packets held for matching at once (default 200000, min 100).
+        clock_offsets_s: Optional {label: seconds} added to that capture's timestamps when
+            the capturing clocks differ.
+        max_packets: Optional cap on frames read from each capture.
+        max_items: Cap on list lengths (default 25).
+
+    Returns:
+        {"status": "success", "verdict", "captures": [{label, packets, unmatched_packets,
+         start, end}], "matching": {window_s, max_packets_held, evicted_early,
+         packets_matched}, "nat", "connections", "transit", "dscp_changes", "issues",
+         "limits"} or {"status": "error", "error"}. Frames are given per capture label.
+
+    Limits: a device that randomizes TCP sequence numbers or rewrites payloads breaks
+    matching for those flows; "seen_only_at" cannot tell a drop from a flow that never
+    needed to cross the other points; times include clock differences between hosts.
+
+    Example:
+        correlate_pcaps([{"path": "/captures/edge-inside.pcap", "label": "inside"},
+                         {"path": "/captures/edge-outside.pcap", "label": "outside"}])
+    """
+    try:
+        return correlate_captures(captures, window_s=window_s, max_packets_held=max_packets_held,
+                                  clock_offsets_s=clock_offsets_s, max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool()
+def merge_pcap_timelines(
+    captures: List[Dict[str, Any]],
+    measurements: Optional[List[Dict[str, Any]]] = None,
+    detectors: Optional[List[str]] = None,
+    failover_max_s: Optional[float] = None,
+    clock_offsets_s: Optional[Dict[str, float]] = None,
+    max_events: int = 500,
+    output_path: Optional[str] = None,
+    overwrite: bool = False,
+) -> Dict[str, Any]:
+    """
+    Merge several captures of one chaos or failover run into a single event timeline
+    and measure the time between chosen events against design thresholds.
+    Deterministic, no LLM.
+
+    Each capture is analyzed once by the analyze_network_pcap detectors; their notable
+    events (BGP down/established, OSPF neighbor_down/up, EIGRP goodbye, ping outages,
+    ICMP errors, Fragmentation Needed, TCP no_answer/RST/zero window, TLS alerts, ESP
+    fragmentation, ...) are merged by absolute timestamp, each tagged with its capture
+    label and detector.
+
+    A measurement picks two events with selectors and reports the delta:
+        {"name": "wan1 failover", "from": {"capture": "wan1", "event": "down"},
+         "to": {"event": "established", "contains": "10.255.0.2"}, "max_s": 30}
+    Selector keys (all optional): capture, detector, protocol, event, contains
+    (substring of the detail), occurrence ("first", "last" or a 1-based number). The
+    "to" event is searched after the "from" event. Verdicts: within, exceeded,
+    below_min, not_found. Without measurements, auto_measurements lists every ping
+    outage duration and each routing down event paired with the next up event of the
+    same protocol, judged against failover_max_s when given.
+
+    Args:
+        captures: One or more {"path": "/abs/file.pcap", "label": "wan1"}; labels unique.
+        measurements: Optional list of {"name", "from", "to", "max_s", "min_s"}.
+        detectors: Optional subset of analyze_network_pcap detectors (default all).
+        failover_max_s: Optional threshold in seconds for the automatic measurements.
+        clock_offsets_s: Optional {label: seconds} added to that capture's timestamps.
+        max_events: Cap on timeline events returned (default 500).
+        output_path: Optional absolute path ending in .json: the result is also written
+            there so the run keeps it next to its captures. Refused if the file exists
+            unless overwrite is true, or if the directory does not exist.
+        overwrite: Replace an existing output_path.
+
+    Returns:
+        {"status": "success", "verdict", "origin" (time of t=0, the earliest capture
+         start), "captures": [{label, packets, start, end, overall_status, events,
+         verdicts}], "measurements": [{name, from, to, delta_s, max_s, verdict, detail}],
+         "auto_measurements", "timeline": [{t, time, capture, detector, protocol, event,
+         detail, frame}], "timeline_omitted", "written_to"} or {"status": "error", "error"}.
+
+    Limits: events are packet timestamps at each capture point (millisecond precision),
+    only as comparable as the capturing clocks; timers inside a router between packets
+    are invisible.
+
+    Example:
+        merge_pcap_timelines([{"path": "/run/wan1.pcap", "label": "wan1"},
+                              {"path": "/run/lan.pcap", "label": "lan"}], failover_max_s=30,
+                             output_path="/run/failover-timing.json")
+    """
+    try:
+        return merge_timelines(captures, measurements=measurements, detectors=detectors,
+                               failover_max_s=failover_max_s, clock_offsets_s=clock_offsets_s,
+                               max_events=max_events, output_path=output_path, overwrite=overwrite)
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 

@@ -22,7 +22,8 @@ SERVER = os.path.join(HERE, "mcp_server.py")
 
 EXISTING_TOOLS = {"analyze_pcap", "quick_quality_check", "list_llm_providers",
                   "analyze_batch_pcaps", "analyze_pcap_partial_streaming"}
-NETWORK_TOOLS = {"analyze_network_pcap", "analyze_vpn_pcap", "analyze_routing_pcap"}
+NETWORK_TOOLS = {"analyze_network_pcap", "analyze_vpn_pcap", "analyze_routing_pcap",
+                 "analyze_data_plane_pcap", "correlate_pcaps", "merge_pcap_timelines"}
 
 
 def fixture(name):
@@ -66,6 +67,34 @@ class TestNetworkToolFunctions(unittest.TestCase):
         result = self.call("analyze_routing_pcap", file_path=fixture("ospf_failover.pcap"))
         self.assertEqual(result["status"], "success")
         self.assertTrue(any(e["event"] == "neighbor_down" for e in result["failover_timeline"]))
+
+    def test_analyze_data_plane_pcap_synthetic(self):
+        result = self.call("analyze_data_plane_pcap", file_path=fixture("dp_tls.pcap"),
+                           tls_baseline={"versions": ["TLS1.3"]})
+        self.assertEqual(result["status"], "success")
+        self.assertIn("fail the baseline", result["tls_verdict"])
+        self.assertEqual(list(result)[:3], ["status", "overall_status", "path_mtu_verdict"])
+
+    def test_analyze_network_pcap_takes_detector_options(self):
+        result = self.call("analyze_network_pcap", file_path=fixture("dp_esp_sizes.pcap"),
+                           detectors=["esp_overhead"], options={"esp_overhead": {"tunnel_mtu": 1476}})
+        self.assertIn("ESP_EXCEEDS_TRANSPORT_MTU", {i["code"] for i in result["esp_overhead"]["issues"]})
+
+    def test_correlate_pcaps_synthetic(self):
+        result = self.call("correlate_pcaps", captures=[
+            {"path": fixture("dp_corr_inside.pcap"), "label": "inside"},
+            {"path": fixture("dp_corr_outside.pcap"), "label": "outside"}])
+        self.assertEqual(result["status"], "success")
+        self.assertTrue(result["nat"])
+        bad = self.call("correlate_pcaps", captures=[{"path": fixture("dp_corr_inside.pcap"), "label": "x"}])
+        self.assertEqual(bad["status"], "error")
+
+    def test_merge_pcap_timelines_synthetic(self):
+        result = self.call("merge_pcap_timelines", captures=[
+            {"path": fixture("ospf_failover.pcap"), "label": "core"}],
+            measurements=[{"name": "ospf", "from": {"event": "neighbor_down"}, "to": {"event": "neighbor_up"},
+                           "max_s": 15}])
+        self.assertEqual(result["measurements"][0]["verdict"], "within")
 
     def test_tool_descriptions_teach_usage(self):
         for name in NETWORK_TOOLS:
