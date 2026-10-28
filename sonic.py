@@ -25,11 +25,15 @@ from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer, print_mos_analysi
 from extractors.tshark import extract_sip_data
 from extractors.auth_info import extract_auth_and_registration_info
 from utils.reporting import print_diagnostic_report, save_report_to_file
+from utils.agent_guide import DEFAULT_SKILL_DIR
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     """
-    Main entry point for S.O.N.I.C. command-line interface.
+    Build the S.O.N.I.C. command-line parser.
+
+    The generated agent skill (--create-skill) reads its CLI reference from this
+    parser, so every option documented there is one the CLI really accepts.
     """
     parser = argparse.ArgumentParser(
         description="Run SIP diagnostic analysis on a pcap file to identify call quality issues like choppy audio and unexpected disconnects.",
@@ -44,6 +48,7 @@ Examples:
   %(prog)s --file wan.pcap --network-only                                          # IPsec/GRE/NHRP/BGP/OSPF/EIGRP/ICMP detectors (no AI)
   %(prog)s --file wan.pcap --network-only --detectors ipsec,gre_nhrp --json        # VPN detectors only, JSON on stdout
   %(prog)s --file wan.pcap --network-only --save_file wan-report.json              # write the report as JSON
+  %(prog)s --create-skill                                                          # write the agent skill to .claude/skills/sonic
 
 Providers:
   ollama     - Local inference (free, default) - requires Ollama installed
@@ -54,9 +59,8 @@ Providers:
     )
     
     parser.add_argument(
-        "--file", 
-        required=True,
-        help="Path to the SIP capture file (pcap/pcapng) to analyze."
+        "--file",
+        help="Path to the capture file (pcap/pcapng) to analyze. Required for every mode except --create-skill."
     )
     
     parser.add_argument(
@@ -181,8 +185,33 @@ Providers:
         action="store_true",
         help="Return quality/MOS metrics immediately, then stream LLM analysis (requires --stream)"
     )
-    
+
+    parser.add_argument(
+        "--create-skill",
+        nargs="?",
+        const=DEFAULT_SKILL_DIR,
+        metavar="DIR",
+        help="Write an Agent Skill that teaches an AI agent to use S.O.N.I.C. (SKILL.md plus reference/ files "
+             f"read on demand) into DIR (default: {DEFAULT_SKILL_DIR}), then exit. Refuses to replace a "
+             "SKILL.md it did not write."
+    )
+
+    return parser
+
+
+def main():
+    """
+    Main entry point for S.O.N.I.C. command-line interface.
+    """
+    parser = build_parser()
     args = parser.parse_args()
+
+    if args.create_skill:
+        from utils.agent_guide import create_skill_command
+        sys.exit(create_skill_command(args.create_skill))
+
+    if not args.file:
+        parser.error("the following arguments are required: --file (unless --create-skill)")
 
     # Handle network-only mode (its default report path is next to the capture)
     if args.network_only:

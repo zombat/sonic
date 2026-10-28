@@ -41,7 +41,16 @@ from analyzers.routing_health import RoutingDetector
 from extractors.network import open_network_records
 
 REPORT_SCHEMA = "sonic.network_report/1"
-DETECTOR_NAMES = ["ipsec", "gre_nhrp", "routing", "reachability", "conversations"]
+# The detector registry: name -> class, in report order. DETECTOR_NAMES, the
+# validation of a detectors list, and the generated agent guide all read it.
+DETECTOR_CLASSES = {
+    "ipsec": IPsecDetector,
+    "gre_nhrp": GreNhrpDetector,
+    "routing": RoutingDetector,
+    "reachability": ReachabilityDetector,
+    "conversations": ConversationDetector,
+}
+DETECTOR_NAMES = list(DETECTOR_CLASSES)
 VPN_DETECTORS = ["ipsec", "gre_nhrp"]
 ROUTING_DETECTORS = ["routing", "reachability"]
 
@@ -125,14 +134,7 @@ def _sip_quality(file_path: str) -> Dict[str, Any]:
 
 
 def _build_detectors(names: List[str], peers: Optional[List[str]]):
-    builders = {
-        "ipsec": lambda: IPsecDetector(peers=peers),
-        "gre_nhrp": GreNhrpDetector,
-        "routing": RoutingDetector,
-        "reachability": ReachabilityDetector,
-        "conversations": ConversationDetector,
-    }
-    return [builders[name]() for name in names]
+    return [IPsecDetector(peers=peers) if name == "ipsec" else DETECTOR_CLASSES[name]() for name in names]
 
 
 def _error(message: str, **extra) -> Dict[str, Any]:

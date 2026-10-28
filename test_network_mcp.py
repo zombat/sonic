@@ -68,13 +68,17 @@ class TestNetworkToolFunctions(unittest.TestCase):
         self.assertTrue(any(e["event"] == "neighbor_down" for e in result["failover_timeline"]))
 
     def test_tool_descriptions_teach_usage(self):
+        # fastmcp keeps only the text before the first docstring section (Args:, Returns:, ...)
+        # as the description a client sees, so returns, limits and examples live in that text.
+        tools = {tool.name: tool for tool in asyncio.run(self.server.mcp.list_tools())}
         for name in NETWORK_TOOLS:
             tool = getattr(self.server, name)
             doc = (getattr(tool, "fn", tool).__doc__ or "")
+            description = tools[name].description or ""
             with self.subTest(tool=name):
                 self.assertIn("Args:", doc)
-                self.assertIn("Returns:", doc)
-                self.assertIn("Example:", doc)
+                self.assertIn("Returns a JSON object", description)
+                self.assertIn("For example", description)
                 self.assertNotIn(chr(0x2014), doc)  # no em dashes in tool descriptions
 
 

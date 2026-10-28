@@ -8,8 +8,15 @@ assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
 Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap.
 
+The server teaches its client how to use it: the initialize result carries
+instructions (which tool for which question, cost, limits), every tool has a
+title, annotations and a description that says when to use it and what it
+returns, the guide topics are resources (sonic://guide/<topic>), and common
+investigations are prompts. All of it comes from utils/agent_guide.py.
+
 Usage:
-    python3 mcp_server.py
+    python3 mcp_server.py                     # serve MCP over stdio
+    python3 mcp_server.py --create-skill [DIR]  # write the Agent Skill and exit
 
 Configure in Claude Desktop mcp.json:
     {
@@ -47,23 +54,25 @@ from analyzers.network_orchestrator import (
     analyze_routing_capture,
     analyze_vpn_capture,
 )
-
-# Create MCP server
-mcp = FastMCP(
-    "S.O.N.I.C. VoIP and Network Analyzer",
-    instructions=(
-        "S.O.N.I.C. analyzes pcap/pcapng files on this machine. Pass absolute file paths. "
-        "For any capture that is not only VoIP (IPsec, GRE/DMVPN, BGP, OSPF, EIGRP, ICMP, ARP), "
-        "start with analyze_network_pcap: it reports which protocols are present and gives "
-        "deterministic verdicts without an LLM. Use analyze_vpn_pcap to prove inter-site traffic "
-        "is encrypted and the IPsec/DMVPN overlay formed, and analyze_routing_pcap for adjacency "
-        "health and failover timelines. For SIP/RTP calls use quick_quality_check (no LLM) or "
-        "analyze_pcap (LLM-assisted)."
-    ),
+from utils.agent_guide import (
+    DEFAULT_SKILL_DIR,
+    TOPICS,
+    WORKFLOWS,
+    build_instructions,
+    create_skill_command,
+    render_skill_md,
+    render_topic,
+    tool_options,
+    workflow_text,
 )
 
+# Create MCP server. The instructions, tool titles, annotations, prompts and
+# guide resources all come from utils/agent_guide.py, the same source the
+# --create-skill command renders the Agent Skill from.
+mcp = FastMCP("S.O.N.I.C. VoIP and Network Analyzer", instructions=build_instructions())
 
-@mcp.tool()
+
+@mcp.tool(**tool_options("analyze_pcap"))
 def analyze_pcap(
     file_path: str,
     provider: str = "ollama",
@@ -72,20 +81,31 @@ def analyze_pcap(
     enable_mos: bool = True
 ) -> Dict[str, Any]:
     """
-    Analyze a VoIP packet capture file for call quality issues.
-    
+    Diagnose the SIP calls in a capture with an LLM: a written explanation of each call
+    (why it failed, dropped, rang out, or had one-way or choppy audio) plus the
+    deterministic quality score and MOS.
+
+    Calls an LLM: tens of seconds to minutes, and with a cloud provider (anthropic,
+    openai, azure) the extracted SIP/SDP data, including authentication headers,
+    leaves this machine, so ask the user first. For numbers only, quick_quality_check
+    answers in seconds without an LLM. Needs SIP in the capture; for anything else use
+    analyze_network_pcap. SONIC_LLM_PROVIDER does not change the provider default here,
+    so pass provider explicitly.
+
+    Returns a JSON object with status, output.diagnostic_report (per-call findings,
+    overall assessment, recommendations), quality_analysis (call_quality and
+    mos_analysis when enabled), sip_data and auth_data; on failure
+    {"status": "error", "error": "..."}, for example "No SIP data found".
+    For example, analyze_pcap(file_path="/captures/call.pcapng", provider="ollama", model="fast").
+
     Args:
-        file_path: Absolute path to pcap/pcapng file on disk
-        provider: LLM provider (ollama, anthropic, openai, azure)
-        model: Analysis mode (fast, detailed, combined)
-        enable_quality: Include call quality scoring
-        enable_mos: Include MOS (Mean Opinion Score) analysis
-    
-    Returns:
-        JSON with diagnostic report, quality analysis, and recommendations
-    
-    Example:
-        analyze_pcap("/path/to/capture.pcapng", provider="anthropic", model="fast")
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        provider: LLM provider: "ollama" (local, default), "anthropic", "openai" or "azure".
+            Cloud providers need their API key in the server's environment.
+        model: "fast" (small model, quickest), "detailed" (larger model) or "combined"
+            (both, recommended, slowest).
+        enable_quality: Also run the deterministic call quality scoring (default true).
+        enable_mos: Also run the RTP MOS analysis per stream (default true).
     """
     try:
         # Validate file exists
@@ -120,22 +140,27 @@ def analyze_pcap(
         }
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("quick_quality_check"))
 def quick_quality_check(file_path: str) -> Dict[str, Any]:
     """
-    Fast quality-only analysis without AI model inference.
-    
-    Provides MOS scores, quality grades, and network metrics.
-    No LLM required - analyzes RTP streams directly.
-    
+    Score SIP/RTP call quality without an LLM: the first tool for "how good were the
+    calls in this capture". Deterministic, a few seconds.
+
+    Runs the weighted call quality scoring (network, protocol, codec and completion
+    scores, an overall score and a grade A+ to F) and the RTP MOS analysis per stream
+    (ITU-T G.107 E-model: average, worst and best MOS, a category, and what degraded
+    it). Needs SIP in the capture; for other traffic use analyze_network_pcap. For a
+    written diagnosis of why a call failed, follow with analyze_pcap (LLM).
+
+    Returns a JSON object with status, file, quality_analysis (overall_score, grade,
+    the four component scores and their details, quality_factors,
+    degradation_factors) and mos_analysis (streams, average_mos, worst_mos, best_mos,
+    overall_category, recommendations). A part that failed is reported as
+    quality_error or mos_error instead. On failure {"status": "error", "error": "..."}.
+    For example, quick_quality_check(file_path="/captures/call.pcapng").
+
     Args:
-        file_path: Absolute path to pcap/pcapng file on disk
-    
-    Returns:
-        JSON with quality score, grade, MOS analysis, network metrics
-    
-    Example:
-        quick_quality_check("/path/to/capture.pcapng")
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
     """
     try:
         # Validate file
@@ -182,16 +207,18 @@ def quick_quality_check(file_path: str) -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("list_llm_providers"))
 def list_llm_providers() -> Dict[str, Any]:
     """
-    List available LLM providers and their model options.
-    
-    Returns:
-        JSON with provider list, model mappings, and current configuration
-    
-    Example:
-        list_llm_providers()
+    List the LLM providers and models the LLM tools (analyze_pcap,
+    analyze_pcap_partial_streaming, analyze_batch_pcaps) can use, and whether each
+    cloud API key is set. No LLM is called; instant. Call it before choosing a
+    provider other than ollama.
+
+    Returns a JSON object with providers (names), models (provider to its "fast" and
+    "detailed" model names), default, and current_config (the SONIC_LLM_PROVIDER value
+    and true/false for whether ANTHROPIC_API_KEY and OPENAI_API_KEY are set; never
+    the keys themselves). For example, list_llm_providers().
     """
     try:
         providers = list_available_providers()
@@ -212,7 +239,7 @@ def list_llm_providers() -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_batch_pcaps"))
 def analyze_batch_pcaps(
     directory: str,
     provider: str = "anthropic",
@@ -220,21 +247,26 @@ def analyze_batch_pcaps(
     mode: str = "sequential"
 ) -> Dict[str, Any]:
     """
-    Batch analyze multiple pcaps in a directory.
-    
-    Supports sequential (one at a time) or parallel (multiple at once) processing.
-    
+    Diagnose every SIP capture in one directory with an LLM, one analyze_pcap run per
+    file, plus aggregate counts.
+
+    Calls an LLM once per file: minutes for a directory, and the provider default is
+    anthropic (a cloud API that needs ANTHROPIC_API_KEY and receives the SIP data), so
+    ask the user and pass provider explicitly. Reads files matching *.pcap* directly
+    in the directory (not subdirectories). For one capture use analyze_pcap; for
+    non-SIP captures call analyze_network_pcap per file.
+
+    Returns a JSON object with files (one result per capture) and aggregate
+    (successful, failed, total_tokens, total_duration); on failure {"status": "error", "error": "..."},
+    for example when the directory has no pcap files.
+    For example, analyze_batch_pcaps(directory="/captures/branch-a", provider="ollama").
+
     Args:
-        directory: Path to directory containing pcap files
-        provider: LLM provider (ollama/anthropic/openai/azure)
-        model: Analysis mode (fast/detailed)
-        mode: Processing mode (sequential/parallel)
-    
-    Returns:
-        Batch results with per-file analysis and aggregate metrics
-    
-    Example:
-        analyze_batch_pcaps("/path/to/pcaps", provider="anthropic", mode="parallel")
+        directory: Absolute path to a directory of pcap/pcapng files on the machine
+            running this server.
+        provider: LLM provider: "anthropic" (default), "ollama", "openai" or "azure".
+        model: "fast" (default) or "detailed".
+        mode: "sequential" (one file at a time, default) or "parallel" (up to 3 at once).
     """
     from ai.batch_streaming import analyze_batch, ProcessingMode
     from pathlib import Path as PathlibPath
@@ -264,26 +296,30 @@ def analyze_batch_pcaps(
         }
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_pcap_partial_streaming"))
 def analyze_pcap_partial_streaming(
     file_path: str,
     provider: str = "anthropic"
 ) -> Dict[str, Any]:
     """
-    Partial streaming: returns quality/MOS immediately, streams LLM after.
-    
-    Best for: Getting quick quality insight while LLM analysis runs in background.
-    Returns timing metrics showing how fast quality results were available.
-    
+    Run the deterministic SIP quality and MOS analysis, then the LLM diagnosis, on one
+    capture, and report how long each part took.
+
+    Calls an LLM: tens of seconds to minutes. The provider default is anthropic (a
+    cloud API that needs ANTHROPIC_API_KEY and receives the SIP data), so ask the user
+    and pass provider explicitly. The MCP result arrives once, after the LLM finishes;
+    to get the numbers sooner, call quick_quality_check first and analyze_pcap after.
+
+    Returns a JSON object with status, quality_analysis, mos_analysis, llm_analysis
+    (the diagnostic report), timing (partial_result_ms, llm_streaming_ms, total_ms)
+    and streaming_metadata (provider, tokens); on failure
+    {"status": "error", "error": "..."}.
+    For example, analyze_pcap_partial_streaming(file_path="/captures/call.pcapng", provider="openai").
+
     Args:
-        file_path: Absolute path to pcap file
-        provider: LLM provider (anthropic/openai/azure for streaming)
-    
-    Returns:
-        Complete analysis {quality, mos, llm_analysis, timing}
-    
-    Example:
-        analyze_pcap_partial_streaming("/path/to/capture.pcapng", provider="anthropic")
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        provider: LLM provider with streaming support: "anthropic" (default), "openai"
+            or "azure".
     """
     from ai.partial_streaming import run_partial_analysis_streaming
     
@@ -301,7 +337,7 @@ def analyze_pcap_partial_streaming(
         }
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_network_pcap"))
 def analyze_network_pcap(
     file_path: str,
     detectors: Optional[List[str]] = None,
@@ -313,10 +349,13 @@ def analyze_network_pcap(
 ) -> Dict[str, Any]:
     """
     Analyze any packet capture (not only VoIP) and return deterministic findings as JSON.
+    The first tool on an unknown capture.
 
     No LLM is used: every verdict comes from decoding the packets (tshark, with scapy as
-    the fallback). Use this as the first tool on an unknown capture: it reports which
-    protocols are present and runs every detector that applies.
+    the fallback), in seconds for a typical capture. It reports which protocols are
+    present and runs every detector that applies. For a focused answer use
+    analyze_vpn_pcap (encryption, IPsec, DMVPN) or analyze_routing_pcap (adjacencies,
+    failover); for SIP call quality, quick_quality_check.
 
     Detectors (pass a subset in `detectors`; default is all):
       - "ipsec": IKEv1/IKEv2 negotiation per IKE SA (outcome: established, failed,
@@ -339,6 +378,24 @@ def analyze_network_pcap(
         duplicate IPs.
       - "conversations": protocol mix by packets and bytes, top conversations, top talkers.
 
+    Returns a JSON object: status "success", schema, overall_status ("ok", "warning",
+    "problem" or "not_present"; the worst detector status, conversations and SIP
+    excluded), protocols_present, detectors_run, verdicts (detector to one sentence),
+    issues (severity, stable code, message, Wireshark frame numbers, detector; errors
+    first), timeline (t in seconds from the first frame, time, protocol, event, detail,
+    frame), capture (backend, packets, duration, missing tshark fields, warnings), one
+    section per detector, each with status, verdict and issues, and sip. Lists are cut
+    at max_items; issues_omitted and timeline_omitted count the rest. On failure
+    {"status": "error", "error": "..."}, plus valid_detectors for an unknown detector.
+
+    Limits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is
+    encrypted, so an authentication failure is inferred (small response, no ESP) and
+    labelled as a heuristic. ESP with NULL encryption cannot be told apart from real
+    encryption without keys. OSPFv3 and IS-IS are not decoded.
+
+    For example, analyze_network_pcap(file_path="/captures/hub-wan.pcap") or
+    analyze_network_pcap(file_path="/captures/r1-r2.pcap", detectors=["routing"]).
+
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
         detectors: Optional list from ["ipsec", "gre_nhrp", "routing", "reachability",
@@ -353,26 +410,6 @@ def analyze_network_pcap(
         include_sip: When SIP is present, also run the existing SIP quality scoring
             (no LLM) and attach it under "sip". For full SIP call analysis use analyze_pcap.
         max_items: Cap on the length of each list in the result (default 25).
-
-    Returns:
-        {"status": "success", "overall_status": "ok"|"warning"|"problem"|"not_present",
-         "protocols_present": [...], "detectors_run": [...], "verdicts": {detector: sentence},
-         "issues": [{severity, code, message, frames, detector}], "timeline": [{t, time,
-         protocol, event, detail, frame}], "capture": {...}, plus one section per detector
-         ("ipsec", "gre_nhrp", "routing", "reachability", "conversations") and "sip"}.
-        On failure: {"status": "error", "error": "..."}.
-        Each section has "status" and a one-sentence "verdict". Times "t" are seconds
-        from the first frame; "frames" are Wireshark frame numbers to inspect.
-        overall_status is the worst detector status (conversations and SIP excluded).
-
-    Limits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is
-    encrypted, so an authentication failure is inferred (small response, no ESP) and
-    labelled as a heuristic. ESP with NULL encryption cannot be told apart from real
-    encryption without keys. OSPFv3 and IS-IS are not decoded.
-
-    Example:
-        analyze_network_pcap("/captures/hub-wan.pcap")
-        analyze_network_pcap("/captures/r1-r2.pcap", detectors=["routing"])
     """
     try:
         return analyze_network_capture(
@@ -388,7 +425,7 @@ def analyze_network_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_vpn_pcap"))
 def analyze_vpn_pcap(
     file_path: str,
     peers: Optional[List[str]] = None,
@@ -416,26 +453,26 @@ def analyze_vpn_pcap(
 
     Where to capture: on the physical/underlay link, ESP proves encryption. If you
     capture on the tunnel interface itself you see decrypted traffic, and GRE without
-    ESP on the underlay means the tunnel has no IPsec protection.
+    ESP on the underlay means the tunnel has no IPsec protection. Seconds for a typical
+    capture.
+
+    Returns a JSON object with status, encryption_verdict, verdict, negotiation_verdict
+    and overlay_verdict first, then ipsec (peer_pairs, cleartext, ike_sas, esp_flows,
+    nat_traversal, issues), gre_nhrp (hubs, spokes, registrations, resolutions,
+    redirects, error_indications, tunnels, spoke_to_spoke_tunnels, issues), issues,
+    timeline and capture. On failure {"status": "error", "error": "..."}.
+
+    For example, analyze_vpn_pcap(file_path="/captures/hub-wan.pcap",
+    peers=["192.0.2.1", "198.51.100.2"]).
 
     Args:
-        file_path: Absolute path to a pcap/pcapng file.
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
         peers: Optional list of the VPN endpoints' WAN IP addresses. All traffic between
             any two of them is judged. Without it, pairs that spoke IKE/ESP and GRE
             endpoints are judged.
         display_filter: Optional Wireshark display filter applied first (needs tshark).
         max_packets: Optional cap on frames read.
         max_items: Cap on list lengths (default 25).
-
-    Returns:
-        {"status": "success", "encryption_verdict", "verdict", "negotiation_verdict",
-         "overlay_verdict", "ipsec": {peer_pairs, cleartext, ike_sas, esp_flows,
-         nat_traversal, issues}, "gre_nhrp": {hubs, spokes, registrations, resolutions,
-         redirects, error_indications, tunnels, spoke_to_spoke_tunnels, issues},
-         "issues", "timeline", "capture"} or {"status": "error", "error"}.
-
-    Example:
-        analyze_vpn_pcap("/captures/hub-wan.pcap", peers=["192.0.2.1", "198.51.100.2"])
     """
     try:
         return analyze_vpn_capture(file_path, peers=peers, display_filter=display_filter,
@@ -444,7 +481,7 @@ def analyze_vpn_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_routing_pcap"))
 def analyze_routing_pcap(
     file_path: str,
     display_filter: Optional[str] = None,
@@ -474,22 +511,21 @@ def analyze_routing_pcap(
     every router on that link. Issue codes are stable strings, for example
     OSPF_HELLO_INTERVAL_MISMATCH, OSPF_MTU_MISMATCH, OSPF_ONE_WAY, BGP_TCP_REFUSED,
     BGP_PEER_SILENT, EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT, ICMP_LOSS.
+    Seconds for a typical capture.
+
+    Returns a JSON object with status, verdict, reachability_verdict,
+    failover_timeline and ping_outages first, then routing (bgp sessions, ospf links,
+    eigrp links, issues), reachability (echo, icmp_errors, arp_unanswered), issues,
+    timeline and capture. On failure {"status": "error", "error": "..."}.
+
+    For example, analyze_routing_pcap(file_path="/captures/r1-r2-failover.pcap").
 
     Args:
-        file_path: Absolute path to a pcap/pcapng file.
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
         display_filter: Optional Wireshark display filter applied first (needs tshark),
             for example "ospf or icmp".
         max_packets: Optional cap on frames read.
         max_items: Cap on list lengths (default 25).
-
-    Returns:
-        {"status": "success", "verdict", "reachability_verdict", "failover_timeline",
-         "ping_outages", "routing": {"bgp": {sessions}, "ospf": {links}, "eigrp": {links},
-         issues}, "reachability": {echo, icmp_errors, arp_unanswered}, "issues",
-         "timeline", "capture"} or {"status": "error", "error"}.
-
-    Example:
-        analyze_routing_pcap("/captures/r1-r2-failover.pcap")
     """
     try:
         return analyze_routing_capture(file_path, display_filter=display_filter,
@@ -498,6 +534,67 @@ def analyze_routing_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-if __name__ == "__main__":
-    # Run MCP server
+# ---------------------------------------------------------------------------
+# Guide resources and workflow prompts (progressive disclosure for MCP clients)
+# ---------------------------------------------------------------------------
+
+def _register_guide_resource(topic: str, title: str):
+    @mcp.resource(f"sonic://guide/{topic}", name=f"guide-{topic}", title=title,
+                  description=f"S.O.N.I.C. guide: {title}. Read it when you need this area in depth.",
+                  mime_type="text/markdown")
+    async def _guide() -> str:
+        return render_topic(topic, list(await mcp.list_tools()))
+
+
+@mcp.resource("sonic://guide/overview", name="guide-overview", title="S.O.N.I.C. overview",
+              description="What S.O.N.I.C. answers, which tool for which question, and the guide topics.",
+              mime_type="text/markdown")
+def guide_overview() -> str:
+    return render_skill_md()
+
+
+for _topic, _title in TOPICS:
+    _register_guide_resource(_topic, _title)
+
+
+@mcp.prompt(name="diagnose_capture", title="Diagnose an unknown capture",
+            description="Walk through an unknown capture: protocols present, then VPN, routing and SIP as they apply.")
+def diagnose_capture(file_path: str) -> str:
+    return workflow_text("diagnose_capture", file_path=file_path)
+
+
+@mcp.prompt(name="check_vpn_encryption", title="Is the VPN traffic encrypted?",
+            description="Prove from a WAN capture whether inter-site traffic is encrypted and the IPsec/DMVPN overlay formed.")
+def check_vpn_encryption(file_path: str, peers: str = "") -> str:
+    peer_list = [p.strip() for p in peers.split(",") if p.strip()]
+    return workflow_text("check_vpn_encryption", file_path=file_path, peers=peer_list)
+
+
+@mcp.prompt(name="investigate_failover", title="Read a routing failover from a capture",
+            description="Order BGP/OSPF/EIGRP events and ping outages to measure convergence.")
+def investigate_failover(file_path: str) -> str:
+    return workflow_text("investigate_failover", file_path=file_path)
+
+
+@mcp.prompt(name="diagnose_sip_call", title="Diagnose SIP call quality",
+            description="Quality and MOS first without an LLM, then an LLM diagnosis only if wanted.")
+def diagnose_sip_call(file_path: str) -> str:
+    return workflow_text("diagnose_sip_call", file_path=file_path)
+
+
+def main(argv=None) -> int:
+    """Serve MCP over stdio, or write the Agent Skill with --create-skill."""
+    import argparse
+    parser = argparse.ArgumentParser(description="S.O.N.I.C. MCP server (stdio).")
+    parser.add_argument("--create-skill", nargs="?", const=DEFAULT_SKILL_DIR, metavar="DIR",
+                        help="Write the S.O.N.I.C. Agent Skill into DIR (default: "
+                             f"{DEFAULT_SKILL_DIR}) and exit instead of serving.")
+    args = parser.parse_args(argv)
+    if args.create_skill:
+        return create_skill_command(args.create_skill)
     mcp.run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

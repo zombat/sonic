@@ -23,7 +23,7 @@ The key to these integrations is the Model Context Protocol (MCP) server built i
 | [NetClaw](https://github.com/automateyournetwork/netclaw) / [OpenClaw](https://github.com/automateyournetwork/openclaw) | MCP server registration |
 | Claude Desktop | MCP client config |
 | Cline (VSCode) | MCP client config |
-| Claude Code / skills-based clients | `--init-skills` command |
+| Claude Code / skills-based clients | `--create-skill` command |
 | Any MCP-compatible client | stdio JSON-RPC |
 
 ---
@@ -122,27 +122,20 @@ By registering `mcp_server.py` as a tool provider, NetClaw inherits all of S.O.N
 
 ## Skills-Based Clients (Claude Code / Cline)
 
-S.O.N.I.C. ships with two Claude Code skills that any skills-aware client can use:
+S.O.N.I.C. writes one Agent Skill, `sonic`, that any skills-aware client can use. It is triggered when you mention a capture file, VoIP call quality, MOS, SIP, RTP, IPsec or VPN encryption, DMVPN, BGP, OSPF, EIGRP or a failover.
 
-- **`sonic-analysis`** — CLI analysis skill, triggered automatically when you mention pcap files, VoIP issues, jitter, call quality, MOS, SIP, RTP, etc.
-- **`sonic-mcp`** — MCP server setup and tool usage skill, triggered when configuring or using the MCP server
-
-**Install skills into your project:**
+**Write the skill into your project:**
 
 ```bash
 # From your project root (where Claude Code is running):
-sonic --init-skills
+python3 /path/to/sonic/sonic.py --create-skill
 ```
 
-This copies `.claude/skills/sonic-analysis/` and `.claude/skills/sonic-mcp/` into your current directory's `.claude/skills/` folder. Claude Code will automatically load them on the next invocation.
+This writes `.claude/skills/sonic/` in the current directory: a short `SKILL.md` (which tool or command answers which question) and `reference/` files the agent reads only when it needs them (MCP tools and parameters, network detectors and issue codes, SIP and RTP analysis, the CLI, interpreting results). Pass a directory to write it elsewhere, for example `--create-skill ~/.claude/skills/sonic`. `python3 mcp_server.py --create-skill` writes the same skill.
 
-**For systems where S.O.N.I.C. isn't installed as a package:**
+The reference files are generated from the installed code, so rerun the command after an upgrade. It replaces only files it wrote and refuses to overwrite a `SKILL.md` it did not write.
 
-```bash
-python3 /path/to/sonic/sonic.py --init-skills
-```
-
-Once installed, Claude Code will automatically guide you through CLI analysis or MCP server setup whenever you ask about VoIP captures — no manual prompting needed.
+An MCP client gets the same guidance without a skill: the server sends instructions at initialize, and serves the reference pages as `sonic://guide/<topic>` resources and four workflow prompts.
 
 ---
 
@@ -155,5 +148,8 @@ Once installed, Claude Code will automatically guide you through CLI analysis or
 | `list_llm_providers` | No | Returns available providers and current config |
 | `analyze_batch_pcaps` | Yes | Processes all pcaps in a directory |
 | `analyze_pcap_partial_streaming` | Yes | Quality first, then streams LLM — cloud providers only |
+| `analyze_network_pcap` | No | Any capture: protocols present plus IPsec, GRE/NHRP, routing, reachability and conversation detectors |
+| `analyze_vpn_pcap` | No | Encrypted or cleartext between VPN peers, IKE outcomes, DMVPN registrations |
+| `analyze_routing_pcap` | No | BGP/OSPF/EIGRP adjacency health, failover timeline, ping outages |
 
 All tools accept absolute file paths only. Relative paths will silently produce file-not-found errors.
