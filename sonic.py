@@ -52,7 +52,7 @@ Examples:
 
 Providers:
   ollama     - Local inference (free, default) - requires Ollama installed
-  anthropic  - Claude models (requires ANTHROPIC_API_KEY)
+  anthropic  - Claude models (ANTHROPIC_API_KEY from the environment or --env-file / SONIC_ENV_FILE)
   openai     - GPT models (requires OPENAI_API_KEY)
   azure      - Azure OpenAI (requires AZURE_OPENAI_KEY and endpoint config)
         """
@@ -65,9 +65,10 @@ Providers:
     
     parser.add_argument(
         "--model",
-        choices=["fast", "detailed", "combined", "all"],
+        choices=["fast", "detailed", "deep", "combined", "all"],
         default="combined",
-        help="Analysis mode: 'combined' (recommended), 'fast', 'detailed', or 'all'. Available models: qwen2.5:0.5b, qwen2.5vl:7b"
+        help="Analysis mode: 'combined' (recommended), 'fast', 'detailed', 'deep' (the provider's most capable model, "
+             "for example claude-opus-5-5), or 'all'"
     )
     
     parser.add_argument(
@@ -150,6 +151,14 @@ Providers:
     )
     
     parser.add_argument(
+        "--env-file",
+        metavar="PATH",
+        help="Dotenv file to read API keys from when they are not in the environment "
+             "(default: $SONIC_ENV_FILE). Only ANTHROPIC_API_KEY, OPENAI_API_KEY and AZURE_OPENAI_KEY are read; "
+             "values are never printed"
+    )
+
+    parser.add_argument(
         "--api-key",
         help="API key for cloud providers (optional, prefers environment variable - ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)"
     )
@@ -205,6 +214,13 @@ def main():
     """
     parser = build_parser()
     args = parser.parse_args()
+
+    from utils.credentials import EnvFileError, configure, install_output_redaction
+    install_output_redaction()
+    try:
+        configure(args.env_file)
+    except EnvFileError as exc:
+        parser.error(str(exc))
 
     if args.create_skill:
         from utils.agent_guide import create_skill_command
