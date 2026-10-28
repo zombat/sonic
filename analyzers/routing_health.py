@@ -34,8 +34,8 @@ from collections import Counter
 from typing import Any, Dict, List, Optional
 
 from analyzers.network_common import (
-    BGP_TYPES, EIGRP_OPCODES, Context, add_frame, bgp_error_hint, bgp_error_name, cap, make_event,
-    make_issue, median, pair_key, sort_issues, status_from_issues, worst_status,
+    BGP_CAPABILITIES, BGP_TYPES, EIGRP_OPCODES, Context, add_frame, bgp_error_hint, bgp_error_name, cap,
+    make_event, make_issue, median, pair_key, sort_issues, status_from_issues, worst_status,
 )
 
 
@@ -59,9 +59,14 @@ class _BgpConnection:
         self.down_t = None
         self.down_reason = None
         self.last_msg_t: Dict[str, float] = {}
+        self.last_msg_n: Dict[str, int] = {}
         self.max_gap: Dict[str, float] = {}
         self.over_hold: List[Dict[str, Any]] = []
         self.frames: List[int] = []
+        self.syn_mss: Dict[str, Optional[int]] = {}      # MSS option in each side's SYN or SYN-ACK
+        self.syn_frames: Dict[str, int] = {}
+        self.down_cause = None
+        self.down_frame = None
 
     def hold_time(self) -> Optional[int]:
         holds = [o["hold"] for o in self.opens.values() if o.get("hold") is not None]
@@ -71,10 +76,11 @@ class _BgpConnection:
 class BgpAnalyzer:
     """Streaming BGP session analysis."""
 
-    def __init__(self):
+    def __init__(self, expected_mss: Optional[int] = None):
         self.connections: Dict[tuple, List[_BgpConnection]] = {}
         self.sessions: Dict[tuple, Dict[str, Any]] = {}
         self.messages = 0
+        self.expected_mss = expected_mss
 
     def _session(self, a, b):
         key = pair_key(a, b)
@@ -89,7 +95,8 @@ class BgpAnalyzer:
         sp = sess["speakers"].get(ip)
         if sp is None:
             sp = {"as": None, "router_id": None, "hold_time": None, "messages": Counter(), "prefixes_announced": 0,
-                  "prefixes_withdrawn": 0, "end_of_rib_t": None, "keepalive_gaps": [], "last_keepalive_t": None}
+                  "prefixes_withdrawn": 0, "end_of_rib_t": None, "keepalive_gaps": [], "last_keepalive_t": None,
+                  "capabilities": None, "first_update_t": None, "last_update_t": None, "updates": []}
             sess["speakers"][ip] = sp
         return sp
 
@@ -118,12 +125,15 @@ class BgpAnalyzer:
             conn.syn_count += 1
         elif flags & 0x02 and flags & 0x10:
             conn.synack = True
+        if flags & 0x02 and src not in conn.syn_mss:
+            conn.syn_mss[src] = tcp.get("mss")
+            conn.syn_frames[src] = n
         if flags & 0x04:
             conn.rst_from = src
-            self._close(sess, conn, t, n, f"TCP RST from {src}")
+            self._close(sess, conn, t, n, f"TCP RST from {src}", "tcp_rst")
         if flags & 0x01:
             conn.fin_from.add(src)
-            self._close(sess, conn, t, n, f"TCP FIN from {src}")
+            self._close(sess, conn, t, n, f"TCP FIN from {src}", "tcp_fin")
         messages = rec.get("bgp", [])
         for msg in messages:
             self.messages += 1
@@ -133,16 +143,27 @@ class BgpAnalyzer:
             sp = self._speaker(sess, src)
             sp["prefixes_announced"] += rec.get("bgp_nlri", 0)
             sp["prefixes_withdrawn"] += rec.get("bgp_withdrawn", 0)
+            if rec.get("bgp_nlri") or rec.get("bgp_withdrawn"):
+                if sp["first_update_t"] is None:
+                    sp["first_update_t"] = t
+                sp["last_update_t"] = t
+                if len(sp["updates"]) < 200:
+                    sp["updates"].append({"t": t, "frame": n, "announced": rec.get("bgp_nlri", 0),
+                                          "withdrawn": rec.get("bgp_withdrawn", 0)})
             if rec.get("bgp_withdrawn"):
                 sess["events"].append(("withdraw", t, n, f"{src} withdrew {rec['bgp_withdrawn']} prefix(es)"))
+            if rec.get("bgp_nlri"):
+                sess["events"].append(("update", t, n, f"{src} announced {rec['bgp_nlri']} prefix(es)"))
 
-    def _close(self, sess, conn, t, n, reason):
+    def _close(self, sess, conn, t, n, reason, cause):
         if conn.closed:
             return
         conn.closed = True
         if conn.established_t is not None and conn.down_t is None:
             conn.down_t = t
             conn.down_reason = conn.down_reason or reason
+            conn.down_cause = conn.down_cause or cause
+            conn.down_frame = n
             sess["downs"] += 1
             sess["events"].append(("down", t, n, f"session down ({conn.down_reason})"))
 
@@ -159,10 +180,13 @@ class BgpAnalyzer:
             if conn.established_t is not None and hold and gap > hold:
                 conn.over_hold.append({"speaker": src, "gap_s": round(gap, 3), "hold_time": hold, "frame": n, "t": t})
         conn.last_msg_t[src] = t
+        conn.last_msg_n[src] = n
         if mtype == 1:
             asn = msg.get("as4") or msg.get("myas")
             conn.opens[src] = {"as": asn, "hold": msg.get("hold"), "router_id": msg.get("bgp_id")}
             sp["as"], sp["hold_time"], sp["router_id"] = asn, msg.get("hold"), msg.get("bgp_id")
+            if msg.get("caps") is not None:
+                sp["capabilities"] = [BGP_CAPABILITIES.get(c, f"capability {c}") for c in msg["caps"]]
             sess["events"].append(("open", t, n, f"OPEN from {src}: AS {asn}, hold {msg.get('hold')} s, "
                                                  f"router ID {msg.get('bgp_id')}"))
         elif mtype == 4:
@@ -190,9 +214,12 @@ class BgpAnalyzer:
                     "while_established": conn.established_t is not None}
             sess["notifications"].append(note)
             conn.down_reason = f"NOTIFICATION from {src}: {name}"
+            conn.down_cause = "hold_timer_expired" if msg.get("major") == 4 else (
+                "bfd_down" if (msg.get("major"), msg.get("minor")) == (6, 10) else "notification")
             sess["events"].append(("notification", t, n, f"NOTIFICATION {src}->{dst}: {name}"))
             if conn.established_t is not None and conn.down_t is None:
                 conn.down_t = t
+                conn.down_frame = n
                 sess["downs"] += 1
                 sess["events"].append(("down", t, n, f"session down ({conn.down_reason})"))
 
@@ -220,11 +247,21 @@ class BgpAnalyzer:
             hold = next((c.hold_time() for c in reversed(conns) if c.hold_time() is not None), None)
             speakers = {}
             for ip, sp in sess["speakers"].items():
+                gaps = sp["keepalive_gaps"]
                 speakers[ip] = {"as": sp["as"], "router_id": sp["router_id"], "hold_time_offered": sp["hold_time"],
+                                "capabilities": sp["capabilities"],
                                 "messages": dict(sp["messages"]), "prefixes_announced": sp["prefixes_announced"],
                                 "prefixes_withdrawn": sp["prefixes_withdrawn"],
                                 "end_of_rib_t": ctx.rel(sp["end_of_rib_t"]),
-                                "keepalive_interval_s": round(median(sp["keepalive_gaps"]), 3) if sp["keepalive_gaps"] else None}
+                                "keepalive_interval_s": round(median(gaps), 3) if gaps else None,
+                                "keepalive_interval_min_s": round(min(gaps), 3) if gaps else None,
+                                "keepalive_interval_max_s": round(max(gaps), 3) if gaps else None,
+                                "first_update_t": ctx.rel(sp["first_update_t"]),
+                                "last_update_t": ctx.rel(sp["last_update_t"]),
+                                "updates": [{"t": ctx.rel(u["t"]), "frame": u["frame"], "announced": u["announced"],
+                                             "withdrawn": u["withdrawn"]} for u in sp["updates"][:10]]}
+            downs = self._downs(conns, ctx, label, issues)
+            mss = self._mss(conns, label, issues)
             ases = {sp["as"] for sp in sess["speakers"].values() if sp["as"] is not None}
             ibgp = len(ases) == 1 and len(sess["speakers"]) == 2
 
@@ -278,6 +315,8 @@ class BgpAnalyzer:
             sessions_out.append({
                 "peers": list(key), "state": state, "ibgp": ibgp, "over_gre": sess["over_gre"],
                 "negotiated_hold_time": hold,
+                "expected_keepalive_interval_s": round(hold / 3, 3) if hold else None,
+                "downs": downs, "tcp_mss": mss,
                 "speakers": speakers, "tcp_connections": len(conns), "times_established": sess["established"],
                 "times_down": sess["downs"],
                 "notifications": [{k: (ctx.rel(v) if k == "t" else v) for k, v in note.items()}
@@ -287,7 +326,71 @@ class BgpAnalyzer:
             })
         listed, omitted = cap(sessions_out, ctx.max_items)
         return {"sessions": listed, "sessions_omitted": omitted, "messages": self.messages,
-                "established_sessions": sum(1 for s in sessions_out if s["state"] == "established")}
+                "established_sessions": sum(1 for s in sessions_out if s["state"] == "established"),
+                "expected_mss": self.expected_mss}
+
+    @staticmethod
+    def _downs(conns, ctx, label, issues) -> List[Dict[str, Any]]:
+        """Why each established connection went down: hold timer, NOTIFICATION, RST or FIN."""
+        out = []
+        for conn in conns:
+            if conn.down_t is None:
+                continue
+            hold = conn.hold_time()
+            silence = {ip: round(conn.down_t - t_last, 3) for ip, t_last in conn.last_msg_t.items()
+                       if t_last <= conn.down_t}
+            # The side that went quiet longest before the session dropped.
+            quiet_ip = max(silence, key=silence.get) if silence else None
+            cause = conn.down_cause or "unknown"
+            explanation = {
+                "hold_timer_expired": "a NOTIFICATION 'Hold Timer Expired' was sent: the other side was silent for "
+                                      "the whole hold time",
+                "notification": "an explicit NOTIFICATION closed the session",
+                "bfd_down": "BFD declared the neighbor down (NOTIFICATION Cease / BFD Down)",
+                "tcp_rst": "TCP RST with no NOTIFICATION before it",
+                "tcp_fin": "TCP FIN with no NOTIFICATION before it",
+            }.get(cause, "no closing message seen")
+            if cause in ("tcp_rst", "tcp_fin") and hold and quiet_ip and silence[quiet_ip] >= hold * 0.9:
+                cause = "hold_timer_expired_inferred"
+                explanation = (f"{quiet_ip} was silent {silence[quiet_ip]} s (hold time {hold} s) before the TCP "
+                               "close and no NOTIFICATION was captured: the hold timer most likely expired")
+            out.append({"t": ctx.rel(conn.down_t), "frame": conn.down_frame, "cause": cause, "reason": conn.down_reason,
+                        "explanation": explanation, "hold_time": hold, "silence_before_down_s": silence,
+                        "quietest_speaker": quiet_ip,
+                        "quietest_last_message_t": ctx.rel(conn.last_msg_t.get(quiet_ip)) if quiet_ip else None,
+                        "quietest_last_message_frame": conn.last_msg_n.get(quiet_ip) if quiet_ip else None})
+        return out
+
+    def _mss(self, conns, label, issues) -> List[Dict[str, Any]]:
+        """MSS option of each SYN and SYN-ACK, checked against the expected clamp when one is given."""
+        out = []
+        for index, conn in enumerate(conns):
+            if not conn.syn_mss:
+                continue
+            entry = {"connection": index + 1, "syn_from": conn.syn_from, "mss": dict(conn.syn_mss),
+                     "frames": dict(conn.syn_frames)}
+            if self.expected_mss:
+                verdicts = {}
+                for ip, value in conn.syn_mss.items():
+                    if value is None:
+                        verdicts[ip] = "no_mss_option"
+                    elif value > self.expected_mss:
+                        verdicts[ip] = "above_expected"
+                    else:
+                        verdicts[ip] = "ok"
+                entry["check"] = verdicts
+                bad = {ip: v for ip, v in verdicts.items() if v != "ok"}
+                if bad:
+                    issues.append(make_issue(
+                        "warning", "BGP_MSS_NOT_CLAMPED",
+                        f"BGP TCP connection {index + 1} on {label}: "
+                        + ", ".join(f"{ip} offered MSS {conn.syn_mss[ip]}" if v == "above_expected" else
+                                    f"{ip} sent no MSS option" for ip, v in bad.items())
+                        + f" (expected {self.expected_mss} or less). The value is what crossed this capture point: "
+                          "'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+                        [conn.syn_frames[ip] for ip in bad], expected_mss=self.expected_mss))
+            out.append(entry)
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +420,7 @@ class OspfAnalyzer:
     def __init__(self):
         self.routers: Dict[tuple, Dict[str, Any]] = {}
         self.exchange: Dict[tuple, Counter] = {}
+        self.dbds: Dict[tuple, List[Dict[str, Any]]] = {}
         self.events: List[tuple] = []
         self.packets = 0
 
@@ -346,6 +450,11 @@ class OspfAnalyzer:
         else:
             if ospf["type"] == 2 and ospf.get("mtu") is not None:
                 router["mtu"] = ospf["mtu"]
+            if ospf["type"] == 2:
+                dbds = self.dbds.setdefault((src, dst), [])
+                if len(dbds) < 500:
+                    dbds.append({"t": t, "n": n, "flags": ospf.get("dbd_flags") or 0, "seq": ospf.get("dd_seq"),
+                                 "mtu": ospf.get("mtu"), "rid": ospf["rid"]})
             self.exchange.setdefault((src, dst), Counter())[ospf["type"]] += 1
 
     def _hello(self, router, ospf, t, n):
@@ -407,6 +516,67 @@ class OspfAnalyzer:
             groups.setdefault(uf.find(key), []).append(key)
         return list(groups.values())
 
+    def _database_exchange(self, a, b, exch, ctx, issues) -> Optional[Dict[str, Any]]:
+        """
+        EXSTART/EXCHANGE progress from the DB Description packets between two routers.
+
+        EXSTART: both send DBDs with the I (init), M and MS bits until one agrees to be
+        slave and echoes the master's sequence number without the I bit. A DBD repeated
+        with the I bit and never answered without it is a stuck EXSTART; a non-initial
+        DBD sequence number retransmitted and never echoed is a stuck EXCHANGE.
+        """
+        ab = self.dbds.get((a["address"], b["address"]), [])
+        ba = self.dbds.get((b["address"], a["address"]), [])
+        if not ab and not ba:
+            return None
+        label = f"{a['rid']} <-> {b['rid']}"
+
+        def side(dbds, sender, other):
+            init = [d for d in dbds if d["flags"] & 0x04]
+            later = [d for d in dbds if not d["flags"] & 0x04]
+            seqs = Counter(d["seq"] for d in later)
+            echoed = {d["seq"] for d in other if not d["flags"] & 0x04}
+            retransmitted = {seq: count for seq, count in seqs.items() if count >= 3 and seq not in echoed}
+            return {"router": sender["rid"], "dbd_sent": len(dbds), "initial_dbd_sent": len(init),
+                    "non_initial_dbd_sent": len(later), "mtu": dbds[0]["mtu"] if dbds else None,
+                    "unacknowledged_sequences": {str(k): v for k, v in retransmitted.items()},
+                    "first_t": ctx.rel(dbds[0]["t"]) if dbds else None,
+                    "last_t": ctx.rel(dbds[-1]["t"]) if dbds else None, "frames": [d["n"] for d in dbds][:10]}
+
+        sa, sb = side(ab, a, ba), side(ba, b, ab)
+        progressed = sa["non_initial_dbd_sent"] or sb["non_initial_dbd_sent"]
+        lsa = (exch[3] + exch[4] + exch[5]) > 0
+        state = "exchange_or_later" if progressed else "exstart"
+        if lsa:
+            state = "loading_or_full"
+        stuck = None
+        repeated_init = max(sa["initial_dbd_sent"], sb["initial_dbd_sent"]) >= 3
+        if not lsa and not progressed and repeated_init:
+            stuck = "exstart"
+        elif not lsa and progressed and (sa["unacknowledged_sequences"] or sb["unacknowledged_sequences"]
+                                         or repeated_init):
+            stuck = "exchange"
+        mtus = {s["router"]: s["mtu"] for s in (sa, sb) if s["mtu"] is not None}
+        cause = None
+        if stuck:
+            if len(set(mtus.values())) > 1:
+                cause = ("interface MTU mismatch in the DBDs (" + ", ".join(f"{r}={m}" for r, m in mtus.items())
+                         + "): the router with the smaller MTU drops the larger router's DBDs")
+            elif 0 in mtus.values():
+                cause = "one side advertises MTU 0 (mtu-ignore) and the exchange still stalls: DBDs are being lost"
+            else:
+                cause = ("DBDs are not acknowledged with the same MTU on both sides: unicast between the neighbors "
+                         "lost or filtered, duplicate router IDs, or one side cannot send large packets")
+            frames = sa["frames"][-3:] + sb["frames"][-3:]
+            issues.append(make_issue("error", f"OSPF_{stuck.upper()}_STUCK",
+                                     f"OSPF adjacency {label} is stuck in {stuck.upper()}: "
+                                     f"{sa['router']} sent {sa['dbd_sent']} DBD(s), {sb['router']} sent "
+                                     f"{sb['dbd_sent']}, and the exchange never progressed; cause: {cause}", frames))
+            last = max((ab + ba), key=lambda d: d["t"])
+            self.events.append(("dbd_stuck", last["t"], last["n"], f"OSPF {label} stuck in {stuck.upper()}"))
+        return {"state_hint": state, "stuck": stuck, "cause": cause, "sides": [sa, sb],
+                "lsa_exchange_seen": lsa}
+
     def report(self, ctx: Context, issues, events) -> Dict[str, Any]:
         links_out = []
         rid_addresses: Dict[str, set] = {}
@@ -447,10 +617,14 @@ class OspfAnalyzer:
             mtus = {r["rid"]: r["mtu"] for r in routers if r["mtu"] is not None}
             if len(set(mtus.values())) > 1:
                 mismatches.append({"parameter": "interface_mtu", "values": mtus})
+                mtu_frames = [d["n"] for (s, _), dl in self.dbds.items()
+                              if s in {r["address"] for r in routers} for d in dl[:1]]
                 issues.append(make_issue("error", "OSPF_MTU_MISMATCH",
                                          f"OSPF DB Description MTU differs on {network or 'link'}: "
                                          + ", ".join(f"{rid}={m}" for rid, m in mtus.items())
-                                         + "; the adjacency sticks in EXSTART/EXCHANGE", []))
+                                         + "; the router with the smaller MTU rejects the other's DBD and the "
+                                           "adjacency sticks in EXSTART/EXCHANGE (fix the IP MTU, or "
+                                           "'ip ospf mtu-ignore')", mtu_frames, values=mtus))
 
             adjacencies = []
             for i, a in enumerate(routers):
@@ -475,8 +649,10 @@ class OspfAnalyzer:
                             issues.append(make_issue(
                                 "warning", "OSPF_NO_ADJACENCY",
                                 f"{a['rid']} and {b['rid']} send hellos on the same link but never list each other", []))
+                    database = self._database_exchange(a, b, exch, ctx, issues)
                     adjacencies.append({"routers": [a["rid"], b["rid"]], "state_hint": state,
-                                        "dbd_exchanged": exch[2] > 0, "lsa_exchange_seen": (exch[3] + exch[4] + exch[5]) > 0})
+                                        "dbd_exchanged": exch[2] > 0, "lsa_exchange_seen": (exch[3] + exch[4] + exch[5]) > 0,
+                                        "database_exchange": database})
 
             routers_out = []
             for r in routers:
@@ -690,8 +866,8 @@ class RoutingDetector:
 
     name = "routing"
 
-    def __init__(self):
-        self.bgp = BgpAnalyzer()
+    def __init__(self, expected_mss: Optional[int] = None):
+        self.bgp = BgpAnalyzer(expected_mss=expected_mss)
         self.ospf = OspfAnalyzer()
         self.eigrp = EigrpAnalyzer()
 
@@ -770,6 +946,7 @@ class RoutingDetector:
         return text + "."
 
 
-FAILOVER_EVENTS = {"established", "down", "notification", "refused", "end_of_rib", "withdraw",
+FAILOVER_EVENTS = {"established", "down", "notification", "refused", "end_of_rib", "withdraw", "update",
+                   "dbd_stuck",
                    "hello_gap", "hellos_resumed", "neighbor_up", "neighbor_down", "dr_change", "router_silent",
                    "goodbye", "hold_expired", "adjacency_init", "query", "sia_query", "neighbor_silent"}
