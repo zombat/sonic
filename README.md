@@ -51,6 +51,8 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **GRE / DMVPN**: GRE keys and tunnels, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles
 - **Routing health**: BGP, OSPF and EIGRP adjacency checks, mismatched parameters, resets and a failover timeline
 - **Reachability**: ICMP echo loss, RTT and outage windows, ICMP errors, ARP without replies, top talkers
+- **Data plane**: path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP and RTP quality
+- **Several captures at once**: follow packets through NAT and across links (translations, drops, asymmetric paths), and one merged event timeline with failover timing against thresholds
 - See the Network and VPN Detectors section below
 
 ## 📋 Prerequisites
@@ -358,15 +360,51 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - ARP requests that never got a reply, gratuitous ARP, and one address claimed by two MAC addresses.
 - Protocols by packet and byte count, top conversations and top talkers.
 
+### Path MTU and fragmentation (`path_mtu`)
+- ICMP Fragmentation Needed (type 3 code 4) and ICMPv6 Packet Too Big: the router, the next-hop MTU it advertises (or none, from a pre-RFC 1191 router), and the probe frame it refers to, matched by the IP identification copied into the error.
+- PMTUD black holes: DF echo probes up to some size answered while larger ones vanished with no ICMP, reported with the bracket the path MTU lies in (`path MTU between 1400 and 1499`); the same for TCP when large DF segments are retransmitted and never acknowledged while smaller ones were. Same-size probes both answered and lost are loss, not a black hole.
+- IP fragments per datagram: complete, incomplete (first, middle or last piece missing at this capture point), overlapping, the size of the first fragment (the MTU of the link where the datagram was split), and ICMP reassembly-time-exceeded.
+
+### ESP overhead (`esp_overhead`)
+- ESP is encrypted, so this is an estimate from sizes, and says so. Every ESP packet is outer IP + (UDP for NAT-T) + 8 + IV + ciphertext + ICV, and the ciphertext is aligned to the cipher's block. Per SA, the sizes are tested against cipher families (AES-GCM/CCM/ChaCha20-Poly1305, AES-CBC with SHA1/SHA256/SHA384/SHA512, 3DES, NULL). A family fitting four or more distinct sizes is a high-confidence estimate; with fewer sizes the capture-wide estimate is used.
+- Per family: inner packet size bounds and the per-packet overhead in tunnel mode and in transport mode over GRE (the DMVPN case; `gre_header_bytes` 8 with a tunnel key, 4 without), the largest inner packet that fits `transport_mtu` unfragmented, and whether a `tunnel_mtu` packet (for example `ip mtu 1400`) still fits once encrypted.
+- ESP packets fragmented after encryption at the transport edge, with frames.
+
+### TCP health (`tcp`)
+- Per connection, from raw sequence numbers: SYN without SYN-ACK (and any ICMP error naming it), SYN answered by RST, retransmissions (fast after duplicate ACKs, or after a timeout, with the observed timeout), gaps lost before the capture point, duplicate ACK runs, zero-window periods with their duration, window-full events, resets, MSS, window scale, SACK and timestamps, handshake round trips, RTT samples and the RFC 6298 RTO they imply.
+- One verdict per connection, backed by counts and frames: `no_answer`, `refused`, `receiver_buffer_exhausted` ("the endpoint's receive buffer is exhausted"), `loss_on_path`, `receive_window_limited`, `reset`, `healthy`.
+
+### TLS (`tls`)
+- Found by content on any TCP port; the first bytes of each direction are reassembled, so a ClientHello split across segments is read. ClientHello: SNI, offered versions, cipher suites, ALPN, groups, key shares, Encrypted Client Hello offered (GREASE dropped). ServerHello: chosen version, suite, key share, HelloRetryRequest. Cleartext alerts (`handshake_failure`, `protocol_version`, ...).
+- TLS 1.2 and older send the certificate in cleartext: the leaf's subject, issuer, DNS names and validity at capture time are read (with the `cryptography` package). TLS 1.3 encrypts the certificate and the server's ALPN choice; the report says they are not visible.
+- A baseline passed as a parameter, for example `{"versions": ["TLS1.3"]}` or `{"min_version": "TLS1.2", "cipher_suites": [...], "require_sni": true, "require_forward_secrecy": true}`. Without one, versions below TLS 1.2 and weak chosen suites (RC4, 3DES, NULL, EXPORT) are still flagged.
+
+### QoS (`qos`)
+- DSCP per flow on the outer header, ECN congestion-experienced marks.
+- GRE: inner DSCP against outer DSCP packet by packet (copied, rewritten, or marked inside and 0 outside).
+- ESP: the outer DSCP per SA. One capture cannot see the inner header; several markings on one SA show DSCP is copied per packet. Compare an inside and an outside capture with `correlate_pcaps` to see a rewrite directly.
+- RTP streams found by header shape on any UDP port: loss, duplicates, reordering, RFC 3550 jitter, the DSCP they carry (voice not marked EF is flagged), and a MOS estimate from the existing E-model in `analyzers/rtp_mos_analysis.py`. Latency needs two capture points.
+
+### Several captures: correlation (`correlate_pcaps`) and a merged timeline (`merge_pcap_timelines`)
+- `correlate_pcaps` takes two or more captures with a label each (inside/outside of a NAT router, WAN1/WAN2) and matches the same packet across them by fields NAT leaves alone: ESP SPI and sequence, TCP sequence and acknowledgement numbers with a payload hash, UDP payload hash, ICMP echo sequence with IP identification. It reports NAT translations (`at_inside 10.0.0.10:40000`, `at_outside 203.0.113.5:61000`), per conversation where each direction was seen and a verdict (`reply_lost`: "the SYN-ACK was last seen at outside and never reached inside", `partial_loss`, `asymmetric`: "out through wan1, back through wan2", `seen_only_at`: a probe that crossed one device but not the next while other traffic between the same addresses did, `not_on_other_paths`, `ok`), transit time and TTL decrement between capture points, and DSCP rewritten between them. Captures are merged by timestamp and streamed: a packet waits at most `window_s` for its copy and at most `max_packets_held` packets wait at once. A capture point that was not recording at the time is not counted as having missed a packet.
+- `merge_pcap_timelines` analyzes each capture once with every detector and merges their events by timestamp into one timeline, each tagged with its capture label. Measurements pick two events by selector (`capture`, `detector`, `protocol`, `event`, `contains`, `occurrence`) and report the delta against `max_s` (`within`, `exceeded`, `not_found`); without measurements, every ping outage and each routing down event paired with the next up event is measured against `failover_max_s`. `output_path` writes the result as JSON beside the run's captures.
+
 ### What packets cannot show
 - A verdict covers only what crossed the capture point. Capture on the underlay (WAN) link to prove encryption; a capture on the tunnel interface shows decrypted traffic.
 - IKEv2 IKE_AUTH is encrypted, so `AUTHENTICATION_FAILED` is never visible. S.O.N.I.C. reports `established` only when ESP follows, and flags a small IKE_AUTH response with no ESP as `auth_likely_failed`, labelled as a heuristic.
 - ESP with NULL encryption cannot be told apart from encrypted ESP without the keys.
 - With IPsec tunnel protection, GRE, NHRP and the routing protocols travel inside ESP and are not visible on the WAN.
 - OSPFv3, IS-IS and IPv6 routing are not decoded. EIGRP speakers are grouped per link by unicast exchange or a shared /24.
+- A PMTUD black hole means no ICMP was seen at this point; an ICMP filtered before it looks the same. IPv6 extension headers (including fragment headers) are not decoded.
+- ESP cipher family and mode are estimates from sizes; AES-GCM, AES-CCM and ChaCha20-Poly1305 look identical.
+- RTT and retransmissions are measured from the capture point. QUIC, DTLS and STARTTLS are not decoded. Certificate trust is not judged.
+- Correlation needs fields that survive the devices in between: a device that randomizes TCP sequence numbers or rewrites payloads breaks matching for those flows, and times between capture points include any clock difference between the capturing hosts.
+- Every data plane section carries its own `limits` list.
 
 ### Test fixtures
 `tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call.
+
+`tests/fixtures/generate_dataplane_fixtures.py` builds the data plane fixtures the same way (names start with `dp_`): Fragmentation Needed, a PMTUD black hole (ICMP and TCP) beside plain loss, complete, incomplete and overlapping fragments, ESP sizes for AES-GCM, AES-CBC/SHA1 and NAT-T with an ESP packet fragmented after encryption, seven TCP connection outcomes, four TLS handshakes (1.3, 1.2 split over two segments with an expired certificate, 1.0 with RC4, a fatal alert), RTP with and without EF plus GRE marking copied and lost, and two multi-capture sets (inside/outside of a NAT router; a LAN with WAN1 out and WAN2 back). `test_dataplane_detectors.py` runs every detector on both backends, the correlation and timeline tools, and the same code over real lab captures when they are present.
 
 ## 🏗️ Architecture
 
@@ -607,12 +645,13 @@ Deterministic analysis of any capture (no LLM): IPsec/IKE/ESP, GRE/NHRP, BGP/OSP
 
 **Parameters**:
 - `file_path` (required): Absolute path to pcap/pcapng file
-- `detectors` (optional): Subset of `ipsec`, `gre_nhrp`, `routing`, `reachability`, `conversations` (default: all)
+- `detectors` (optional): Subset of `ipsec`, `gre_nhrp`, `routing`, `reachability`, `path_mtu`, `esp_overhead`, `tcp`, `tls`, `qos`, `conversations` (default: all)
 - `peers` (optional): IP addresses whose mutual traffic the encryption verdict judges
 - `display_filter` (optional): Wireshark display filter applied first (needs tshark)
 - `max_packets` (optional): Read at most this many frames
 - `include_sip` (optional): Run the SIP quality scoring when SIP is present (default: true)
 - `max_items` (optional): Cap on each list in the result (default: 25)
+- `options` (optional): Per-detector settings, `{"esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline": {...}}}`
 
 **Example**:
 ```
@@ -637,6 +676,36 @@ BGP, OSPF and EIGRP health plus reachability. Returns the routing `verdict`, `re
 **Example**:
 ```
 Claude: Did OSPF reconverge after R3 failed? Use /captures/r1-r3.pcap
+```
+
+#### `analyze_data_plane_pcap`
+Path MTU and fragmentation, ESP overhead, TCP health, TLS against a baseline, and QoS with RTP quality, with one verdict per detector first (`path_mtu_verdict`, `esp_overhead_verdict`, `tcp_verdict`, `tls_verdict`, `qos_verdict`).
+
+**Parameters**: `file_path`, and optional `tls_baseline`, `transport_mtu` (default 1500), `tunnel_mtu`, `gre_header_bytes` (default 8), `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Will a 1400-byte tunnel MTU fragment after encryption on /captures/br1-wan.pcap?
+```
+
+#### `correlate_pcaps`
+Follows packets across two or more labelled captures: NAT translations, replies lost between two points, asymmetric paths, probes stopped by a device, transit time and TTL decrement, DSCP rewrites.
+
+**Parameters**: `captures` (`[{"path", "label"}, ...]`), and optional `window_s` (default 2), `max_packets_held` (default 200000), `clock_offsets_s`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Correlate /captures/edge-inside.pcap (inside) and /captures/edge-outside.pcap (outside): where did the SYN-ACK go?
+```
+
+#### `merge_pcap_timelines`
+One timeline of every detector's events across several captures, with measured deltas between chosen events against thresholds, optionally written to a JSON file.
+
+**Parameters**: `captures`, and optional `measurements`, `detectors`, `failover_max_s`, `clock_offsets_s`, `max_events`, `output_path`, `overwrite`
+
+**Example**:
+```
+Claude: Merge /run/wan1.pcap and /run/lan.pcap and check the failover finished within 30 seconds
 ```
 
 Each tool's description (what an MCP client shows the agent) explains its inputs, outputs, verdict values and limits, so an agent can learn the tool from the tool itself.

@@ -5,6 +5,25 @@ All notable changes to S.O.N.I.C. (SIP Observation and Network Inspection Consol
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Data plane detectors** (deterministic, no LLM), run by default in `analyze_network_capture`:
+  - `path_mtu`: ICMP Fragmentation Needed / Packet Too Big with the advertised MTU matched to the probe frame, PMTUD black holes for DF pings and TCP (with the bracket the path MTU lies in), IP fragments complete, incomplete and overlapping, reassembly timeouts
+  - `esp_overhead`: ESP sizes per SA tested against cipher families, inner size bounds and overhead in tunnel and transport-over-GRE mode, tunnel MTU fit against the transport MTU, ESP fragmented after encryption; labelled as estimates
+  - `tcp`: per-connection health from raw sequence numbers (no answer, refused, fast and timeout retransmissions, gaps, duplicate ACKs, zero window with duration, window full, resets, MSS and window scale, RTT and RFC 6298 RTO) with one verdict per connection
+  - `tls`: ClientHello and ServerHello on any port with segment reassembly, TLS 1.2 certificates (TLS 1.3 reported as encrypted), cleartext alerts, and a baseline check passed as a parameter
+  - `qos`: DSCP per flow, GRE inner against outer DSCP, ESP DSCP per SA, RTP loss, RFC 3550 jitter and DSCP with a MOS estimate from the existing E-model, ECN CE
+- **Multi-capture tools**: `correlate_captures` (`analyzers/correlate.py`) follows packets across labelled captures for NAT translations, lost replies, asymmetric paths, stopped probes, transit time, TTL decrement and DSCP rewrites, streaming with a bounded match window; `merge_timelines` (`analyzers/timeline.py`) merges every detector's events from several captures and measures deltas between chosen events against thresholds, optionally writing JSON
+- **MCP tools**: `analyze_data_plane_pcap`, `correlate_pcaps`, `merge_pcap_timelines`; `analyze_network_pcap` takes per-detector `options`
+- **Tests**: `test_dataplane_detectors.py` (both backends, synthetic fixtures from `tests/fixtures/generate_dataplane_fixtures.py`, real lab captures when present) and new MCP tool tests
+
+### Changed
+- Every network record carries `dp` (IP identification, DF/MF, fragment offset, DSCP/ECN, raw TCP sequence numbers, window and options, payload head and hash, ICMP next-hop MTU) from both backends (`extractors/dataplane.py`)
+- tshark runs with `ip.defragment:FALSE`, so fragments stay one record per frame as on the scapy backend; the scapy backend reports a UDP length from the header, as tshark does
+
+---
+
 ## [3.1.0] - 2026-10-25
 
 ### Added
