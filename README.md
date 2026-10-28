@@ -47,9 +47,11 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Error Recovery**: Comprehensive format conversion and parsing strategies
 
 ### 🛰️ Network and VPN Detectors (No LLM)
-- **IPsec / VPN**: IKEv1 and IKEv2 outcomes, NOTIFY errors, retransmissions, rekeys, ESP flows, NAT-T, and an encrypted or cleartext verdict per peer pair
-- **GRE / DMVPN**: GRE keys and tunnels, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles
-- **Routing health**: BGP, OSPF and EIGRP adjacency checks, mismatched parameters, resets and a failover timeline
+- **Zero-cleartext audit**: every frame of a transport link against an allowlist, pass or fail, so one leaked GRE, BGP, OSPF or ICMP packet fails a runbook gate
+- **IPsec / VPN**: IKEv1 and IKEv2 outcomes, IKEv2 proposals offered and chosen, DH group retries, NAT detection checked against the wire, DPD liveness, a diagnosis per SA, NOTIFY errors, rekeys, stale ESP SPIs, NAT-T, and an encrypted or cleartext verdict per peer pair
+- **GRE / DMVPN**: GRE keys and tunnels, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles, and the DMVPN Phase 3 sequence proven step by step (or the encrypted shortcut evidence when NHRP is inside ESP)
+- **Routing health**: BGP (OPEN capabilities, keepalive cadence, UPDATE timing, MSS clamping, why a session went down), OSPF (mismatches, stuck EXSTART/EXCHANGE) and EIGRP adjacency checks, and a failover timeline
+- **Convergence**: from an event time or the first failure sign, the delay to detection, the first UPDATE on the surviving path and traffic resuming, and whether DPD or the BGP hold timer drove it
 - **Reachability**: ICMP echo loss, RTT and outage windows, ICMP errors, ARP without replies, top talkers
 - **Data plane**: path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP and RTP quality
 - **Several captures at once**: follow packets through NAT and across links (translations, drops, asymmetric paths), and one merged event timeline with failover timing against thresholds
@@ -338,6 +340,9 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - **Rekeys**: CREATE_CHILD_SA exchanges and ESP SPI changes.
 - **ESP flows** per SPI and direction: packets, bytes, missing sequence numbers, duplicates (possible replay), out-of-order packets, one-way ESP.
 - **NAT-T**: IKE on UDP 4500 (told apart from ESP-in-UDP by the 4-byte non-ESP marker), ESP-in-UDP flows, keepalives, NAT detection payloads.
+- **IKEv2 negotiation detail** (`negotiation` per SA): the proposals offered in IKE_SA_INIT and the one chosen, by name (for example `AES-GCM-16-256`, `HMAC-SHA2-512`, `ECP-256 (group 19)`), weak algorithms flagged per RFC 8247, the KE group of each attempt and any INVALID_KE_PAYLOAD retry with the group asked for, the NAT_DETECTION hashes recomputed from the addresses and ports on the wire (so a NAT between the sender and the capture point is proven, not guessed) and the move to UDP 4500, and DPD liveness checks (the SA's empty INFORMATIONAL requests: interval per sender, unanswered checks and their retransmissions).
+- **Diagnosis per SA** (`diagnosis.code`): `ok`, `proposal_mismatch` (with the offer, since the responder's proposal never crosses the wire), `dh_group_mismatch`, `auth_failed`, `auth_no_reply`, `nat_t_missing`, `udp_4500_blocked`, `no_reply`, `no_esp_after_auth`, `liveness_lost`, `peer_lost_sa`.
+- **IKE SA collisions** (both peers initiating at once, normal for Phase 3 shortcuts), cleartext INVALID_SPI / INVALID_IKE_SPI, and ESP on an old SPI more than 2 s after a newer SPI took over that direction (`ESP_STALE_SPI`).
 - **Encryption verdict** (`encryption_verdict`): for each peer pair, every packet between the same two addresses is protected (ESP, IKE, NAT-T keepalive) or cleartext (ICMP, GRE without ESP, TCP/UDP payload, OSPF, ...). The verdict reads like `all inter-site traffic encrypted: 2 peer pair(s), 480 ESP packets, no cleartext between the same endpoints` or `cleartext seen: icmp 198.51.100.2->192.0.2.1 4 packets`. Pass `peers` to judge all traffic between a given set of addresses.
 
 ### GRE / DMVPN (`gre_nhrp`)
@@ -347,9 +352,14 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - Resolution requests and replies (the NBMA address each answer maps to), Traffic Indications (the DMVPN Phase 3 redirect), Error Indications with their codes, and spoke-to-spoke tunnels.
 - A `dmvpn_phase_hint`: `phase3`, `phase2_or_phase3`, `hub_and_spoke_only` or `unknown`.
 
+### DMVPN Phase 3 sequence (`dmvpn_phase3`)
+- For every flow the hub redirected: `via_hub` (data inside GRE from the spoke to the hub, and where the hub forwarded it), `redirect` (the NHRP Traffic Indication), `resolution_request`, `resolution_reply` (NBMA address and prefix) and `direct` (data straight to that NBMA address), each with frame and time, the first missing step and a diagnosis, plus timings (redirect delay, resolution round trip, time to the shortcut).
+- Hub-relayed spoke-to-spoke traffic that got no redirect, NHRP resolution thrashing (requests per spoke per second, repeats for one target with no reply) and error indications.
+- With tunnel protection the NHRP steps are inside ESP. Pass `hubs` (the hub NBMA addresses) and an IKE SA between two other addresses is checked as an encrypted shortcut: ESP to a hub before it, IKE_SA_INIT answered, IKE_AUTH answered, the first ESP directly between the spokes.
+
 ### Routing health (`routing`)
-- **BGP** (TCP 179): TCP SYN without answer or refused with RST, OPEN details (AS, hold time, router ID), established and down transitions, UPDATE prefix counts, End-of-RIB, NOTIFICATION code and subcode decoded with a plain hint (for example Hold Timer Expired, OPEN Message Error / Bad Peer AS), gaps longer than the hold time, a peer silent at capture end, flaps.
-- **OSPF** (IP 89): routers grouped per link, hello and dead intervals, network mask, area, authentication type, stub flag and DB Description MTU compared between neighbors, DR/BDR changes, one-way neighbors, duplicate router IDs, hello gaps past the dead interval, neighbors dropped and re-added.
+- **BGP** (TCP 179): TCP SYN without answer or refused with RST, OPEN details (AS, hold time, router ID, capabilities), keepalive cadence against hold/3, UPDATE timing per speaker, the TCP MSS option of each SYN and SYN-ACK (checked against `expected_mss`, for example 1360 for `ip tcp adjust-mss 1360`), the cause of each session drop (`hold_timer_expired`, `notification`, `bfd_down`, `tcp_rst`, `tcp_fin`, or `hold_timer_expired_inferred` when a peer was silent for the hold time before a bare RST/FIN), established and down transitions, UPDATE prefix counts, End-of-RIB, NOTIFICATION code and subcode decoded with a plain hint (for example Hold Timer Expired, OPEN Message Error / Bad Peer AS), gaps longer than the hold time, a peer silent at capture end, flaps.
+- **OSPF** (IP 89): routers grouped per link, hello and dead intervals, network mask, area, authentication type, stub flag and DB Description MTU compared between neighbors, adjacencies stuck in EXSTART (initial DB Descriptions repeated, never answered) or EXCHANGE (a DBD sequence retransmitted, never echoed) with the cause (for example the DBD MTU mismatch), DR/BDR changes, one-way neighbors, duplicate router IDs, hello gaps past the dead interval, neighbors dropped and re-added.
 - **EIGRP** (IP 88): K-values and AS compared between speakers, hold time, goodbye messages, INIT updates (adjacency starts and restarts), Queries and SIA-Queries, a speaker silent past its hold time.
 - Routing protocols carried inside GRE (for example EIGRP or BGP over a DMVPN tunnel without IPsec) are analyzed on the tunnel addresses and marked `over_gre`.
 - A `failover_timeline` puts these events in order, so a router failure and the reconvergence after it can be read off.
@@ -389,9 +399,20 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - `correlate_pcaps` takes two or more captures with a label each (inside/outside of a NAT router, WAN1/WAN2) and matches the same packet across them by fields NAT leaves alone: ESP SPI and sequence, TCP sequence and acknowledgement numbers with a payload hash, UDP payload hash, ICMP echo sequence with IP identification. It reports NAT translations (`at_inside 10.0.0.10:40000`, `at_outside 203.0.113.5:61000`), per conversation where each direction was seen and a verdict (`reply_lost`: "the SYN-ACK was last seen at outside and never reached inside", `partial_loss`, `asymmetric`: "out through wan1, back through wan2", `seen_only_at`: a probe that crossed one device but not the next while other traffic between the same addresses did, `not_on_other_paths`, `ok`), transit time and TTL decrement between capture points, and DSCP rewritten between them. Captures are merged by timestamp and streamed: a packet waits at most `window_s` for its copy and at most `max_packets_held` packets wait at once. A capture point that was not recording at the time is not counted as having missed a packet.
 - `merge_pcap_timelines` analyzes each capture once with every detector and merges their events by timestamp into one timeline, each tagged with its capture label. Measurements pick two events by selector (`capture`, `detector`, `protocol`, `event`, `contains`, `occurrence`) and report the delta against `max_s` (`within`, `exceeded`, `not_found`); without measurements, every ping outage and each routing down event paired with the next up event is measured against `failover_max_s`. `output_path` writes the result as JSON beside the run's captures.
 
+### Zero-cleartext audit (`cleartext_audit`, run only when named)
+- Every frame is matched against an allowlist; anything else is reported by protocol, category (`tunnel_without_encryption`, `routing`, `icmp`, `layer2`, `cleartext`, ...) and address pair, with frame numbers, and the audit returns `passed` true or false. An empty capture fails.
+- Default allowlist `crypto` (ESP, ISAKMP on UDP 500 and 4500, NAT-T keepalives). Other tokens: `arp`, `icmp`, `routing` or `bgp`/`ospf`/`eigrp`/..., `gre`, `l2-control` (CDP, STP, LLDP, LACP, Cisco loopback keepalives), service names, `tcp:N`, `udp:N`, `proto:N`, `ethertype:0xN`, each optionally scoped to addresses: `icmp@203.0.113.1`.
+
+### Convergence timeline (`convergence`, run only when named)
+- Takes an optional `event_time` (epoch, seconds from the first frame, or ISO-8601) and `failed_peer`; otherwise it starts from the first failure sign and infers the peer.
+- Failure signs: the last ESP/IKE from a peer before it went quiet, DPD left unanswered, the last BGP message from a speaker whose session dropped, a ping outage. Detection: DPD giving up, Hold Timer Expired, an inferred hold expiry, BFD Down. Reaction: the first BGP UPDATE on a session not involving the failed peer. Resumed: a ping answered again, the surviving tunnels' ESP rate taking over the failed tunnel's (heuristic), or ESP from the failed peer returning.
+- Returns the deltas from the event and the driver: `bfd`, `bgp_hold_timer`, `dpd`, `explicit_close` or `undetermined`, with the reason. Without an event, a quiet period counts only when the other side kept sending into it, so idle tunnels are not mistaken for failures.
+
 ### What packets cannot show
 - A verdict covers only what crossed the capture point. Capture on the underlay (WAN) link to prove encryption; a capture on the tunnel interface shows decrypted traffic.
-- IKEv2 IKE_AUTH is encrypted, so `AUTHENTICATION_FAILED` is never visible. S.O.N.I.C. reports `established` only when ESP follows, and flags a small IKE_AUTH response with no ESP as `auth_likely_failed`, labelled as a heuristic.
+- IKEv2 IKE_AUTH is encrypted, so `AUTHENTICATION_FAILED`, the child SA proposal, traffic selectors and identities are never visible. A PSK mismatch shows as a small encrypted IKE_AUTH response with no ESP (`auth_failed`, a heuristic) or as IKE_AUTH retransmissions with no reply (`auth_no_reply`), never as a visible hash. S.O.N.I.C. reports `established` only when ESP follows.
+- DPD is recognised by size (an empty encrypted INFORMATIONAL). INVALID_SPI normally travels inside the encrypted IKE SA; only an unprotected one is read, and a stale SPI is inferred from ESP timing.
+- On a protected DMVPN transport link, convergence is read from ESP rates and DPD; the BGP reaction is not visible there, and the driver is then inferred from timing against `hold_time`. An event time taken on another host's clock shifts every delta by the clock skew.
 - ESP with NULL encryption cannot be told apart from encrypted ESP without the keys.
 - With IPsec tunnel protection, GRE, NHRP and the routing protocols travel inside ESP and are not visible on the WAN.
 - OSPFv3, IS-IS and IPv6 routing are not decoded. EIGRP speakers are grouped per link by unicast exchange or a shared /24.
@@ -402,7 +423,7 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - Every data plane section carries its own `limits` list.
 
 ### Test fixtures
-`tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call.
+`tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call; plus, for the control plane detectors, IKEv2 proposals with a DH retry and DPD, four IKEv2 failure shapes, a stale SPI, one leaked packet of each kind on an encrypted link, broken and encrypted Phase 3 sequences, BGP failover with MSS options, a DPD-driven failover, and OSPF stuck in EXSTART and EXCHANGE. `test_control_plane.py` runs them on both backends (test names say `synthetic`) and checks the Pleiades lab captures when they exist on the machine.
 
 `tests/fixtures/generate_dataplane_fixtures.py` builds the data plane fixtures the same way (names start with `dp_`): Fragmentation Needed, a PMTUD black hole (ICMP and TCP) beside plain loss, complete, incomplete and overlapping fragments, ESP sizes for AES-GCM, AES-CBC/SHA1 and NAT-T with an ESP packet fragmented after encryption, seven TCP connection outcomes, four TLS handshakes (1.3, 1.2 split over two segments with an expired certificate, 1.0 with RC4, a fatal alert), RTP with and without EF plus GRE marking copied and lost, and two multi-capture sets (inside/outside of a NAT router; a LAN with WAN1 out and WAN2 back). `test_dataplane_detectors.py` runs every detector on both backends, the correlation and timeline tools, and the same code over real lab captures when they are present.
 
@@ -665,13 +686,13 @@ Deterministic analysis of any capture (no LLM): IPsec/IKE/ESP, GRE/NHRP, BGP/OSP
 
 **Parameters**:
 - `file_path` (required): Absolute path to pcap/pcapng file
-- `detectors` (optional): Subset of `ipsec`, `gre_nhrp`, `routing`, `reachability`, `path_mtu`, `esp_overhead`, `tcp`, `tls`, `qos`, `conversations` (default: all)
+- `detectors` (optional): Subset of `ipsec`, `gre_nhrp`, `dmvpn_phase3`, `routing`, `reachability`, `path_mtu`, `esp_overhead`, `tcp`, `tls`, `qos`, `conversations` (the default), plus `cleartext_audit` and `convergence` (only when named)
 - `peers` (optional): IP addresses whose mutual traffic the encryption verdict judges
 - `display_filter` (optional): Wireshark display filter applied first (needs tshark)
 - `max_packets` (optional): Read at most this many frames
 - `include_sip` (optional): Run the SIP quality scoring when SIP is present (default: true)
 - `max_items` (optional): Cap on each list in the result (default: 25)
-- `options` (optional): Per-detector settings, `{"esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline": {...}}}`
+- `options` (optional): Per-detector settings, `{"esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline": {...}}, "dmvpn_phase3": {"hubs"}, "routing": {"expected_mss"}, "cleartext_audit": {"allow"}, "convergence": {"event_time", "failed_peer", "hold_time", "silence_s"}}`
 
 **Example**:
 ```
@@ -681,7 +702,9 @@ Claude: Analyze /captures/hub-wan.pcap with analyze_network_pcap
 #### `analyze_vpn_pcap`
 Proves from packets whether inter-site traffic is encrypted and whether the IPsec and DMVPN overlay formed. Returns `encryption_verdict` (`encrypted`, `cleartext_seen`, `no_esp`, `not_present`), `verdict`, `negotiation_verdict` and `overlay_verdict` first.
 
-**Parameters**: `file_path`, and optional `peers`, `display_filter`, `max_packets`, `max_items`
+Also `phase3_verdict` and `ike_diagnoses` (one diagnosis code per IKE SA).
+
+**Parameters**: `file_path`, and optional `peers`, `display_filter`, `max_packets`, `max_items`, `hubs`
 
 **Example**:
 ```
@@ -691,7 +714,7 @@ Claude: Is the traffic between 192.0.2.1 and 198.51.100.2 encrypted in /captures
 #### `analyze_routing_pcap`
 BGP, OSPF and EIGRP health plus reachability. Returns the routing `verdict`, `reachability_verdict`, a `failover_timeline` and `ping_outages` first.
 
-**Parameters**: `file_path`, and optional `display_filter`, `max_packets`, `max_items`
+**Parameters**: `file_path`, and optional `display_filter`, `max_packets`, `max_items`, `expected_mss`
 
 **Example**:
 ```
@@ -726,6 +749,25 @@ One timeline of every detector's events across several captures, with measured d
 **Example**:
 ```
 Claude: Merge /run/wan1.pcap and /run/lan.pcap and check the failover finished within 30 seconds
+
+#### `audit_cleartext_pcap`
+The zero-cleartext assertion: returns `passed` (true or false), `result`, `verdict`, `frames_outside_allowlist`, `first_violation_frame`, `by_protocol` and `violations` with frame numbers.
+
+**Parameters**: `file_path`, and optional `allow` (allowlist tokens, default `["crypto"]`), `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Fail the run if /captures/br1-wan.pcap carried anything but IPsec (Cisco link keepalives allowed): audit_cleartext_pcap with allow ["crypto", "l2-control"]
+```
+
+#### `analyze_convergence_pcap`
+The failover timeline: `driver` (`dpd`, `bgp_hold_timer`, `bfd`, `explicit_close`, `undetermined`), `failed_peer`, `measurements` (seconds from the event to the first failure sign, detection, first UPDATE on the surviving path and traffic resuming) and an ordered `timeline` with frames.
+
+**Parameters**: `file_path`, and optional `event_time`, `failed_peer`, `hold_time`, `silence_s`, `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: CORE1 was stopped at 2026-10-27T19:49:30Z; how long until BR1's traffic moved? Use /captures/br1-wan.pcap
 ```
 
 Each tool's description (what an MCP client shows the agent) explains its inputs, outputs, verdict values and limits, so an agent can learn the tool from the tool itself.

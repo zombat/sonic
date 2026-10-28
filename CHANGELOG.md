@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🙈 **Keys never shown**: redacted by value (and `sk-ant-...` by pattern) from every MCP tool result, CLI output, log records, saved reports and the prompts sent to the LLM (`RedactingLM`); `list_llm_providers` reports only `configured` and the source (`environment` or the env file path)
 - 🧪 `test_credentials.py`: parser, precedence, redaction of every output path with dummy keys, the CLI and a real MCP stdio session
 - 🧪 `test_mcp_guidance.py`: instructions, annotations, descriptions, prompts and resources, the skill's frontmatter, size, coverage, refusal and idempotence, both entry points, and a real MCP stdio session
-
 - **Data plane detectors** (deterministic, no LLM), run by default in `analyze_network_capture`:
   - `path_mtu`: ICMP Fragmentation Needed / Packet Too Big with the advertised MTU matched to the probe frame, PMTUD black holes for DF pings and TCP (with the bracket the path MTU lies in), IP fragments complete, incomplete and overlapping, reassembly timeouts
   - `esp_overhead`: ESP sizes per SA tested against cipher families, inner size bounds and overhead in tunnel and transport-over-GRE mode, tunnel MTU fit against the transport MTU, ESP fragmented after encryption; labelled as estimates
@@ -28,7 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-capture tools**: `correlate_captures` (`analyzers/correlate.py`) follows packets across labelled captures for NAT translations, lost replies, asymmetric paths, stopped probes, transit time, TTL decrement and DSCP rewrites, streaming with a bounded match window; `merge_timelines` (`analyzers/timeline.py`) merges every detector's events from several captures and measures deltas between chosen events against thresholds, optionally writing JSON
 - **MCP tools**: `analyze_data_plane_pcap`, `correlate_pcaps`, `merge_pcap_timelines`; `analyze_network_pcap` takes per-detector `options`
 - **Tests**: `test_dataplane_detectors.py` (both backends, synthetic fixtures from `tests/fixtures/generate_dataplane_fixtures.py`, real lab captures when present) and new MCP tool tests
-
+- The three data plane MCP tools follow the guidance conventions: titles, annotations, descriptions with returns, cost and limits in the visible text, results through `redact_result`, rows in the instructions and the generated skill
+- Zero-cleartext audit (`cleartext_audit` detector, `audit_cleartext_pcap` MCP tool): every frame against an allowlist (default ESP, IKE on UDP 500/4500, NAT-T keepalives; tokens for ARP, ICMP, routing, GRE, link-local layer 2, ports and protocols, each scopable to addresses), reported by protocol and address pair with frame numbers, and a pass or fail result
+- IKEv2 exchange decoding: proposals offered and chosen by name with weak algorithms flagged, KE groups and INVALID_KE_PAYLOAD retries, NAT_DETECTION hashes recomputed from the wire and the move to UDP 4500, DPD liveness checks, IKE SA collisions, cleartext INVALID_SPI / INVALID_IKE_SPI, ESP on a stale SPI after a rekey, and a diagnosis code per IKE SA (proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing, udp_4500_blocked, no_reply, liveness_lost, peer_lost_sa, ...)
+- DMVPN Phase 3 sequence proof (`dmvpn_phase3` detector): per redirected flow the ordered steps via hub, redirect, resolution request, resolution reply and direct data, with the first missing step and why; hub-relayed traffic with no redirect; resolution thrashing; and, given the hubs, encrypted spoke-to-spoke shortcuts when NHRP is inside ESP
+- BGP: OPEN capabilities, keepalive cadence against hold/3, UPDATE timing, the TCP MSS of each SYN and SYN-ACK checked against `expected_mss`, and the cause of each session drop (hold timer, NOTIFICATION, BFD, RST, FIN, or a hold expiry inferred from silence)
+- OSPF: adjacencies stuck in EXSTART or EXCHANGE from DB Description retransmissions, with the cause (for example the DBD MTU mismatch)
+- Convergence timeline (`convergence` detector, `analyze_convergence_pcap` MCP tool): from an event time or the first failure sign, the delay to detection, to the first UPDATE on the surviving path and to traffic resuming, and the driver (DPD, BGP hold timer, BFD, explicit close)
+- `hubs` on analyze_vpn_pcap and analyze_network_pcap, `expected_mss` on analyze_routing_pcap and analyze_network_pcap
+- Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
 - Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
@@ -38,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - INTEGRATION_GUIDE.md and README.md describe `--create-skill` in place of the `--init-skills` command they named, which did not exist
 - Every network record carries `dp` (IP identification, DF/MF, fragment offset, DSCP/ECN, raw TCP sequence numbers, window and options, payload head and hash, ICMP next-hop MTU) from both backends (`extractors/dataplane.py`)
 - tshark runs with `ip.defragment:FALSE`, so fragments stay one record per frame as on the scapy backend; the scapy backend reports a UDP length from the header, as tshark does
+- `DETECTOR_CLASSES` also holds `path_mtu`, `esp_overhead`, `tcp`, `tls` and `qos`; `_build_detectors` builds from it and passes per-detector `options`
+- The extractor hands the IKE bytes from tshark (`udp.payload`) to the same parser scapy uses, so IKE fields match by construction; records gain the TCP MSS of SYNs, BGP capability codes, OSPF DBD flags and sequence, and an `llc` label for CDP/STP frames
+- Synthetic IKEv2 fixtures carry real NAT detection hashes
 
 ### Fixed
 - The MCP server's stdout carries only JSON-RPC (`utils/protocol_stdout.py`). Before serving it keeps the real stdout for the protocol and points descriptor 1 and `sys.stdout` at stderr, so the SIP, network, extractor and reporting prints (and child processes) no longer corrupt the stdio channel; the CLI's output is unchanged. `test_mcp_stdio.py` runs a real stdio session, calls the SIP and network tools on a sample capture and parses every byte written to stdout through the server's exit

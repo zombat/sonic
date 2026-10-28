@@ -7,7 +7,8 @@ detectors (IPsec/IKE/ESP, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP) as tools for AI
 assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
 Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap,
-analyze_data_plane_pcap, correlate_pcaps, merge_pcap_timelines.
+analyze_data_plane_pcap, audit_cleartext_pcap, correlate_pcaps, analyze_convergence_pcap,
+merge_pcap_timelines.
 
 The server teaches its client how to use it: the initialize result carries
 instructions (which tool for which question, cost, limits), every tool has a
@@ -42,7 +43,7 @@ import os
 import sys
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 from fastmcp import FastMCP
 
@@ -56,10 +57,12 @@ from analyzers.call_quality_scoring import CallQualityScorer
 from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer
 from llm_config import list_available_providers, resolve_provider
 from analyzers.network_orchestrator import (
+    analyze_convergence_capture,
     analyze_data_plane_capture,
     analyze_network_capture,
     analyze_routing_capture,
     analyze_vpn_capture,
+    audit_cleartext_capture,
 )
 from analyzers.correlate import correlate_captures
 from analyzers.timeline import merge_timelines
@@ -391,22 +394,33 @@ def analyze_network_pcap(
     analyze_vpn_pcap (encryption, IPsec, DMVPN) or analyze_routing_pcap (adjacencies,
     failover); for SIP call quality, quick_quality_check.
 
-    Detectors (pass a subset in `detectors`; default is all):
+    Detectors (pass a subset in `detectors`; the default runs all but the last two):
       - "ipsec": IKEv1/IKEv2 negotiation per IKE SA (outcome: established, failed,
-        no_response, auth_likely_failed, ...), NOTIFY errors such as NO_PROPOSAL_CHOSEN,
-        retransmissions without a reply, rekeys (CREATE_CHILD_SA, ESP SPI changes),
-        ESP flows per SPI (packets, sequence gaps, duplicates = possible replay),
-        NAT-T (IKE on UDP 4500, ESP-in-UDP, keepalives), and the encryption verdict:
-        "encrypted" or "cleartext_seen" for traffic between the same two endpoints.
+        no_response, auth_likely_failed, ...), the IKEv2 proposals offered and chosen
+        (encryption, PRF, integrity, DH group, weak algorithms), KE groups and
+        INVALID_KE_PAYLOAD retries, NAT detection hashes checked against the wire and
+        the move to UDP 4500, DPD liveness checks, a "diagnosis" per SA (ok,
+        proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing,
+        no_reply, liveness_lost, peer_lost_sa), NOTIFY errors, IKE SA collisions, rekeys,
+        ESP flows per SPI (sequence gaps, duplicates, an old SPI still used after a newer
+        one took over), NAT-T, and the encryption verdict: "encrypted" or
+        "cleartext_seen" for traffic between the same two endpoints.
       - "gre_nhrp": GRE tunnels (keys, inner protocols, key mismatch), NHRP registrations
         (spoke -> hub, result registered/refused/unanswered), hub and spoke roles,
         resolution requests/replies, redirects (DMVPN Phase 3), error indications,
         and spoke-to-spoke tunnels.
-      - "routing": BGP sessions (state, OPEN AS/hold time/router ID, NOTIFICATION
-        code/subcode decoded with a hint, resets, End-of-RIB, refused TCP 179), OSPF
-        per link (hello/dead/mask/area/auth/MTU mismatches, one-way neighbors, DR/BDR,
-        hello gaps past the dead interval), EIGRP (K-value and AS mismatches, goodbyes,
-        hold time expiry, INIT restarts, queries/SIA), plus a failover_timeline.
+      - "dmvpn_phase3": per redirected flow the ordered Phase 3 steps (via_hub, redirect,
+        resolution_request, resolution_reply, direct) with frames and times, the first
+        missing step and why; hub-relayed spoke traffic with no redirect; resolution
+        thrashing; and, with `hubs`, encrypted spoke-to-spoke shortcuts (IKE then direct
+        ESP) when NHRP is hidden inside ESP.
+      - "routing": BGP sessions (state, OPEN AS/hold time/router ID/capabilities,
+        keepalive cadence, UPDATE timing, NOTIFICATION code/subcode decoded with a hint,
+        the cause of each drop, the MSS of each SYN and SYN-ACK checked against
+        `expected_mss`, refused TCP 179), OSPF per link (hello/dead/mask/area/auth/MTU
+        mismatches, one-way neighbors, DR/BDR, hello gaps, adjacencies stuck in EXSTART
+        or EXCHANGE), EIGRP (K-value and AS mismatches, goodbyes, hold time expiry, INIT
+        restarts, queries/SIA), plus a failover_timeline.
       - "reachability": ICMP echo loss/RTT per source->destination pair with outage
         windows, ICMP unreachable/TTL-exceeded with decoded codes, ARP with no reply,
         duplicate IPs.
@@ -428,6 +442,8 @@ def analyze_network_pcap(
       - "qos": DSCP per flow, GRE inner vs outer DSCP, ESP outer DSCP per SA, RTP
         streams with loss, RFC 3550 jitter, DSCP and an E-model MOS estimate, ECN CE.
       - "conversations": protocol mix by packets and bytes, top conversations, top talkers.
+      - Run only when named: "cleartext_audit" (audit_cleartext_pcap) and "convergence"
+        (analyze_convergence_pcap).
 
     Returns a JSON object: status "success", schema, overall_status ("ok", "warning",
     "problem" or "not_present"; the worst detector status, conversations and SIP
@@ -440,18 +456,22 @@ def analyze_network_pcap(
     {"status": "error", "error": "..."}, plus valid_detectors for an unknown detector.
 
     Limits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is
-    encrypted, so an authentication failure is inferred (small response, no ESP) and
-    labelled as a heuristic. ESP with NULL encryption cannot be told apart from real
-    encryption without keys. OSPFv3 and IS-IS are not decoded.
+    encrypted, so the child SA proposal, identities and AUTH are never visible: a PSK
+    mismatch shows only as a small encrypted IKE_AUTH response or as retransmissions with
+    no reply (a labelled heuristic). DPD is recognised by message size; INVALID_SPI
+    normally travels encrypted. ESP with NULL encryption cannot be told apart from real
+    encryption without keys. With tunnel protection, GRE, NHRP and BGP are inside ESP on
+    the transport link. OSPFv3 and IS-IS are not decoded.
 
     For example, analyze_network_pcap(file_path="/captures/hub-wan.pcap") or
     analyze_network_pcap(file_path="/captures/r1-r2.pcap", detectors=["routing"]).
 
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
-        detectors: Optional list from ["ipsec", "gre_nhrp", "routing", "reachability", "path_mtu",
-            "esp_overhead", "tcp", "tls", "qos",
-            "conversations"]. Unknown names return an error listing the valid ones.
+        detectors: Optional list from ["ipsec", "gre_nhrp", "dmvpn_phase3", "routing",
+            "reachability", "path_mtu", "esp_overhead", "tcp", "tls", "qos", "conversations"]
+            (the default), plus "cleartext_audit" and "convergence", which run only when
+            named. Unknown names return an error listing the valid ones.
         peers: Optional list of IP addresses (for example the WAN addresses of the hub
             and spokes). The encryption verdict then judges all traffic between any two
             of them. Without it, the verdict judges every pair that exchanged IKE/ESP,
@@ -463,8 +483,11 @@ def analyze_network_pcap(
             (no LLM) and attach it under "sip". For full SIP call analysis use analyze_pcap.
         max_items: Cap on the length of each list in the result (default 25).
         options: Optional per-detector settings: {"esp_overhead": {"transport_mtu": 1500,
-            "tunnel_mtu": 1400, "gre_header_bytes": 8}, "tls": {"baseline": {...}}} with the
-            baseline keys of analyze_data_plane_pcap's tls_baseline.
+            "tunnel_mtu": 1400, "gre_header_bytes": 8}, "tls": {"baseline": {...}}}, the baseline
+            keys being those of analyze_data_plane_pcap's tls_baseline; also {"dmvpn_phase3":
+            {"hubs": [hub NBMA IPs]}, "routing": {"expected_mss": 1360}, "cleartext_audit":
+            {"allow": [tokens]}, "convergence": {"event_time", "failed_peer", "hold_time",
+            "silence_s"}}. Unknown keys are refused.
     """
     try:
         return analyze_network_capture(
@@ -489,13 +512,15 @@ def analyze_vpn_pcap(
     display_filter: Optional[str] = None,
     max_packets: Optional[int] = None,
     max_items: int = 25,
+    hubs: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Prove from packets whether VPN traffic between sites is encrypted and whether the
     IPsec and DMVPN overlay formed. Deterministic, no LLM.
 
     Use it on a capture of a WAN/underlay link (between hub and spoke routers). It runs
-    the "ipsec" and "gre_nhrp" detectors of analyze_network_pcap and puts the answers first:
+    the "ipsec", "gre_nhrp" and "dmvpn_phase3" detectors of analyze_network_pcap and puts
+    the answers first:
 
       - encryption_verdict: "encrypted" (only ESP/IKE/NAT-T keepalives between the
         peers), "cleartext_seen" (some ICMP, GRE without ESP, TCP/UDP payload or routing
@@ -507,17 +532,33 @@ def analyze_vpn_pcap(
       - negotiation_verdict: IKE SA outcomes (established, failed with the NOTIFY name,
         no_response, auth_likely_failed).
       - overlay_verdict: NHRP registrations per hub (who registered, who was refused).
+      - phase3_verdict: the DMVPN Phase 3 sequence per redirected flow (which step is
+        missing when one is), or, with `hubs`, the encrypted spoke-to-spoke shortcuts.
+      - ike_diagnoses: one line per IKE SA with a stable code: ok, proposal_mismatch,
+        dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing, udp_4500_blocked,
+        no_reply, no_esp_after_auth, liveness_lost, peer_lost_sa. Each SA in
+        ipsec.ike_sas also has "negotiation": proposals_offered and proposal_chosen
+        (encryption, prf, integrity, dh_group, weak), ke_groups_offered,
+        invalid_ke_payload, nat_detection (nat_detected, translated, moved_to_udp_4500)
+        and liveness (DPD checks, interval_s_by_sender, unanswered_checks).
 
     Where to capture: on the physical/underlay link, ESP proves encryption. If you
     capture on the tunnel interface itself you see decrypted traffic, and GRE without
     ESP on the underlay means the tunnel has no IPsec protection. Seconds for a typical
     capture.
 
-    Returns a JSON object with status, encryption_verdict, verdict, negotiation_verdict
-    and overlay_verdict first, then ipsec (peer_pairs, cleartext, ike_sas, esp_flows,
-    nat_traversal, issues), gre_nhrp (hubs, spokes, registrations, resolutions,
-    redirects, error_indications, tunnels, spoke_to_spoke_tunnels, issues), issues,
-    timeline and capture. On failure {"status": "error", "error": "..."}.
+    Returns a JSON object with status, encryption_verdict, verdict, negotiation_verdict,
+    overlay_verdict, phase3_verdict and ike_diagnoses first, then ipsec (peer_pairs,
+    cleartext, ike_sas, esp_flows, nat_traversal, issues), gre_nhrp (hubs, spokes,
+    registrations, resolutions, redirects, error_indications, tunnels,
+    spoke_to_spoke_tunnels, issues), dmvpn_phase3 (flows, hub_relayed_without_redirect,
+    resolution_thrashing, encrypted_shortcuts, cannot_show, issues), issues, timeline
+    and capture. On failure {"status": "error", "error": "..."}.
+
+    Limits: IKE_AUTH and everything after it is encrypted. A PSK mismatch is never
+    visible as a hash: it shows as auth_failed (a small encrypted IKE_AUTH response) or
+    auth_no_reply (retransmissions, no reply). On a protected DMVPN the NHRP steps are
+    inside ESP; only the IKE and ESP between spokes can be checked, given `hubs`.
 
     For example, analyze_vpn_pcap(file_path="/captures/hub-wan.pcap",
     peers=["192.0.2.1", "198.51.100.2"]).
@@ -530,10 +571,13 @@ def analyze_vpn_pcap(
         display_filter: Optional Wireshark display filter applied first (needs tshark).
         max_packets: Optional cap on frames read.
         max_items: Cap on list lengths (default 25).
+        hubs: Optional hub NBMA (WAN) addresses. With them, an IKE SA between two other
+            addresses is checked as a spoke-to-spoke shortcut (IKE_SA_INIT, IKE_AUTH,
+            direct ESP).
     """
     try:
         return analyze_vpn_capture(file_path, peers=peers, display_filter=display_filter,
-                                   max_packets=max_packets, max_items=max_items)
+                                   max_packets=max_packets, max_items=max_items, hubs=hubs)
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
@@ -545,6 +589,7 @@ def analyze_routing_pcap(
     display_filter: Optional[str] = None,
     max_packets: Optional[int] = None,
     max_items: int = 25,
+    expected_mss: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Check routing protocol health (BGP, OSPF, EIGRP) and reachability from a capture,
@@ -567,8 +612,14 @@ def analyze_routing_pcap(
 
     Capture both sides of an adjacency when you can: a link capture shows hellos from
     every router on that link. Issue codes are stable strings, for example
-    OSPF_HELLO_INTERVAL_MISMATCH, OSPF_MTU_MISMATCH, OSPF_ONE_WAY, BGP_TCP_REFUSED,
-    BGP_PEER_SILENT, EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT, ICMP_LOSS.
+    OSPF_HELLO_INTERVAL_MISMATCH, OSPF_MTU_MISMATCH, OSPF_EXSTART_STUCK,
+    OSPF_EXCHANGE_STUCK, OSPF_ONE_WAY, BGP_TCP_REFUSED, BGP_PEER_SILENT,
+    BGP_MSS_NOT_CLAMPED, EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT, ICMP_LOSS.
+    Each BGP session lists "downs" with a cause (hold_timer_expired, notification,
+    bfd_down, tcp_rst, tcp_fin, hold_timer_expired_inferred) and "tcp_mss" per
+    connection; each OSPF adjacency has "database_exchange" (stuck: exstart or
+    exchange, and the cause, for example the DBD MTU mismatch). To time a failover
+    from an event, analyze_convergence_pcap measures it directly.
     Seconds for a typical capture.
 
     Returns a JSON object with status, verdict, reachability_verdict,
@@ -584,15 +635,154 @@ def analyze_routing_pcap(
             for example "ospf or icmp".
         max_packets: Optional cap on frames read.
         max_items: Cap on list lengths (default 25).
+        expected_mss: Optional MSS the BGP SYN and SYN-ACK should carry (for example 1360
+            for "ip tcp adjust-mss 1360"). The value is what crossed the capture point;
+            adjust-mss rewrites SYNs only where they cross the interface it is on.
     """
     try:
         return analyze_routing_capture(file_path, display_filter=display_filter,
+                                       max_packets=max_packets, max_items=max_items,
+                                       expected_mss=expected_mss)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("audit_cleartext_pcap"))
+@redact_result
+def audit_cleartext_pcap(
+    file_path: str,
+    allow: Optional[List[str]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Assert that a crypto transport link carried nothing but allowed traffic: every frame
+    is checked against an allowlist and the audit passes or fails. Deterministic, no LLM,
+    seconds for a typical capture.
+
+    Use it as a gate after capturing the WAN/transport link of an IPsec or DMVPN network:
+    one leaked GRE, BGP, OSPF, ICMP, ARP or other frame outside the allowlist fails the
+    audit and is reported by protocol and address pair with its frame numbers. To explain
+    an IPsec negotiation instead, use analyze_vpn_pcap.
+
+    Allowlist tokens (default ["crypto"]): crypto (= esp, ike, nat-t), esp (IP 50 and
+    ESP-in-UDP), ike (UDP 500/4500), nat-t (ESP-in-UDP, IKE on 4500, keepalives), ah,
+    arp, icmp, icmpv6, routing (= bgp, ospf, eigrp, rip, ldp, bfd, pim, vrrp, hsrp) or each
+    by name, gre, l2-control (= cdp, stp, lldp, lacp, loop: Cisco keepalives, EtherType
+    0x9000), dhcp, dns, ntp, ssh, snmp, syslog, tacacs, radius, tcp:N, udp:N, proto:N,
+    ethertype:0xNNNN. Scope a token to addresses with @: "icmp@203.0.113.1" (ICMP only to
+    or from the provider), "bgp@198.51.100.0/30". A Cisco router's transport link also
+    carries loopback keepalives and CDP: add "l2-control" to accept them.
+
+    Returns a JSON object: status "success", passed (true or false), result ("pass" or
+    "fail"), verdict, allowlist, frames_audited, frames_allowed,
+    frames_outside_allowlist, first_violation_frame, by_protocol (protocol, category,
+    packets, bytes, pairs, first_frame), violations (protocol, category, src, dst,
+    packets, bytes, first_frame, first_t, last_frame, last_t, frames, hint),
+    allowed_by_rule, cannot_show and capture. Categories: crypto,
+    tunnel_without_encryption (GRE outside ESP), routing, icmp, layer2,
+    authenticated_only (AH), cleartext. An empty capture fails. On failure
+    {"status": "error", "error": "..."}, for example for an unknown allowlist token.
+
+    Limits (also in cannot_show): only frames that crossed this capture point and that
+    the capture kept are audited; ESP with NULL or weak encryption passes, because ESP
+    payload is opaque; a non-first IP fragment follows its datagram's first fragment,
+    and is reported as udp (fail-closed) when that first fragment was not captured.
+
+    For example, audit_cleartext_pcap(file_path="/captures/br1-wan.pcap") or
+    audit_cleartext_pcap(file_path="/captures/br1-wan.pcap",
+    allow=["crypto", "l2-control", "icmp@172.16.11.1"]).
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        allow: Optional allowlist tokens (see above). An unknown token is an error.
+        display_filter: Optional Wireshark display filter applied first (needs tshark).
+            Narrowing the capture also narrows what the audit proves.
+        max_packets: Optional cap on frames read (the audit then covers only those).
+        max_items: Cap on the violations list (default 25; the counts stay complete).
+    """
+    try:
+        return audit_cleartext_capture(file_path, allow=allow, display_filter=display_filter,
                                        max_packets=max_packets, max_items=max_items)
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("analyze_convergence_pcap"))
+@redact_result
+def analyze_convergence_pcap(
+    file_path: str,
+    event_time: Optional[Union[str, float]] = None,
+    failed_peer: Optional[str] = None,
+    hold_time: Optional[float] = None,
+    silence_s: Optional[float] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Measure a failover from one capture and say what drove it. Deterministic, no LLM,
+    seconds for a typical capture.
+
+    From an event (for example the moment a runbook stopped a link or a router) or,
+    without one, from the first sign of failure, it measures the time to detection, to
+    the first BGP UPDATE or withdrawal on the surviving path, and to traffic resuming.
+    Signals: the last ESP/IKE from a peer before it went quiet; IKEv2 DPD checks left
+    unanswered and the last retransmission (DPD giving up); BGP NOTIFICATIONs (Hold Timer
+    Expired, Cease/BFD Down), RST or FIN, and a hold expiry inferred from silence; BGP
+    UPDATEs on sessions not involving the failed peer; ping outages and their recovery;
+    and on encrypted transport captures the surviving tunnels' ESP rate taking over the
+    failed tunnel's. For adjacency health without an event, use analyze_routing_pcap.
+
+    Returns a JSON object: status "success", verdict, driver (mechanism "bfd",
+    "bgp_hold_timer", "dpd", "explicit_close" or "undetermined", and reason),
+    failed_peer and failed_peer_source, event_time, measurements (origin, origin_t,
+    first_failure_sign, detection, first_update_on_surviving_path, traffic_resumed, and
+    event_to_first_failure_sign_s, event_to_detection_s, event_to_first_update_s,
+    event_to_traffic_resumed_s), timeline (t, time, delta_s, phase: event, failure,
+    teardown, detection, reaction or recovery, signal, peer, detail, frame),
+    traffic_shift, issues, cannot_show and capture. Deltas are seconds from the event (or
+    the first failure sign); a negative first-sign delta means the failure showed before
+    the given event time. On failure {"status": "error", "error": "..."}.
+
+    Limits (also in cannot_show): on a protected tunnel BGP and user traffic are inside
+    ESP, so the reaction is inferred from ESP rates and the driver from timing against
+    hold_time; DPD is recognised by size; the event time comes from another clock than
+    the capture, so a skew shifts every delta; only this capture point is seen.
+
+    For example, analyze_convergence_pcap(file_path="/captures/br1-wan.pcap",
+    event_time="+30") or analyze_convergence_pcap(file_path="/captures/core1-wan.pcap",
+    event_time="2026-10-27T19:49:30Z", failed_peer="172.16.1.2", hold_time=30).
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        event_time: Optional time of the event: epoch seconds, seconds from the first frame
+            ("30" or "+30"), or ISO-8601 with a zone ("2026-10-27T19:49:30Z"). Without it
+            the earliest failure sign is the start, and a quiet period counts only when the
+            other side kept sending into it.
+        failed_peer: Optional address of the peer that failed (a hub's WAN address or a BGP
+            neighbor). Without it, it is inferred and failed_peer_source says how.
+        hold_time: Optional BGP hold time in seconds, to infer a hold-timer driven failover
+            from timing when BGP is inside ESP.
+        silence_s: Optional seconds of silence that count as a peer stopping. Default:
+            twice the direction's usual longest gap, at least 3 s, and at least 1.5 DPD
+            intervals when DPD is periodic.
+        display_filter: Optional Wireshark display filter applied first (needs tshark).
+        max_packets: Optional cap on frames read.
+        max_items: Caps the timeline at four times this (default 25).
+    """
+    try:
+        return analyze_convergence_capture(file_path, event_time=event_time, failed_peer=failed_peer,
+                                           hold_time=hold_time, silence_s=silence_s,
+                                           display_filter=display_filter, max_packets=max_packets,
+                                           max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_data_plane_pcap"))
+@redact_result
 def analyze_data_plane_pcap(
     file_path: str,
     tls_baseline: Optional[Dict[str, Any]] = None,
@@ -606,60 +796,49 @@ def analyze_data_plane_pcap(
     """
     Look into the data plane of one capture: path MTU and fragmentation, ESP overhead,
     TCP health per connection, TLS handshakes against a baseline, and QoS markings with
-    RTP quality. Deterministic, no LLM; one read of the capture.
+    RTP quality. Use it after analyze_network_pcap when the question is about packets
+    getting through (MTU, drops, retransmissions, TLS policy, DSCP, voice quality).
 
-    It runs the "path_mtu", "esp_overhead", "tcp", "tls" and "qos" detectors of
-    analyze_network_pcap and puts one verdict per detector first:
+    Deterministic, no LLM, one read of the capture: seconds for a typical capture. Needs
+    only file_path; pass tunnel_mtu (the tunnel's ip mtu, for example 1400) to check that
+    a full-size packet still fits transport_mtu once encrypted, and tls_baseline (for
+    example {"versions": ["TLS1.3"]}) to judge TLS against a policy. Runs the path_mtu,
+    esp_overhead, tcp, tls and qos detectors of analyze_network_pcap.
 
-      - path_mtu_verdict: Fragmentation Needed / Packet Too Big with the next-hop MTU and
-        the probe frame, PMTUD black holes ("DF probes up to 1400 answered, 1500 vanished
-        with no ICMP; path MTU between 1400 and 1499"), fragments complete/incomplete.
-      - esp_overhead_verdict: per ESP SA the cipher families its sizes fit (an estimate:
-        ESP is encrypted), the overhead in tunnel and transport-over-GRE mode, whether a
-        tunnel_mtu packet still fits transport_mtu once encrypted, outer ESP fragments.
-      - tcp_verdict: per connection one of no_answer, refused, receiver_buffer_exhausted
-        ("the endpoint's receive buffer is exhausted"), loss_on_path, receive_window_limited,
-        reset, healthy, with retransmission/gap/dup-ACK/zero-window counts and frames.
-      - tls_verdict: versions negotiated and baseline failures. In TLS 1.3 the certificate
-        is encrypted and reported as not visible; in TLS 1.2 it is read.
-      - qos_verdict: marked flows, GRE marking copied or lost, ESP DSCP per SA, RTP streams
-        with loss, jitter, DSCP and a MOS estimate.
+    Returns a JSON object with status, overall_status and one verdict per detector first
+    (path_mtu_verdict, esp_overhead_verdict, tcp_verdict, tls_verdict, qos_verdict), then
+    the sections: path_mtu (frag_needed with the advertised MTU and probe frame,
+    black_holes with the range the path MTU lies in, fragments), esp_overhead (flows with
+    the cipher families their sizes fit, overhead per mode, outer_fragmentation), tcp
+    (connections, each with a verdict: no_answer, refused, receiver_buffer_exhausted,
+    loss_on_path, receive_window_limited, reset, healthy), tls (sessions: SNI, offered and
+    chosen version and suite, certificate, alerts, baseline_pass) and qos (marked flows,
+    GRE and ESP marking, rtp_streams with loss, jitter, DSCP and a MOS estimate). Each
+    section has issues with stable codes (PMTU_BLACK_HOLE, ESP_OUTER_FRAGMENTED,
+    TCP_ZERO_WINDOW, TLS_BASELINE_VERSION, QOS_RTP_NOT_EF, ...), Wireshark frames, and
+    limits. On failure {"status": "error", "error": "..."}.
 
-    Every section has "issues" (stable codes such as PMTU_BLACK_HOLE, PMTU_FRAG_NEEDED,
-    ESP_OUTER_FRAGMENTED, ESP_EXCEEDS_TRANSPORT_MTU, TCP_NO_ANSWER, TCP_ZERO_WINDOW,
-    TCP_LOSS, TLS_BASELINE_VERSION, TLS_ALERT, QOS_RTP_NOT_EF, QOS_GRE_DSCP_NOT_COPIED),
-    Wireshark frame numbers, and "limits": what this capture cannot show.
+    Limits: only what crossed this capture point (a black hole means no ICMP was seen
+    here); the ESP cipher and mode are estimates from sizes, since ESP is encrypted; the
+    TLS 1.3 certificate is encrypted; QUIC, DTLS and STARTTLS are not decoded; RTP
+    latency needs two capture points (correlate_pcaps).
+
+    For example, analyze_data_plane_pcap(file_path="/captures/br1-wan.pcap", tunnel_mtu=1400)
+    or analyze_data_plane_pcap(file_path="/captures/dmz.pcap", tls_baseline={"versions": ["TLS1.3"]}).
 
     Args:
-        file_path: Absolute path to a pcap/pcapng file.
-        tls_baseline: Optional TLS policy, for example {"versions": ["TLS1.3"]} or
-            {"min_version": "TLS1.2", "cipher_suites": ["TLS_AES_128_GCM_SHA256", "0x1302"],
-            "require_sni": true, "alpn": ["h2"], "require_forward_secrecy": true,
-            "forbid_weak_offers": true}. Without it, versions below TLS 1.2 and weak
-            chosen suites are still flagged.
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        tls_baseline: Optional TLS policy: {"versions": ["TLS1.3"]}, or {"min_version": "TLS1.2",
+            "cipher_suites": ["TLS_AES_128_GCM_SHA256", "0x1302"], "require_sni": true,
+            "alpn": ["h2"], "require_forward_secrecy": true, "forbid_weak_offers": true}.
+            Without it, versions below TLS 1.2 and weak chosen suites are still flagged.
         transport_mtu: MTU of the link that carries ESP (default 1500).
-        tunnel_mtu: The tunnel's ip mtu (for example 1400): checks that a full-size inner
-            packet still fits transport_mtu after encryption.
+        tunnel_mtu: Optional ip mtu of the tunnel (for example 1400), the largest inner packet.
         gre_header_bytes: GRE header inside ESP in transport mode: 8 with a tunnel key
             (default, usual for DMVPN), 4 without.
         display_filter: Optional Wireshark display filter applied first (needs tshark).
         max_packets: Optional cap on frames read.
         max_items: Cap on list lengths (default 25).
-
-    Returns:
-        {"status": "success", "overall_status", "path_mtu_verdict", "esp_overhead_verdict",
-         "tcp_verdict", "tls_verdict", "qos_verdict", "path_mtu": {...}, "esp_overhead": {...},
-         "tcp": {"connections": [...]}, "tls": {"sessions": [...]}, "qos": {...}, "issues",
-         "timeline", "capture"} or {"status": "error", "error"}.
-
-    Limits: verdicts cover only what crossed this capture point (an ICMP dropped before
-    it is invisible, so a black hole means "no ICMP seen here"); ESP cipher and mode are
-    estimates; QUIC, DTLS and STARTTLS are not decoded; RTP latency needs two capture
-    points (use correlate_pcaps).
-
-    Example:
-        analyze_data_plane_pcap("/captures/br1-wan.pcap", tunnel_mtu=1400)
-        analyze_data_plane_pcap("/captures/dmz.pcap", tls_baseline={"versions": ["TLS1.3"]})
     """
     try:
         return analyze_data_plane_capture(file_path, tls_baseline=tls_baseline, transport_mtu=transport_mtu,
@@ -670,7 +849,8 @@ def analyze_data_plane_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("correlate_pcaps"))
+@redact_result
 def correlate_pcaps(
     captures: List[Dict[str, Any]],
     window_s: float = 2.0,
@@ -681,54 +861,46 @@ def correlate_pcaps(
 ) -> Dict[str, Any]:
     """
     Follow the same packets through two or more captures taken at different points
-    (inside and outside of a NAT router, WAN1 and WAN2, before and after a firewall)
-    and report what happened between them. Deterministic, no LLM.
+    (inside and outside of a NAT router, WAN1 and WAN2, before and after a firewall) and
+    say what happened between them. Use it whenever you have two capture points: it shows
+    NAT translations, where a reply was dropped, asymmetric paths and probes an ACL stopped,
+    which one capture cannot.
 
-    Packets are recognised by fields NAT leaves alone: ESP SPI and sequence number,
-    TCP sequence/acknowledgement numbers with flags, length and a payload hash, UDP
-    length and payload hash, ICMP echo sequence with IP identification, else IP
-    identification and length. GRE carrying IPv4 is matched on the inner packet.
+    Deterministic, no LLM. Needs two or more {"path", "label"} entries with unique labels,
+    taken at the same time (clock_offsets_s corrects clocks that differ). Each capture is
+    read once and the captures are merged by timestamp as a stream: a packet waits at most
+    window_s for its copy and at most max_packets_held packets wait at once (the oldest are
+    evicted early and counted), so memory depends on the window, not the capture size;
+    seconds for typical lab captures. Packets are recognised by fields NAT leaves alone:
+    ESP SPI and sequence, TCP sequence/acknowledgement numbers with flags, length and a
+    payload hash, UDP length and payload hash, ICMP echo sequence with IP identification.
+    GRE carrying IPv4 is matched on the inner packet.
 
-    Reports:
-      - nat: each translation, for example {"at_inside": "10.0.0.10:40000",
-        "at_outside": "203.0.113.5:61000", "remote": "198.51.100.80:443",
-        "kind": "source NAT with port/id translation", "packets"}.
-      - connections: per conversation, linked across captures through NAT, a verdict:
-        "reply_lost" (for example "the SYN-ACK was last seen at outside and never
-        reached inside"), "partial_loss", "asymmetric" ("out through wan1, back
-        through wan2"), "seen_only_at" (a probe seen before a device but never after
-        it: an ACL, a route or a drop), "ok".
-      - transit: per capture pair, packets matched, time between sightings (one-way
-        delay plus clock offset), TTL decrement (routed hops between the points).
-      - dscp_changes: the same packet carrying a different DSCP at two points.
-
-    Memory is bounded: captures are merged by timestamp and streamed; a packet waits at
-    most window_s for its copy and at most max_packets_held packets wait at once (the
-    oldest are evicted early and counted in matching.evicted_early).
-
-    Args:
-        captures: Two or more {"path": "/abs/file.pcap", "label": "inside"}; labels must be
-            unique. List them in path order when they lie on one path.
-        window_s: Seconds a packet waits for its copy in another capture (default 2.0, max 60).
-        max_packets_held: Cap on packets held for matching at once (default 200000, min 100).
-        clock_offsets_s: Optional {label: seconds} added to that capture's timestamps when
-            the capturing clocks differ.
-        max_packets: Optional cap on frames read from each capture.
-        max_items: Cap on list lengths (default 25).
-
-    Returns:
-        {"status": "success", "verdict", "captures": [{label, packets, unmatched_packets,
-         start, end}], "matching": {window_s, max_packets_held, evicted_early,
-         packets_matched}, "nat", "connections", "transit", "dscp_changes", "issues",
-         "limits"} or {"status": "error", "error"}. Frames are given per capture label.
+    Returns a JSON object with status, verdict, captures (label, packets, unmatched_packets,
+    start, end), matching (window_s, max_packets_held, evicted_early, packets_matched), nat
+    (each translation: at_<label> endpoints, remote, kind, packets, frames), connections
+    (per conversation, linked through NAT, a verdict: reply_lost such as "the SYN-ACK was
+    last seen at outside and never reached inside", partial_loss, asymmetric such as "out
+    through wan1, back through wan2", seen_only_at for a probe stopped after a device while
+    other traffic between the same addresses crossed it, not_on_other_paths, ok), transit
+    (time between sightings and TTL decrement per capture pair), dscp_changes, issues and
+    limits. Frames are given per capture label. On failure {"status": "error", "error": "..."}.
 
     Limits: a device that randomizes TCP sequence numbers or rewrites payloads breaks
-    matching for those flows; "seen_only_at" cannot tell a drop from a flow that never
-    needed to cross the other points; times include clock differences between hosts.
+    matching for those flows; times include clock differences between capturing hosts; a
+    capture point that was not recording at the time is not counted as missing a packet.
 
-    Example:
-        correlate_pcaps([{"path": "/captures/edge-inside.pcap", "label": "inside"},
-                         {"path": "/captures/edge-outside.pcap", "label": "outside"}])
+    For example, correlate_pcaps(captures=[{"path": "/captures/edge-inside.pcap", "label": "inside"},
+    {"path": "/captures/edge-outside.pcap", "label": "outside"}]).
+
+    Args:
+        captures: Two or more {"path": "/abs/file.pcap", "label": "inside"}; labels unique. List
+            them in path order when they lie on one path.
+        window_s: Seconds a packet waits for its copy in another capture (default 2.0, at most 60).
+        max_packets_held: Cap on packets held for matching at once (default 200000, at least 100).
+        clock_offsets_s: Optional {label: seconds} added to that capture's timestamps.
+        max_packets: Optional cap on frames read from each capture.
+        max_items: Cap on list lengths (default 25).
     """
     try:
         return correlate_captures(captures, window_s=window_s, max_packets_held=max_packets_held,
@@ -737,7 +909,8 @@ def correlate_pcaps(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
-@mcp.tool()
+@mcp.tool(**tool_options("merge_pcap_timelines"))
+@redact_result
 def merge_pcap_timelines(
     captures: List[Dict[str, Any]],
     measurements: Optional[List[Dict[str, Any]]] = None,
@@ -749,53 +922,50 @@ def merge_pcap_timelines(
     overwrite: bool = False,
 ) -> Dict[str, Any]:
     """
-    Merge several captures of one chaos or failover run into a single event timeline
-    and measure the time between chosen events against design thresholds.
-    Deterministic, no LLM.
+    Merge the captures of one chaos or failover run into a single event timeline and
+    measure the time between chosen events against design thresholds. Use it for a
+    failover run: how long from a link or router going down to routing reconverging and
+    pings recovering, and whether that is within the threshold.
 
-    Each capture is analyzed once by the analyze_network_pcap detectors; their notable
-    events (BGP down/established, OSPF neighbor_down/up, EIGRP goodbye, ping outages,
-    ICMP errors, Fragmentation Needed, TCP no_answer/RST/zero window, TLS alerts, ESP
+    Deterministic, no LLM. Needs one or more {"path", "label"} entries; each capture is
+    analyzed once by every analyze_network_pcap detector (seconds per capture), and their
+    events (BGP down/established, OSPF neighbor_down/up, EIGRP goodbye, ping outages, ICMP
+    errors, Fragmentation Needed, TCP no_answer/RST/zero window, TLS alerts, ESP
     fragmentation, ...) are merged by absolute timestamp, each tagged with its capture
-    label and detector.
+    label and detector. A measurement picks two events with selectors, for example
+    {"name": "wan1 failover", "from": {"capture": "wan1", "event": "down"}, "to": {"event":
+    "established", "contains": "10.255.0.2"}, "max_s": 30}; selector keys are capture,
+    detector, protocol, event, contains (substring of the detail) and occurrence ("first",
+    "last" or a 1-based number), and "to" is searched after "from". Without measurements,
+    every ping outage and each routing down event paired with the next up event of the same
+    protocol is measured against failover_max_s. output_path writes the result as JSON so
+    the run keeps it; it is the only tool that writes a file, and only there.
 
-    A measurement picks two events with selectors and reports the delta:
-        {"name": "wan1 failover", "from": {"capture": "wan1", "event": "down"},
-         "to": {"event": "established", "contains": "10.255.0.2"}, "max_s": 30}
-    Selector keys (all optional): capture, detector, protocol, event, contains
-    (substring of the detail), occurrence ("first", "last" or a 1-based number). The
-    "to" event is searched after the "from" event. Verdicts: within, exceeded,
-    below_min, not_found. Without measurements, auto_measurements lists every ping
-    outage duration and each routing down event paired with the next up event of the
-    same protocol, judged against failover_max_s when given.
+    Returns a JSON object with status, verdict, origin (time of t=0, the earliest capture
+    start), captures (label, packets, start, end, overall_status, events, verdicts),
+    measurements (name, from, to, delta_s, max_s, verdict within, exceeded, below_min or
+    not_found, detail), auto_measurements, timeline (t, time, capture, detector, protocol,
+    event, detail, frame), timeline_omitted, limits and written_to. On failure
+    {"status": "error", "error": "..."}, for example for an unknown selector key or an
+    existing output_path without overwrite.
+
+    Limits: events are packet timestamps at each capture point (millisecond precision),
+    only as comparable as the capturing clocks; timers inside a router between packets are
+    invisible.
+
+    For example, merge_pcap_timelines(captures=[{"path": "/run/wan1.pcap", "label": "wan1"},
+    {"path": "/run/lan.pcap", "label": "lan"}], failover_max_s=30, output_path="/run/failover.json").
 
     Args:
         captures: One or more {"path": "/abs/file.pcap", "label": "wan1"}; labels unique.
-        measurements: Optional list of {"name", "from", "to", "max_s", "min_s"}.
+        measurements: Optional list of {"name", "from", "to", "max_s", "min_s"} with selectors.
         detectors: Optional subset of analyze_network_pcap detectors (default all).
         failover_max_s: Optional threshold in seconds for the automatic measurements.
         clock_offsets_s: Optional {label: seconds} added to that capture's timestamps.
         max_events: Cap on timeline events returned (default 500).
-        output_path: Optional absolute path ending in .json: the result is also written
-            there so the run keeps it next to its captures. Refused if the file exists
-            unless overwrite is true, or if the directory does not exist.
-        overwrite: Replace an existing output_path.
-
-    Returns:
-        {"status": "success", "verdict", "origin" (time of t=0, the earliest capture
-         start), "captures": [{label, packets, start, end, overall_status, events,
-         verdicts}], "measurements": [{name, from, to, delta_s, max_s, verdict, detail}],
-         "auto_measurements", "timeline": [{t, time, capture, detector, protocol, event,
-         detail, frame}], "timeline_omitted", "written_to"} or {"status": "error", "error"}.
-
-    Limits: events are packet timestamps at each capture point (millisecond precision),
-    only as comparable as the capturing clocks; timers inside a router between packets
-    are invisible.
-
-    Example:
-        merge_pcap_timelines([{"path": "/run/wan1.pcap", "label": "wan1"},
-                              {"path": "/run/lan.pcap", "label": "lan"}], failover_max_s=30,
-                             output_path="/run/failover-timing.json")
+        output_path: Optional absolute path ending in .json to write the result to; refused if
+            the file exists (unless overwrite) or its directory does not.
+        overwrite: Replace an existing output_path (default false).
     """
     try:
         return merge_timelines(captures, measurements=measurements, detectors=detectors,
