@@ -23,6 +23,16 @@ import dspy
 from utils.credentials import get_secret, redact, redact_text
 
 PROFILES = ("fast", "detailed", "deep")
+DEFAULT_PROVIDER = "ollama"
+PROVIDER_VARIABLE = "SONIC_LLM_PROVIDER"
+
+
+def resolve_provider(provider: Optional[str] = None) -> str:
+    """
+    The one provider every LLM path uses: the one passed in, else
+    $SONIC_LLM_PROVIDER, else DEFAULT_PROVIDER (ollama, local).
+    """
+    return provider or os.getenv(PROVIDER_VARIABLE) or DEFAULT_PROVIDER
 
 
 class LLMConfig:
@@ -49,7 +59,7 @@ class LLMConfig:
     }
     
     def __init__(self, provider: str = None, model_name: str = None, api_key: str = None):
-        self.provider = provider or os.getenv("SONIC_LLM_PROVIDER", "ollama")
+        self.provider = resolve_provider(provider)
         self.model_name = model_name
         self.api_key = api_key or self._get_api_key()
         self.temperature = float(os.getenv("SONIC_LLM_TEMPERATURE", "0.7"))
@@ -166,7 +176,7 @@ def list_available_providers():
     return {
         "providers": list(LLMConfig.PROVIDER_MODELS.keys()),
         "models": LLMConfig.PROVIDER_MODELS,
-        "default": "ollama"
+        "default": DEFAULT_PROVIDER,
     }
 
 

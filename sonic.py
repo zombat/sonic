@@ -55,6 +55,10 @@ Providers:
   anthropic  - Claude models (ANTHROPIC_API_KEY from the environment or --env-file / SONIC_ENV_FILE)
   openai     - GPT models (requires OPENAI_API_KEY)
   azure      - Azure OpenAI (requires AZURE_OPENAI_KEY and endpoint config)
+
+API keys:
+  Read from the environment, then from the dotenv file named by --env-file or SONIC_ENV_FILE.
+  There is no key option: a key typed on the command line lands in shell history and ps output.
         """
     )
     
@@ -147,7 +151,10 @@ Providers:
     
     parser.add_argument(
         "--model-name",
-        help="Override default model name for the provider (advanced users only)"
+        metavar="NAME",
+        help="Run the LLM analysis on this model of --provider (for example llama3:8b with ollama) instead of "
+             "the ones --model picks; fast, detailed, deep and combined then make one pass on it. "
+             "Not with --model all"
     )
     
     parser.add_argument(
@@ -158,11 +165,6 @@ Providers:
              "values are never printed"
     )
 
-    parser.add_argument(
-        "--api-key",
-        help="API key for cloud providers (optional, prefers environment variable - ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)"
-    )
-    
     # Batch and streaming options
     parser.add_argument(
         "--batch-dir",
@@ -228,6 +230,8 @@ def main():
 
     if not args.file:
         parser.error("the following arguments are required: --file (unless --create-skill)")
+    if args.model_name and args.model == "all":
+        parser.error("--model-name cannot be used with --model all, which tests its own models")
 
     # Handle network-only mode (its default report path is next to the capture)
     if args.network_only:
@@ -254,7 +258,8 @@ def main():
         return
     
     # Standard analysis mode
-    result = run_analysis_mode(args.file, args.model, enable_quality=args.quality, enable_mos=args.mos, provider=args.provider)
+    result = run_analysis_mode(args.file, args.model, enable_quality=args.quality, enable_mos=args.mos,
+                               provider=args.provider, model_name=args.model_name)
     
     # Extract auth data for reporting
     auth_data = None
@@ -458,7 +463,8 @@ def handle_batch_analysis(args):
         model=args.model,
         mode=mode,
         max_workers=args.batch_workers,
-        on_file_progress=batch_progress
+        on_file_progress=batch_progress,
+        model_name=args.model_name,
     )
     
     # Print summary
@@ -503,7 +509,8 @@ def handle_streaming_analysis(args):
             args.file,
             provider=args.provider,
             on_token=token_callback,
-            on_partial_result=partial_callback
+            on_partial_result=partial_callback,
+            model_name=args.model_name,
         )
         
         print("\n\n" + "="*80)
@@ -538,7 +545,8 @@ def handle_streaming_analysis(args):
             args.file,
             provider=args.provider,
             on_token=token_callback,
-            on_progress=progress_callback
+            on_progress=progress_callback,
+            model_name=args.model_name,
         )
         
         print("\n\n" + "="*80)

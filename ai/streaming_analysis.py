@@ -10,7 +10,7 @@ from typing import Dict, Any, Callable, Iterator, Optional
 import json
 from io import StringIO
 
-from llm_config import get_llm_streaming
+from llm_config import get_llm_streaming, resolve_provider
 
 
 def run_combined_analysis_streaming(
@@ -18,7 +18,8 @@ def run_combined_analysis_streaming(
     file_path: str = None,
     provider: str = None,
     on_token: Optional[Callable[[str], None]] = None,
-    on_progress: Optional[Callable[[str], None]] = None
+    on_progress: Optional[Callable[[str], None]] = None,
+    model_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Streams combined analysis output token-by-token.
@@ -29,6 +30,7 @@ def run_combined_analysis_streaming(
         provider: LLM provider (must support streaming)
         on_token: Callback for each token (for real-time display)
         on_progress: Callback for progress messages
+        model_name: Run on this model instead of the provider's default (optional)
     
     Returns:
         Complete analysis result (accumulated from stream)
@@ -43,18 +45,19 @@ def run_combined_analysis_streaming(
         ...     on_progress=progress_cb
         ... )
     """
+    provider = resolve_provider(provider)
     if on_progress:
         on_progress("Initializing streaming analysis...")
     
     # Get streaming factory
     try:
-        stream_fn = get_llm_streaming(profile="fast", provider=provider, on_token=on_token)
+        stream_fn = get_llm_streaming(profile="fast", provider=provider, model_name=model_name, on_token=on_token)
     except ValueError as e:
         # Fallback to non-streaming
         if on_progress:
             on_progress(f"Streaming not supported for {provider}, using standard analysis")
         from ai.analysis import run_combined_analysis
-        return run_combined_analysis(file_content, file_path, provider)
+        return run_combined_analysis(file_content, file_path, provider, model_name=model_name)
     
     # Build prompt
     prompt = f"""Analyze this VoIP SIP capture data for call quality issues:
