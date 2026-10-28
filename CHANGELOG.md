@@ -5,6 +5,23 @@ All notable changes to S.O.N.I.C. (SIP Observation and Network Inspection Consol
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Zero-cleartext audit (`cleartext_audit` detector, `audit_cleartext_pcap` MCP tool): every frame against an allowlist (default ESP, IKE on UDP 500/4500, NAT-T keepalives; tokens for ARP, ICMP, routing, GRE, link-local layer 2, ports and protocols, each scopable to addresses), reported by protocol and address pair with frame numbers, and a pass or fail result
+- IKEv2 exchange decoding: proposals offered and chosen by name with weak algorithms flagged, KE groups and INVALID_KE_PAYLOAD retries, NAT_DETECTION hashes recomputed from the wire and the move to UDP 4500, DPD liveness checks, IKE SA collisions, cleartext INVALID_SPI / INVALID_IKE_SPI, ESP on a stale SPI after a rekey, and a diagnosis code per IKE SA (proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing, udp_4500_blocked, no_reply, liveness_lost, peer_lost_sa, ...)
+- DMVPN Phase 3 sequence proof (`dmvpn_phase3` detector): per redirected flow the ordered steps via hub, redirect, resolution request, resolution reply and direct data, with the first missing step and why; hub-relayed traffic with no redirect; resolution thrashing; and, given the hubs, encrypted spoke-to-spoke shortcuts when NHRP is inside ESP
+- BGP: OPEN capabilities, keepalive cadence against hold/3, UPDATE timing, the TCP MSS of each SYN and SYN-ACK checked against `expected_mss`, and the cause of each session drop (hold timer, NOTIFICATION, BFD, RST, FIN, or a hold expiry inferred from silence)
+- OSPF: adjacencies stuck in EXSTART or EXCHANGE from DB Description retransmissions, with the cause (for example the DBD MTU mismatch)
+- Convergence timeline (`convergence` detector, `analyze_convergence_pcap` MCP tool): from an event time or the first failure sign, the delay to detection, to the first UPDATE on the surviving path and to traffic resuming, and the driver (DPD, BGP hold timer, BFD, explicit close)
+- `hubs` on analyze_vpn_pcap and analyze_network_pcap, `expected_mss` on analyze_routing_pcap and analyze_network_pcap
+- Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
+
+### Changed
+- The extractor hands the IKE bytes from tshark (`udp.payload`) to the same parser scapy uses, so IKE fields match by construction; records gain the TCP MSS of SYNs, BGP capability codes, OSPF DBD flags and sequence, and an `llc` label for CDP/STP frames
+- Synthetic IKEv2 fixtures carry real NAT detection hashes
+- MCP tool descriptions put outputs and limits before `Args:`, the part clients show
+
 ## [3.1.0] - 2026-10-25
 
 ### Added
