@@ -101,13 +101,14 @@ Providers:
         "--network-only",
         action="store_true",
         help="Run the non-SIP network detectors (IPsec/IKE/ESP, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP, "
-             "conversations) without any AI model. Writes the report to --save_file "
+             "path MTU, ESP overhead, TCP, TLS, QoS, conversations) without any AI model. Writes the report to --save_file "
              "(default: <capture>.network.md; a path ending in .json writes JSON)."
     )
 
     parser.add_argument(
         "--detectors",
-        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, routing, reachability, conversations"
+        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, routing, reachability, path_mtu, "
+             "esp_overhead, tcp, tls, qos, conversations"
     )
 
     parser.add_argument(

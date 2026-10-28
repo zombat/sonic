@@ -14,6 +14,11 @@ Detectors:
     gre_nhrp       GRE tunnels and NHRP (DMVPN registration, resolution, redirect)
     routing        BGP, OSPF and EIGRP health with a failover timeline
     reachability   ICMP echo loss/RTT/outages, ICMP errors, ARP without replies
+    path_mtu       Fragmentation Needed / Packet Too Big, PMTUD black holes, IP fragments
+    esp_overhead   ESP sizes against cipher families, overhead, post-encryption fragmentation
+    tcp            per-connection TCP health with a verdict (no answer, loss, zero window, ...)
+    tls            TLS ClientHello/ServerHello, certificate (TLS 1.2), baseline check
+    qos            DSCP per flow, GRE/ESP marking copy, RTP jitter/loss/MOS with DSCP
     conversations  protocols, top conversations and top talkers
 
 When SIP is present the existing SIP quality path (CallQualityScorer and the
@@ -38,12 +43,20 @@ from analyzers.ipsec_vpn import IPsecDetector
 from analyzers.network_common import Context, SEVERITY_ORDER, iso_time, worst_status
 from analyzers.reachability import ConversationDetector, ReachabilityDetector
 from analyzers.routing_health import RoutingDetector
+from analyzers.esp_overhead import EspOverheadDetector
+from analyzers.path_mtu import PathMtuDetector
+from analyzers.qos import QosDetector
+from analyzers.tcp_health import TcpHealthDetector
+from analyzers.tls_inspect import TlsDetector
 from extractors.network import open_network_records
 
 REPORT_SCHEMA = "sonic.network_report/1"
-DETECTOR_NAMES = ["ipsec", "gre_nhrp", "routing", "reachability", "conversations"]
+DETECTOR_NAMES = ["ipsec", "gre_nhrp", "routing", "reachability", "path_mtu", "esp_overhead", "tcp", "tls", "qos",
+                  "conversations"]
 VPN_DETECTORS = ["ipsec", "gre_nhrp"]
 ROUTING_DETECTORS = ["routing", "reachability"]
+DATA_PLANE_DETECTORS = ["path_mtu", "esp_overhead", "tcp", "tls", "qos"]
+OPTION_KEYS = {"esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline"}}
 
 
 def _family(rec: Dict[str, Any], families: set):
@@ -124,12 +137,18 @@ def _sip_quality(file_path: str) -> Dict[str, Any]:
     return result
 
 
-def _build_detectors(names: List[str], peers: Optional[List[str]]):
+def _build_detectors(names: List[str], peers: Optional[List[str]], options: Optional[Dict[str, Dict[str, Any]]] = None):
+    options = options or {}
     builders = {
         "ipsec": lambda: IPsecDetector(peers=peers),
         "gre_nhrp": GreNhrpDetector,
         "routing": RoutingDetector,
         "reachability": ReachabilityDetector,
+        "path_mtu": PathMtuDetector,
+        "esp_overhead": lambda: EspOverheadDetector(**options.get("esp_overhead", {})),
+        "tcp": TcpHealthDetector,
+        "tls": lambda: TlsDetector(**options.get("tls", {})),
+        "qos": QosDetector,
         "conversations": ConversationDetector,
     }
     return [builders[name]() for name in names]
@@ -150,6 +169,7 @@ def analyze_network_capture(
     include_sip: bool = True,
     max_items: int = 25,
     backend: str = "auto",
+    options: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Run the network detectors over one capture and return one combined report.
@@ -164,6 +184,8 @@ def analyze_network_capture(
         include_sip: run the existing SIP quality path when SIP is present
         max_items: cap on list lengths in the report (sessions, flows, pairs, ...)
         backend: "auto", "tshark" or "scapy"
+        options: per-detector settings, {"esp_overhead": {"transport_mtu", "tunnel_mtu",
+                 "gre_header_bytes"}, "tls": {"baseline": {...}}}
 
     Returns:
         dict: the report (status "success"), or {"status": "error", "error": ...}
@@ -185,6 +207,13 @@ def analyze_network_capture(
     if max_packets is not None and int(max_packets) <= 0:
         return _error("max_packets must be a positive number")
     max_items = max(1, int(max_items or 25))
+    options = dict(options or {})
+    for name, settings in options.items():
+        if name not in OPTION_KEYS:
+            return _error(f"No options for detector {name!r}", detectors_with_options=sorted(OPTION_KEYS))
+        if not isinstance(settings, dict) or set(settings) - OPTION_KEYS[name]:
+            return _error(f"Unknown option(s) for {name}: {sorted(set(settings or {}) - OPTION_KEYS[name])}",
+                          valid_options=sorted(OPTION_KEYS[name]))
 
     try:
         extraction = open_network_records(file_path, display_filter=display_filter,
@@ -192,7 +221,7 @@ def analyze_network_capture(
     except (FileNotFoundError, RuntimeError) as exc:
         return _error(str(exc))
 
-    active = _build_detectors(names, peer_list)
+    active = _build_detectors(names, peer_list, options)
     families: set = set()
     packets = 0
     total_bytes = 0
@@ -329,5 +358,29 @@ def analyze_routing_capture(file_path: str, display_filter: Optional[str] = None
         "failover_timeline": routing.get("failover_timeline", []),
         "ping_outages": outages,
     }
+    ordered.update(report)
+    return ordered
+
+
+def analyze_data_plane_capture(file_path: str, tls_baseline: Optional[Dict[str, Any]] = None,
+                               transport_mtu: int = 1500, tunnel_mtu: Optional[int] = None,
+                               gre_header_bytes: int = 8, display_filter: Optional[str] = None,
+                               max_packets: Optional[int] = None, max_items: int = 25,
+                               backend: str = "auto") -> Dict[str, Any]:
+    """
+    The data plane detectors (path_mtu, esp_overhead, tcp, tls, qos), with each verdict lifted to the top.
+    """
+    options = {"esp_overhead": {"transport_mtu": transport_mtu, "tunnel_mtu": tunnel_mtu,
+                                "gre_header_bytes": gre_header_bytes}}
+    if tls_baseline:
+        options["tls"] = {"baseline": tls_baseline}
+    report = analyze_network_capture(file_path, detectors=DATA_PLANE_DETECTORS, display_filter=display_filter,
+                                     max_packets=max_packets, include_sip=False, max_items=max_items,
+                                     backend=backend, options=options)
+    if report.get("status") != "success":
+        return report
+    ordered = {"status": report["status"], "overall_status": report["overall_status"]}
+    for name in DATA_PLANE_DETECTORS:
+        ordered[f"{name}_verdict"] = report.get(name, {}).get("verdict")
     ordered.update(report)
     return ordered

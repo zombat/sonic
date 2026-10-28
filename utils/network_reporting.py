@@ -14,7 +14,9 @@ from typing import Any, Dict, List
 
 STATUS_MARK = {"ok": "OK", "warning": "WARNING", "problem": "PROBLEM", "not_present": "not present"}
 SECTION_TITLES = [("ipsec", "IPsec / VPN"), ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("routing", "Routing protocols"),
-                  ("reachability", "Reachability (ICMP / ARP)"), ("conversations", "Conversations")]
+                  ("reachability", "Reachability (ICMP / ARP)"), ("path_mtu", "Path MTU and fragmentation"),
+                  ("esp_overhead", "ESP overhead (estimate)"), ("tcp", "TCP health"), ("tls", "TLS"), ("qos", "QoS"),
+                  ("conversations", "Conversations")]
 
 
 def print_network_summary(report: Dict[str, Any]) -> None:
