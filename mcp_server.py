@@ -53,7 +53,7 @@ from extractors.tshark import extract_sip_data
 from extractors.auth_info import extract_auth_and_registration_info
 from analyzers.call_quality_scoring import CallQualityScorer
 from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer
-from llm_config import list_available_providers
+from llm_config import list_available_providers, resolve_provider
 from analyzers.network_orchestrator import (
     analyze_network_capture,
     analyze_routing_capture,
@@ -88,7 +88,7 @@ mcp = FastMCP("S.O.N.I.C. VoIP and Network Analyzer", instructions=build_instruc
 @redact_result
 def analyze_pcap(
     file_path: str,
-    provider: str = "ollama",
+    provider: Optional[str] = None,
     model: str = "combined",
     enable_quality: bool = True,
     enable_mos: bool = True
@@ -102,8 +102,8 @@ def analyze_pcap(
     openai, azure) the extracted SIP/SDP data, including authentication headers,
     leaves this machine, so ask the user first. For numbers only, quick_quality_check
     answers in seconds without an LLM. Needs SIP in the capture; for anything else use
-    analyze_network_pcap. SONIC_LLM_PROVIDER does not change the provider default here,
-    so pass provider explicitly.
+    analyze_network_pcap. Without provider it uses the server's SONIC_LLM_PROVIDER, else
+    ollama; list_llm_providers says which.
 
     Returns a JSON object with status, output.diagnostic_report (per-call findings,
     overall assessment, recommendations), quality_analysis (call_quality and
@@ -113,9 +113,10 @@ def analyze_pcap(
 
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
-        provider: LLM provider: "ollama" (local, default), "anthropic", "openai" or "azure".
-            Cloud providers need their API key in the server's environment or in the
-            env file named by --env-file or SONIC_ENV_FILE.
+        provider: LLM provider: "ollama" (local), "anthropic", "openai" or "azure".
+            Default: the server's SONIC_LLM_PROVIDER, else "ollama". Cloud providers need
+            their API key in the server's environment or in the env file named by
+            --env-file or SONIC_ENV_FILE.
         model: "fast" (small model, quickest), "detailed" (the provider's default model),
             "deep" (its most capable model, for example claude-opus-5-5) or "combined"
             (fast and detailed, recommended).
@@ -142,7 +143,7 @@ def analyze_pcap(
             model_mode=model,
             enable_quality=enable_quality,
             enable_mos=enable_mos,
-            provider=provider
+            provider=resolve_provider(provider)
         )
         
         return result
@@ -230,11 +231,13 @@ def list_llm_providers() -> Dict[str, Any]:
     List the LLM providers and models the LLM tools (analyze_pcap,
     analyze_pcap_partial_streaming, analyze_batch_pcaps) can use, and whether each
     cloud API key is set. No LLM is called; instant. Call it before choosing a
-    provider other than ollama.
+    provider other than ollama, or to see which provider an LLM tool uses when a call
+    does not pass one.
 
     Returns a JSON object with providers (names), models (provider to its "fast",
-    "detailed" and, for anthropic, "deep" model names), default, and current_config:
-    the SONIC_LLM_PROVIDER value and credentials, which says for each API key only
+    "detailed" and, for anthropic, "deep" model names), default (used when
+    SONIC_LLM_PROVIDER is unset), and current_config: provider (what every LLM tool
+    uses when a call does not pass one) and credentials, which says for each API key only
     whether it is configured and where it came from ("environment" or the env file's
     path), never any part of the key. For example, list_llm_providers().
     """
@@ -245,7 +248,7 @@ def list_llm_providers() -> Dict[str, Any]:
         # from (environment or env file path), never any part of a value.
         credentials = credential_status()
         providers["current_config"] = {
-            "provider": os.getenv("SONIC_LLM_PROVIDER", "ollama"),
+            "provider": resolve_provider(),
             "credentials": credentials,
             "anthropic_key_set": credentials["ANTHROPIC_API_KEY"]["configured"],
             "openai_key_set": credentials["OPENAI_API_KEY"]["configured"],
@@ -264,7 +267,7 @@ def list_llm_providers() -> Dict[str, Any]:
 @redact_result
 def analyze_batch_pcaps(
     directory: str,
-    provider: str = "anthropic",
+    provider: Optional[str] = None,
     model: str = "fast",
     mode: str = "sequential"
 ) -> Dict[str, Any]:
@@ -272,9 +275,9 @@ def analyze_batch_pcaps(
     Diagnose every SIP capture in one directory with an LLM, one analyze_pcap run per
     file, plus aggregate counts.
 
-    Calls an LLM once per file: minutes for a directory, and the provider default is
-    anthropic (a cloud API that needs ANTHROPIC_API_KEY and receives the SIP data), so
-    ask the user and pass provider explicitly. Reads files matching *.pcap* directly
+    Calls an LLM once per file: minutes for a directory. Without provider it uses the
+    server's SONIC_LLM_PROVIDER, else ollama; a cloud provider receives the SIP data, so
+    ask the user before choosing one. Reads files matching *.pcap* directly
     in the directory (not subdirectories). For one capture use analyze_pcap; for
     non-SIP captures call analyze_network_pcap per file.
 
@@ -286,7 +289,8 @@ def analyze_batch_pcaps(
     Args:
         directory: Absolute path to a directory of pcap/pcapng files on the machine
             running this server.
-        provider: LLM provider: "anthropic" (default), "ollama", "openai" or "azure".
+        provider: LLM provider: "ollama", "anthropic", "openai" or "azure". Default: the
+            server's SONIC_LLM_PROVIDER, else "ollama".
         model: "fast" (default) or "detailed".
         mode: "sequential" (one file at a time, default) or "parallel" (up to 3 at once).
     """
@@ -304,7 +308,7 @@ def analyze_batch_pcaps(
         mode_enum = ProcessingMode.PARALLEL if mode == "parallel" else ProcessingMode.SEQUENTIAL
         return analyze_batch(
             [str(f) for f in files],
-            provider=provider,
+            provider=resolve_provider(provider),
             model=model,
             mode=mode_enum,
             max_workers=3
@@ -322,15 +326,15 @@ def analyze_batch_pcaps(
 @redact_result
 def analyze_pcap_partial_streaming(
     file_path: str,
-    provider: str = "anthropic"
+    provider: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Run the deterministic SIP quality and MOS analysis, then the LLM diagnosis, on one
     capture, and report how long each part took.
 
-    Calls an LLM: tens of seconds to minutes. The provider default is anthropic (a
-    cloud API that needs ANTHROPIC_API_KEY and receives the SIP data), so ask the user
-    and pass provider explicitly. The MCP result arrives once, after the LLM finishes;
+    Calls an LLM: tens of seconds to minutes. Without provider it uses the server's
+    SONIC_LLM_PROVIDER, else ollama; a cloud provider receives the SIP data, so ask the
+    user before choosing one. The MCP result arrives once, after the LLM finishes;
     to get the numbers sooner, call quick_quality_check first and analyze_pcap after.
 
     Returns a JSON object with status, quality_analysis, mos_analysis, llm_analysis
@@ -341,8 +345,9 @@ def analyze_pcap_partial_streaming(
 
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
-        provider: LLM provider with streaming support: "anthropic" (default), "openai"
-            or "azure".
+        provider: LLM provider: "anthropic", "openai" or "azure" stream; "ollama" runs
+            the same diagnosis without streaming. Default: the server's
+            SONIC_LLM_PROVIDER, else "ollama".
     """
     from ai.partial_streaming import run_partial_analysis_streaming
     
@@ -350,7 +355,7 @@ def analyze_pcap_partial_streaming(
         if not os.path.exists(file_path):
             return {"status": "error", "error": f"File not found: {file_path}"}
         
-        return run_partial_analysis_streaming(file_path, provider=provider)
+        return run_partial_analysis_streaming(file_path, provider=resolve_provider(provider))
     
     except Exception as e:
         return {

@@ -30,7 +30,8 @@ except ImportError:
         return iterable
 
 
-def run_analysis_mode(file_path: str, model_mode: str, enable_quality: bool = False, enable_mos: bool = False, provider: str = None) -> Dict[str, Any]:
+def run_analysis_mode(file_path: str, model_mode: str, enable_quality: bool = False, enable_mos: bool = False,
+                      provider: str = None, model_name: str = None) -> Dict[str, Any]:
     """
     Runs SIP analysis in the specified mode.
     
@@ -40,10 +41,15 @@ def run_analysis_mode(file_path: str, model_mode: str, enable_quality: bool = Fa
         enable_quality: Whether to run call quality scoring
         enable_mos: Whether to run MOS analysis
         provider: LLM provider (ollama, anthropic, openai, azure) - defaults to SONIC_LLM_PROVIDER env var
+        model_name: Run on this model instead of the ones the mode picks (--model-name);
+            not with 'all', which compares its own list of models
         
     Returns:
         Dict[str, Any]: Analysis results
     """
+    if model_name and model_mode == "all":
+        return {"status": "error", "error": "--model-name cannot be used with --model all, which tests its own models"}
+
     print(f"🔧 Enriching SIP data with codec analysis context...")
     print(f"🎵 Analyzing RTP streams and correlating with SDP information...")
     
@@ -61,18 +67,18 @@ def run_analysis_mode(file_path: str, model_mode: str, enable_quality: bool = Fa
     result = None
     if model_mode == "combined":
         print("🔄 Running combined analysis (recommended)...")
-        result = run_combined_analysis(sip_data, file_path, provider=provider)
+        result = run_combined_analysis(sip_data, file_path, provider=provider, model_name=model_name)
     elif model_mode == "fast":
         print("⚡ Running fast analysis...")
-        fast_lm = get_llm(profile="fast", provider=provider)
+        fast_lm = get_llm(profile="fast", provider=provider, model_name=model_name)
         result = sip_diagnostic_test(fast_lm, sip_data, file_path)
     elif model_mode == "detailed":
         print("🔍 Running detailed analysis...")
-        detailed_lm = get_llm(profile="detailed", provider=provider)
+        detailed_lm = get_llm(profile="detailed", provider=provider, model_name=model_name)
         result = sip_diagnostic_test(detailed_lm, sip_data, file_path)
     elif model_mode == "deep":
         print("🧠 Running deep analysis (the provider's most capable model)...")
-        deep_lm = get_llm(profile="deep", provider=provider)
+        deep_lm = get_llm(profile="deep", provider=provider, model_name=model_name)
         result = sip_diagnostic_test(deep_lm, sip_data, file_path)
     elif model_mode == "all":
         print("🧪 Running comprehensive analysis with all models...")

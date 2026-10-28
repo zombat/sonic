@@ -81,7 +81,8 @@ class SipDiagnosticSignature(dspy.Signature):
     analysis: str = dspy.OutputField(desc="A JSON object containing comprehensive diagnostic report focused on call quality issues.")
 
 
-def run_combined_analysis(file_content: str, file_path: str = None, provider: str = None) -> Dict[str, Any]:
+def run_combined_analysis(file_content: str, file_path: str = None, provider: str = None,
+                          model_name: str = None) -> Dict[str, Any]:
     """
     Runs analysis with both top models and combines the results.
     
@@ -97,6 +98,8 @@ def run_combined_analysis(file_content: str, file_path: str = None, provider: st
     Args:
         file_content: Extracted SIP data from packet capture (JSON or raw text format)
         provider: LLM provider (ollama, anthropic, openai, azure) - defaults to SONIC_LLM_PROVIDER env var
+        model_name: Run the analysis once on this model instead (--model-name). The two
+            passes differ only in their model, so with one model there is one pass.
     
     Returns:
         Dict[str, Any]: Combined analysis result with enhanced diagnostic information
@@ -112,6 +115,11 @@ def run_combined_analysis(file_content: str, file_path: str = None, provider: st
         >>> print(result["output"]["diagnostic_report"]["analysis_method"])
         'Combined: Fast structured analysis + Detailed natural language insights'
     """
+    if model_name:
+        print(f"🔄 Running the analysis on {model_name} (--model-name)...")
+        return sip_diagnostic_test(get_llm(profile="detailed", provider=provider, model_name=model_name),
+                                   file_content, file_path)
+
     print("🔄 Running combined analysis with top 2 models...")
     
     # Run fast model

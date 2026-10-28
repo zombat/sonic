@@ -276,5 +276,111 @@ class TestStdioGuidance(unittest.TestCase):
         self.assertIn("| `peers` |", text)
 
 
+class TestProviderResolution(unittest.TestCase):
+    """Every LLM tool defaults to one provider: its argument, else SONIC_LLM_PROVIDER, else ollama."""
+
+    LLM_TOOLS = [row["name"] for row in guide.TOOL_GUIDE if row["llm"]]
+
+    def setUp(self):
+        from unittest import mock
+        self.mock = mock
+        self.env = mock.patch.dict(os.environ)
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        os.environ.pop("SONIC_LLM_PROVIDER", None)
+
+    def test_no_llm_tool_hard_codes_a_provider_default(self):
+        tools = {tool.name: tool for tool in server_tools()}
+        for name in self.LLM_TOOLS:
+            schema = tools[name].parameters["properties"]["provider"]
+            self.assertIsNone(schema.get("default"), name)
+
+    def providers_used(self):
+        """Call each LLM tool without provider; return the provider each one handed on."""
+        seen = {}
+        mock = self.mock
+        fixture = os.path.join(HERE, "tests", "fixtures", "sip_minimal.pcap")
+        directory = os.path.dirname(fixture)
+
+        def record(name):
+            def fake(*_args, **kwargs):
+                seen[name] = kwargs.get("provider")
+                return {"status": "success"}
+            return fake
+
+        import types
+        import ai.batch_streaming as batch
+        partial = types.ModuleType("ai.partial_streaming")  # the tools import these inside the call
+        partial.run_partial_analysis_streaming = record("analyze_pcap_partial_streaming")
+        with mock.patch.object(mcp_server, "run_analysis_mode", record("analyze_pcap")), \
+                mock.patch.object(batch, "analyze_batch", record("analyze_batch_pcaps")), \
+                mock.patch.dict(sys.modules, {"ai.partial_streaming": partial}):
+            for name in self.LLM_TOOLS:
+                tool = getattr(mcp_server, name)
+                fn = getattr(tool, "fn", tool)
+                fn(directory=directory) if name == "analyze_batch_pcaps" else fn(file_path=fixture)
+        return seen
+
+    def test_without_the_variable_every_tool_uses_ollama(self):
+        self.assertEqual(self.providers_used(), {name: "ollama" for name in self.LLM_TOOLS})
+
+    def test_the_variable_sets_every_tool(self):
+        os.environ["SONIC_LLM_PROVIDER"] = "anthropic"
+        self.assertEqual(self.providers_used(), {name: "anthropic" for name in self.LLM_TOOLS})
+        fn = getattr(mcp_server.list_llm_providers, "fn", mcp_server.list_llm_providers)
+        self.assertEqual(fn()["current_config"]["provider"], "anthropic")
+
+    def test_the_argument_wins(self):
+        os.environ["SONIC_LLM_PROVIDER"] = "anthropic"
+        from llm_config import LLMConfig, resolve_provider
+        self.assertEqual(resolve_provider("openai"), "openai")
+        self.assertEqual(LLMConfig("openai").provider, "openai")
+        self.assertEqual(LLMConfig().provider, "anthropic")
+
+    def test_guidance_states_the_resolution(self):
+        tools = server_tools()
+        for text in (guide.build_instructions(), guide.render_topic("sip-rtp", tools),
+                     guide.render_topic("interpreting-results", tools)):
+            self.assertIn("SONIC_LLM_PROVIDER", text)
+            self.assertNotIn("does not override", text)
+
+
+class TestCliModelOptions(unittest.TestCase):
+    """--api-key is gone; --model-name reaches the LLM; --model all refuses it."""
+
+    def test_no_option_takes_an_api_key(self):
+        import sonic
+        options = [opt for action in sonic.build_parser()._actions for opt in action.option_strings]
+        self.assertFalse([opt for opt in options if "key" in opt], options)
+        done = subprocess.run([sys.executable, CLI, "--file", "x.pcap", "--api-key", "abc"], cwd=HERE,
+                              capture_output=True, text=True, timeout=300)
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("unrecognized arguments", done.stderr)
+
+    def test_model_name_reaches_get_llm(self):
+        from unittest import mock
+        from analyzers import orchestrator
+        fixture = os.path.join(HERE, "tests", "fixtures", "sip_minimal.pcap")
+        names = []
+
+        def fake_get_llm(profile="fast", provider=None, model_name=None, api_key=None):
+            names.append(model_name)
+            return object()
+
+        with mock.patch.object(orchestrator, "get_llm", fake_get_llm), \
+                mock.patch("ai.analysis.get_llm", fake_get_llm), \
+                mock.patch.object(orchestrator, "sip_diagnostic_test", return_value={"status": "error"}), \
+                mock.patch("ai.analysis.sip_diagnostic_test", return_value={"status": "error"}):
+            for mode in ("fast", "detailed", "deep", "combined"):
+                orchestrator.run_analysis_mode(fixture, mode, provider="ollama", model_name="llama3:8b")
+        self.assertEqual(names, ["llama3:8b"] * 4)
+
+    def test_model_name_refused_with_all(self):
+        done = subprocess.run([sys.executable, CLI, "--file", "x.pcap", "--model", "all",
+                               "--model-name", "llama3:8b"], cwd=HERE, capture_output=True, text=True, timeout=300)
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("--model-name cannot be used with --model all", done.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

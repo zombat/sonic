@@ -171,8 +171,9 @@ def build_instructions() -> str:
         "analyze_routing_pcap; quick_quality_check if SIP is present; analyze_pcap only for a written "
         "SIP diagnosis. Quote verdicts, issue codes and frame numbers.",
         "",
-        "[LLM] tools take seconds to minutes; pass provider. A cloud provider sends SIP data, "
-        "auth headers included, off this machine: ask first. The rest are deterministic.",
+        "[LLM] tools take seconds to minutes; provider defaults to the server's SONIC_LLM_PROVIDER, "
+        "else ollama (list_llm_providers shows it). A cloud provider sends SIP data, auth headers "
+        "included, off this machine: ask first. The rest are deterministic.",
         "",
         "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
         "*_omitted counts the rest; narrow big captures with display_filter or max_packets.",
@@ -423,7 +424,7 @@ def render_network_detectors() -> str:
 def render_sip_rtp() -> str:
     from analyzers.call_quality_scoring import QualityGrade, QualityMetrics
     from analyzers.rtp_mos_analysis import MOSAnalysisResult, MOSCategory
-    from llm_config import LLMConfig
+    from llm_config import DEFAULT_PROVIDER, PROVIDER_VARIABLE, LLMConfig
     lines = [
         "# SIP and RTP analysis",
         "",
@@ -448,9 +449,11 @@ def render_sip_rtp() -> str:
         "",
         "## LLM providers and models",
         "",
-        "Pass `provider` explicitly on every LLM tool. Analysis modes: `fast` (small model), `detailed` "
-        "(the provider's default model), `deep` (its most capable model), `combined` (fast and detailed, "
-        "recommended), `all` (CLI only).",
+        f"Every LLM tool takes `provider`; a call without it uses the server's `{PROVIDER_VARIABLE}`, else "
+        f"`{DEFAULT_PROVIDER}`, and `list_llm_providers` reports that choice as `current_config.provider`. "
+        "Analysis modes: `fast` (small model), `detailed` (the provider's default model), `deep` (its most "
+        "capable model), `combined` (fast and detailed, recommended), `all` (CLI only). The CLI's "
+        "`--model-name` runs one pass on a model you name instead.",
         "",
         "API keys come from the server's environment (an MCP client's `env` block passes them through), then "
         "from the dotenv file named by `--env-file` or `SONIC_ENV_FILE`. `list_llm_providers` says whether each "
@@ -500,6 +503,7 @@ def render_cli() -> str:
 
 def render_interpreting() -> str:
     from analyzers import network_orchestrator as orch
+    from llm_config import DEFAULT_PROVIDER, PROVIDER_VARIABLE
     return "\n".join([
         "# Interpreting results and common pitfalls",
         "",
@@ -532,8 +536,9 @@ def render_interpreting() -> str:
         "- Without `peers`, the encryption verdict judges only pairs that spoke IKE/ESP plus GRE endpoints. "
         "Pass the WAN addresses to judge all traffic between them.",
         "- `display_filter` needs tshark; with the scapy fallback it is not applied.",
-        "- The LLM tools' `provider` defaults differ (`analyze_pcap`: ollama; batch and streaming: anthropic) "
-        "and SONIC_LLM_PROVIDER does not override them. Pass `provider` explicitly.",
+        f"- Every LLM tool without `provider` uses the server's `{PROVIDER_VARIABLE}`, else "
+        f"`{DEFAULT_PROVIDER}`. Pass `provider` when the user named one, or check "
+        "`list_llm_providers` first; a cloud provider receives the SIP data.",
         "- LLM output varies from call to call; the deterministic tools give the same answer every time.",
         "",
     ])

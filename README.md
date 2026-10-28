@@ -502,7 +502,7 @@ python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_r
 ### Advanced Options
 
 ```bash
-# Override model name for a provider
+# Run the analysis on one model of your choosing (one pass; not with --model all)
 python3 sonic.py --file capture.pcapng --provider ollama --model-name "llama3:8b"
 
 # The provider's most capable model (anthropic: claude-opus-5-5)
@@ -524,7 +524,7 @@ python3 sonic.py --env-file ~/secrets/anthropic.env --file capture.pcapng --prov
 
 The file is parsed as data (`KEY=VALUE`, optional `export`, single or double quotes, `#` comments), never through a shell, and a value is never copied into the environment, so child processes such as tshark do not inherit it. This keeps the key out of an AI assistant's context: the assistant (or an MCP client config) only ever handles the file's path.
 
-A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value (and anything shaped like `sk-ant-...` by pattern) from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). Avoid passing a key on the command line, where it lands in shell history and the process list.
+A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value (and anything shaped like `sk-ant-...` by pattern) from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). There is no option that takes a key: one typed on the command line lands in shell history and the process list, so put it in the environment or in the file `--env-file` or `SONIC_ENV_FILE` names.
 
 ## 🤖 MCP Integration
 
@@ -574,6 +574,8 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
          }
    ```
    or pass a key the client already has through its own environment, if your client expands variables there (for example `"ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"`). The environment wins over the file.
+
+   `SONIC_LLM_PROVIDER` is the provider every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) uses when a call does not pass `provider`; without it the default is `ollama`.
    
    Replace `/absolute/path/to/sonic/mcp_server.py` with your actual path.
 
