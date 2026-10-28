@@ -17,23 +17,33 @@ Record keys (a key is present only when the frame carries that protocol):
     t            capture timestamp, epoch seconds (float)
     len          frame length in bytes
     eth_type     EtherType of a non-IP frame (ARP is 0x0806)
+    llc          "cdp" | "stp" | "llc" for an 802.3/LLC frame (no EtherType)
     ip           outer IP header: {"v": 4|6, "src", "dst", "proto", "ttl"}
-    tcp          {"sport", "dport", "flags", "len"}       (outer TCP)
+    tcp          {"sport", "dport", "flags", "len"}       (outer TCP; a SYN also
+                  carries "mss" when the MSS option is present)
     udp          {"sport", "dport", "len"}                (outer UDP, len = payload bytes)
     inner        IPv4 header carried inside GRE: {"src", "dst", "proto"}
     ike          {"version", "ispi", "rspi", "exch", "flags", "msgid", "length",
-                  "notify": [types], "encrypted": bool, "natt": bool}
+                  "notify": [types], "encrypted": bool, "natt": bool,
+                  "payloads": [cleartext payload types, in order],
+                  "proposals": [{"num", "protocol", "spi", "transforms": [{"type", "id", "key_length"}]}],
+                  "ke_group": int|None, "natd_src": [hex], "natd_dst": [hex],
+                  "invalid_ke_group": int|None, "invalid_spis": [hex]}
+                 Both backends parse the IKE bytes with parse_ike (tshark hands over
+                 udp.payload), so the decoded fields are identical by construction.
     esp          {"spi", "seq", "udp": bool}
     nat_keepalive True for a NAT-T keepalive (a one-byte 0xFF on UDP 4500)
     gre          {"key": int|None, "ptype": int}
     nhrp         {"op", "src_nbma", "src_proto", "dst_proto", "reqid", "code",
                   "err_code", "client_nbma", "client_proto", "prefix",
                   "orig_src", "orig_dst"}
-    bgp          [{"type", "len", "myas", "hold", "bgp_id", "as4", "major", "minor"}, ...]
+    bgp          [{"type", "len", "myas", "hold", "bgp_id", "as4", "major", "minor",
+                   "caps": [capability codes] (OPEN only, else None)}, ...]
     bgp_nlri     IPv4 prefixes announced in this frame's UPDATEs
     bgp_withdrawn IPv4 prefixes withdrawn in this frame's UPDATEs
     ospf         {"type", "rid", "area", "auth", "mask", "hello", "dead", "prio",
-                  "dr", "bdr", "neighbors": [...], "options", "mtu"}
+                  "dr", "bdr", "neighbors": [...], "options", "mtu",
+                  "dbd_flags", "dd_seq"}                   (mtu/dbd_flags/dd_seq: DB Description only)
     eigrp        {"opcode", "as", "flags", "seq", "ack", "tlvs": [...], "k": [6]|None,
                   "hold": int|None}
     icmp         {"v6": bool, "type", "code", "id", "seq", "src", "dst",
@@ -79,9 +89,11 @@ TSHARK_FIELDS = [
     ("tcp.dstport", ["tcp.dstport"]),
     ("tcp.flags", ["tcp.flags"]),
     ("tcp.len", ["tcp.len"]),
+    ("tcp.mss", ["tcp.options.mss_val"]),
     ("udp.srcport", ["udp.srcport"]),
     ("udp.dstport", ["udp.dstport"]),
     ("udp.length", ["udp.length"]),
+    ("udp.payload", ["udp.payload"]),
     ("udpencap.non_esp_marker", ["udpencap.non_esp_marker"]),
     ("udpencap.nat_keepalive", ["udpencap.nat_keepalive"]),
     ("isakmp.ispi", ["isakmp.ispi"]),
@@ -113,6 +125,7 @@ TSHARK_FIELDS = [
     ("bgp.hold", ["bgp.open.holdtime"]),
     ("bgp.id", ["bgp.open.identifier"]),
     ("bgp.as4", ["bgp.cap.4as"]),
+    ("bgp.caps", ["bgp.cap.type"]),
     ("bgp.major", ["bgp.notify.major_error"]),
     ("bgp.minor", ["bgp.notify.minor_error"]),
     ("bgp.minor_open", ["bgp.notify.minor_error_open"]),
@@ -136,6 +149,8 @@ TSHARK_FIELDS = [
     ("ospf.neighbors", ["ospf.hello.active_neighbor"]),
     ("ospf.options", ["ospf.v2.options"]),
     ("ospf.mtu", ["ospf.db.interface_mtu"]),
+    ("ospf.dbd", ["ospf.dbd"]),
+    ("ospf.dd_seq", ["ospf.db.dd_sequence"]),
     ("eigrp.opcode", ["eigrp.opcode"]),
     ("eigrp.as", ["eigrp.as"]),
     ("eigrp.flags", ["eigrp.flags"]),
@@ -274,6 +289,8 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
                      "proto": row.int("ipv6.nxt"), "ttl": row.int("ipv6.hlim")}
     elif row.has("eth.type"):
         rec["eth_type"] = row.int("eth.type")
+    elif ":llc" in protocols:
+        rec["llc"] = "cdp" if ":cdp" in protocols else ("stp" if ":stp" in protocols else "llc")
 
     # GRE carrying IPv4: the transport and routing fields belong to the inner
     # packet, so they go under rec["inner"] with the inner addresses.
@@ -290,12 +307,24 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
     if row.has("tcp.srcport") and l4_proto == 6:
         target["tcp"] = {"sport": row.int("tcp.srcport"), "dport": row.int("tcp.dstport"),
                          "flags": row.int("tcp.flags") or 0, "len": row.int("tcp.len") or 0}
+        if target["tcp"]["flags"] & 0x02 and row.has("tcp.mss"):
+            target["tcp"]["mss"] = row.int("tcp.mss")
     if row.has("udp.srcport") and l4_proto == 17:
         length = row.int("udp.length")
         target["udp"] = {"sport": row.int("udp.srcport"), "dport": row.int("udp.dstport"),
                          "len": max((length or 8) - 8, 0)}
 
-    if row.has("isakmp.exchtype"):
+    ike_from_bytes = None
+    if row.has("isakmp.exchtype") and row.has("udp.payload") and "udp" in target:
+        raw = bytes.fromhex(_hex_bytes(row.first("udp.payload")) or "")
+        ports = (target["udp"]["sport"], target["udp"]["dport"])
+        if 4500 in ports and raw[:4] == b"\x00\x00\x00\x00":
+            ike_from_bytes = parse_ike(raw[4:], natt=True)
+        elif 500 in ports or 4500 in ports:
+            ike_from_bytes = parse_ike(raw, natt=False)
+    if ike_from_bytes:
+        target["ike"] = ike_from_bytes
+    elif row.has("isakmp.exchtype"):
         version_raw = row.int("isakmp.version") or 0
         version = 2 if (version_raw >> 4) == 2 else 1
         flags = row.int("isakmp.flags") or 0
@@ -312,6 +341,7 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
             "encrypted": (46 in types) if version == 2 else bool(flags & 0x01),
             "natt": row.has("udpencap.non_esp_marker"),
         }
+        target["ike"].update(_ike_defaults())
     if row.has("esp.spi"):
         target["esp"] = {"spi": row.int("esp.spi"), "seq": row.int("esp.sequence"),
                          "udp": "udp" in target}
@@ -350,14 +380,18 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
             minors.extend(row.ints(key))
         messages = []
         open_index = notify_index = 0
+        caps = row.ints("bgp.caps")
         for index, mtype in enumerate(types):
             msg = {"type": mtype, "len": lengths[index] if index < len(lengths) else None,
-                   "myas": None, "hold": None, "bgp_id": None, "as4": None, "major": None, "minor": None}
+                   "myas": None, "hold": None, "bgp_id": None, "as4": None, "major": None, "minor": None,
+                   "caps": None}
             if mtype == 1:
                 msg["myas"] = myas[open_index] if open_index < len(myas) else None
                 msg["hold"] = holds[open_index] if open_index < len(holds) else None
                 msg["bgp_id"] = ids[open_index] if open_index < len(ids) else None
                 msg["as4"] = as4s[open_index] if open_index < len(as4s) else None
+                # tshark flattens capability codes per frame; one OPEN per frame is the norm.
+                msg["caps"] = caps if open_index == 0 else []
                 open_index += 1
             elif mtype == 3:
                 msg["major"] = majors[notify_index] if notify_index < len(majors) else None
@@ -383,6 +417,8 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
             "neighbors": row.all("ospf.neighbors"),
             "options": row.int("ospf.options"),
             "mtu": row.int("ospf.mtu"),
+            "dbd_flags": row.int("ospf.dbd"),
+            "dd_seq": row.int("ospf.dd_seq"),
         }
 
     if row.has("eigrp.opcode"):
@@ -510,8 +546,60 @@ def _ip4(data: bytes) -> str:
     return ".".join(str(b) for b in data[:4])
 
 
+def _ike_defaults() -> Dict[str, Any]:
+    """The decoded IKE fields a header-only parse cannot fill."""
+    return {"payloads": [], "proposals": [], "ke_group": None, "natd_src": [], "natd_dst": [],
+            "invalid_ke_group": None, "invalid_spis": []}
+
+
+def parse_ikev2_sa(body: bytes) -> List[Dict[str, Any]]:
+    """
+    Decode an IKEv2 SA payload body (RFC 7296 3.3) into its proposals.
+
+    Each proposal: {"num", "protocol" (1 IKE, 2 AH, 3 ESP), "spi" (hex or None),
+    "transforms": [{"type", "id", "key_length"}]}.
+    """
+    proposals = []
+    pos = 0
+    while pos + 8 <= len(body) and len(proposals) < 32:
+        last, _, plen, num, proto, spi_size, count = struct.unpack("!BBHBBBB", body[pos:pos + 8])
+        if plen < 8 or pos + plen > len(body):
+            break
+        spi = body[pos + 8:pos + 8 + spi_size].hex() if spi_size else None
+        transforms = []
+        tpos = pos + 8 + spi_size
+        end = pos + plen
+        while tpos + 8 <= end and len(transforms) < max(count, 1) * 2 and len(transforms) < 64:
+            _, _, tlen, ttype, _, tid = struct.unpack("!BBHBBH", body[tpos:tpos + 8])
+            if tlen < 8:
+                break
+            key_length = None
+            apos = tpos + 8
+            while apos + 4 <= tpos + tlen:
+                atype, avalue = struct.unpack("!HH", body[apos:apos + 4])
+                if atype & 0x8000:
+                    if atype & 0x7FFF == 14:
+                        key_length = avalue
+                    apos += 4
+                else:
+                    apos += 4 + avalue
+            transforms.append({"type": ttype, "id": tid, "key_length": key_length})
+            tpos += tlen
+        proposals.append({"num": num, "protocol": proto, "spi": spi, "transforms": transforms})
+        pos += plen
+        if last == 0:
+            break
+    return proposals
+
+
 def parse_ike(data: bytes, natt: bool) -> Optional[Dict[str, Any]]:
-    """Parse an IKEv1/IKEv2 header and its cleartext payload chain."""
+    """
+    Parse an IKEv1/IKEv2 header and its cleartext payload chain.
+
+    For IKEv2 it also decodes what is readable before the SK payload: SA
+    proposals and transforms, the KE payload's DH group, NAT detection hashes,
+    the group an INVALID_KE_PAYLOAD asks for, and the SPI an INVALID_SPI names.
+    """
     if len(data) < 28:
         return None
     ispi, rspi = data[0:8].hex(), data[8:16].hex()
@@ -519,29 +607,47 @@ def parse_ike(data: bytes, natt: bool) -> Optional[Dict[str, Any]]:
     version = 2 if (version_raw >> 4) == 2 else 1
     if (version_raw >> 4) not in (1, 2):
         return None
-    notifies: List[int] = []
+    out = {"version": version, "ispi": ispi, "rspi": rspi, "exch": exch, "flags": flags,
+           "msgid": msgid, "length": length, "notify": [], "encrypted": False, "natt": natt}
+    out.update(_ike_defaults())
+    notifies: List[int] = out["notify"]
     encrypted = (version == 1 and bool(flags & 0x01))
     nxt, offset = first, 28
     end = min(len(data), length) if length else len(data)
     steps = 0
     while nxt and not encrypted and offset + 4 <= end and steps < 64:
         steps += 1
-        if version == 2 and nxt == 46:
-            encrypted = True
+        if version == 2 and nxt in (46, 53):
             break
         next_payload, _, plen = struct.unpack("!BBH", data[offset:offset + 4])
         if plen < 4:
             break
+        out["payloads"].append(nxt)
         body = data[offset + 4:offset + plen]
         if version == 2 and nxt == 41 and len(body) >= 4:
-            notifies.append(struct.unpack("!H", body[2:4])[0])
+            spi_size, ntype = body[1], struct.unpack("!H", body[2:4])[0]
+            notifies.append(ntype)
+            ndata = body[4 + spi_size:]
+            if ntype == 16388:
+                out["natd_src"].append(ndata.hex())
+            elif ntype == 16389:
+                out["natd_dst"].append(ndata.hex())
+            elif ntype == 17 and len(ndata) >= 2:
+                out["invalid_ke_group"] = struct.unpack("!H", ndata[0:2])[0]
+            elif ntype == 11:
+                out["invalid_spis"].append((ndata[:4] or body[4:4 + spi_size]).hex())
+        elif version == 2 and nxt == 33:
+            out["proposals"] = parse_ikev2_sa(body)
+        elif version == 2 and nxt == 34 and len(body) >= 2:
+            out["ke_group"] = struct.unpack("!H", body[0:2])[0]
         elif version == 1 and nxt == 11 and len(body) >= 8:
             notifies.append(struct.unpack("!H", body[6:8])[0])
         nxt, offset = next_payload, offset + plen
-    if version == 2 and nxt == 46:
+    if version == 2 and nxt in (46, 53):
         encrypted = True
-    return {"version": version, "ispi": ispi, "rspi": rspi, "exch": exch, "flags": flags,
-            "msgid": msgid, "length": length, "notify": notifies, "encrypted": encrypted, "natt": natt}
+        out["payloads"].append(nxt)
+    out["encrypted"] = encrypted
+    return out
 
 
 def parse_nhrp(data: bytes) -> Optional[Dict[str, Any]]:
@@ -612,11 +718,12 @@ def parse_bgp_messages(data: bytes) -> (List[Dict[str, Any]], int, int, int):
             break
         body = data[pos + 19:pos + length]
         msg = {"type": mtype, "len": length, "myas": None, "hold": None, "bgp_id": None,
-               "as4": None, "major": None, "minor": None}
+               "as4": None, "major": None, "minor": None, "caps": None}
         if mtype == 1 and len(body) >= 10:
             _, myas, hold = struct.unpack("!BHH", body[0:5])
             msg.update(myas=myas, hold=hold, bgp_id=_ip4(body[5:9]))
             msg["as4"] = _bgp_as4(body[10:10 + body[9]])
+            msg["caps"] = _bgp_caps(body[10:10 + body[9]])
         elif mtype == 3 and len(body) >= 2:
             msg.update(major=body[0], minor=body[1])
         elif mtype == 2 and len(body) >= 4:
@@ -645,6 +752,22 @@ def _bgp_as4(params: bytes) -> Optional[int]:
     return None
 
 
+def _bgp_caps(params: bytes) -> List[int]:
+    """Capability codes from an OPEN's optional parameters, in wire order."""
+    codes: List[int] = []
+    pos = 0
+    while pos + 2 <= len(params):
+        ptype, plen = params[pos], params[pos + 1]
+        value = params[pos + 2:pos + 2 + plen]
+        if ptype == 2:
+            cpos = 0
+            while cpos + 2 <= len(value):
+                codes.append(value[cpos])
+                cpos += 2 + value[cpos + 1]
+        pos += 2 + plen
+    return codes
+
+
 def _count_prefixes(data: bytes) -> int:
     count = pos = 0
     while pos < len(data):
@@ -664,7 +787,7 @@ def parse_ospf(data: bytes) -> Optional[Dict[str, Any]]:
     out = {"type": ptype, "rid": _ip4(data[4:8]), "area": _ip4(data[8:12]),
            "auth": struct.unpack("!H", data[14:16])[0], "mask": None, "hello": None,
            "dead": None, "prio": None, "dr": None, "bdr": None, "neighbors": [],
-           "options": None, "mtu": None}
+           "options": None, "mtu": None, "dbd_flags": None, "dd_seq": None}
     body = data[24:struct.unpack("!H", data[2:4])[0]]
     if ptype == 1 and len(body) >= 20:
         out["mask"] = _ip4(body[0:4])
@@ -672,7 +795,7 @@ def parse_ospf(data: bytes) -> Optional[Dict[str, Any]]:
         out["dr"], out["bdr"] = _ip4(body[12:16]), _ip4(body[16:20])
         out["neighbors"] = [_ip4(body[i:i + 4]) for i in range(20, len(body) - 3, 4)]
     elif ptype == 2 and len(body) >= 8:
-        out["mtu"], out["options"] = struct.unpack("!HB", body[0:3])
+        out["mtu"], out["options"], out["dbd_flags"], out["dd_seq"] = struct.unpack("!HBBI", body[0:8])
     return out
 
 
@@ -766,7 +889,7 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
     tshark backend field for field.
     """
     try:
-        from scapy.all import PcapReader, IP, IPv6, ARP
+        from scapy.all import PcapReader, IP, IPv6, ARP, LLC, SNAP
     except ImportError:
         print("Scapy is not installed. Please run 'pip install scapy'.", file=sys.stderr)
         raise
@@ -802,13 +925,40 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
                 payload = raw[40:40 + ip6.plen] if ip6.plen else raw[40:]
                 rec["ip"] = {"v": 6, "src": ip6.src, "dst": ip6.dst, "proto": int(ip6.nh), "ttl": int(ip6.hlim)}
             else:
-                eth_type = getattr(pkt, "type", None)
+                eth_type = None if LLC in pkt else getattr(pkt, "type", None)
                 if isinstance(eth_type, int):
                     rec["eth_type"] = eth_type
+                elif LLC in pkt:
+                    # 802.3 + LLC: CDP rides SNAP with Cisco's PID 0x2000, STP uses DSAP 0x42.
+                    if SNAP in pkt and int(pkt[SNAP].code) == 0x2000:
+                        rec["llc"] = "cdp"
+                    elif int(pkt[LLC].dsap) == 0x42:
+                        rec["llc"] = "stp"
+                    else:
+                        rec["llc"] = "llc"
                 yield rec
                 continue
             _fill_l4(rec, rec["ip"], payload, bgp)
             yield rec
+
+
+def _tcp_mss(options: bytes) -> Optional[int]:
+    """The MSS value from a TCP options block, or None when absent."""
+    pos = 0
+    while pos < len(options):
+        kind = options[pos]
+        if kind == 0:
+            break
+        if kind == 1:
+            pos += 1
+            continue
+        if pos + 1 >= len(options) or options[pos + 1] < 2:
+            break
+        olen = options[pos + 1]
+        if kind == 2 and olen == 4 and pos + 4 <= len(options):
+            return struct.unpack("!H", options[pos + 2:pos + 4])[0]
+        pos += olen
+    return None
 
 
 def _fill_l4(rec: Dict[str, Any], ip: Dict[str, Any], payload: bytes, bgp: _BgpReassembler):
@@ -820,6 +970,10 @@ def _fill_l4(rec: Dict[str, Any], ip: Dict[str, Any], payload: bytes, bgp: _BgpR
         flags = payload[13] | ((payload[12] & 0x01) << 8)
         data = payload[offset:]
         rec["tcp"] = {"sport": sport, "dport": dport, "flags": flags, "len": len(data)}
+        if flags & 0x02:
+            mss = _tcp_mss(payload[20:offset])
+            if mss is not None:
+                rec["tcp"]["mss"] = mss
         if 179 in (sport, dport):
             key = (ip["src"], sport, ip["dst"], dport)
             messages, nlri, withdrawn = bgp.feed(key, seq, data, flags)

@@ -182,6 +182,8 @@ def protocol_label(rec: Dict[str, Any]) -> str:
     if not ip:
         if "arp" in rec:
             return "arp"
+        if "llc" in rec:
+            return rec["llc"]
         eth_type = rec.get("eth_type")
         if eth_type is not None:
             return ETHERTYPE_NAMES.get(eth_type, f"ethertype-0x{eth_type:04x}")
@@ -255,6 +257,53 @@ IKEV1_NOTIFY = {
 }
 
 
+IKEV2_TRANSFORM_TYPES = {1: "encryption", 2: "prf", 3: "integrity", 4: "dh_group", 5: "esn"}
+IKEV2_TRANSFORM_IDS = {
+    1: {1: "DES-IV64", 2: "DES", 3: "3DES", 4: "RC5", 5: "IDEA", 6: "CAST", 7: "BLOWFISH", 9: "DES-IV32",
+        11: "NULL", 12: "AES-CBC", 13: "AES-CTR", 14: "AES-CCM-8", 15: "AES-CCM-12", 16: "AES-CCM-16",
+        18: "AES-GCM-8", 19: "AES-GCM-12", 20: "AES-GCM-16", 21: "NULL-AUTH-AES-GMAC", 23: "CAMELLIA-CBC",
+        24: "CAMELLIA-CTR", 28: "CHACHA20-POLY1305"},
+    2: {1: "HMAC-MD5", 2: "HMAC-SHA1", 3: "HMAC-TIGER", 4: "AES128-XCBC", 5: "HMAC-SHA2-256",
+        6: "HMAC-SHA2-384", 7: "HMAC-SHA2-512", 8: "AES128-CMAC"},
+    3: {0: "NONE", 1: "HMAC-MD5-96", 2: "HMAC-SHA1-96", 3: "DES-MAC", 4: "KPDK-MD5", 5: "AES-XCBC-96",
+        6: "HMAC-MD5-128", 7: "HMAC-SHA1-160", 8: "AES-CMAC-96", 9: "AES-128-GMAC", 10: "AES-192-GMAC",
+        11: "AES-256-GMAC", 12: "HMAC-SHA2-256-128", 13: "HMAC-SHA2-384-192", 14: "HMAC-SHA2-512-256"},
+    4: {0: "NONE", 1: "MODP-768 (group 1)", 2: "MODP-1024 (group 2)", 5: "MODP-1536 (group 5)",
+        14: "MODP-2048 (group 14)", 15: "MODP-3072 (group 15)", 16: "MODP-4096 (group 16)",
+        17: "MODP-6144 (group 17)", 18: "MODP-8192 (group 18)", 19: "ECP-256 (group 19)",
+        20: "ECP-384 (group 20)", 21: "ECP-521 (group 21)", 22: "MODP-1024-160 (group 22)",
+        23: "MODP-2048-224 (group 23)", 24: "MODP-2048-256 (group 24)", 25: "ECP-192 (group 25)",
+        26: "ECP-224 (group 26)", 31: "Curve25519 (group 31)", 32: "Curve448 (group 32)"},
+    5: {0: "no ESN", 1: "ESN"},
+}
+# Algorithms current guidance (RFC 8247) says not to use: flagged as info, never as failure.
+IKEV2_WEAK = {1: {1, 2, 3, 4, 5, 6, 7, 9, 11}, 2: {1, 3}, 3: {1, 3, 4, 6}, 4: {1, 2, 5, 22, 23, 24}}
+IKEV2_AEAD = {14, 15, 16, 18, 19, 20, 28}
+IKE_PROTOCOLS = {1: "IKE", 2: "AH", 3: "ESP"}
+
+
+def ikev2_transform_name(ttype: int, tid: int, key_length: Optional[int] = None) -> str:
+    name = IKEV2_TRANSFORM_IDS.get(ttype, {}).get(tid, f"id {tid}")
+    return f"{name}-{key_length}" if key_length and ttype == 1 else name
+
+
+def ikev2_proposal_summary(proposal: Dict[str, Any]) -> Dict[str, Any]:
+    """Name every transform of one decoded proposal, grouped by type."""
+    out: Dict[str, Any] = {"number": proposal.get("num"),
+                           "protocol": IKE_PROTOCOLS.get(proposal.get("protocol"), proposal.get("protocol"))}
+    weak = []
+    for ttype, label in IKEV2_TRANSFORM_TYPES.items():
+        names = [ikev2_transform_name(t["type"], t["id"], t.get("key_length"))
+                 for t in proposal.get("transforms", []) if t["type"] == ttype]
+        out[label] = names
+        weak += [ikev2_transform_name(t["type"], t["id"], t.get("key_length"))
+                 for t in proposal.get("transforms", []) if t["type"] == ttype and t["id"] in IKEV2_WEAK.get(ttype, ())]
+    if not out["integrity"] and any(t["type"] == 1 and t["id"] in IKEV2_AEAD for t in proposal.get("transforms", [])):
+        out["integrity"] = ["(AEAD: integrity is part of the cipher)"]
+    out["weak"] = weak
+    return out
+
+
 def ike_notify_name(version: int, code: int) -> str:
     table = IKEV2_NOTIFY if version == 2 else IKEV1_NOTIFY
     return table.get(code, f"NOTIFY_{code}")
@@ -308,6 +357,13 @@ BGP_ERROR_HINTS = {
     (6, 7): "two TCP connections collided; one was closed (normal and harmless)",
     (6, 10): "BFD declared the neighbor down",
 }
+
+
+BGP_CAPABILITIES = {1: "multiprotocol", 2: "route-refresh", 3: "outbound-route-filtering", 5: "extended-nexthop",
+                    6: "extended-message", 9: "bgp-role", 64: "graceful-restart", 65: "4-byte-as",
+                    67: "dynamic-capability", 69: "add-path", 70: "enhanced-route-refresh",
+                    71: "long-lived-graceful-restart", 73: "fqdn", 128: "route-refresh-cisco-old",
+                    131: "multisession-cisco"}
 
 
 def bgp_error_name(major: Optional[int], minor: Optional[int]) -> str:
