@@ -5,6 +5,25 @@ All notable changes to S.O.N.I.C. (SIP Observation and Network Inspection Consol
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 🧭 **MCP guidance built into the server** (`utils/agent_guide.py`)
+  - Instructions in the initialize result, under 2 KB: which tool answers which question, the order of a typical investigation, which tools call an LLM, result shape, size limits and what packets cannot show
+  - Every tool has a title and annotations (read-only, not destructive; deterministic tools idempotent and closed world, LLM tools open world), and a description that says when to use it, what it needs, what it costs and what it returns
+  - Prompts `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call`
+  - Resources `sonic://guide/overview` and `sonic://guide/<topic>` (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`)
+- 🎓 **Agent Skill by progressive disclosure**: `python3 sonic.py --create-skill [DIR]` and `python3 mcp_server.py --create-skill [DIR]` (default `.claude/skills/sonic`) write a short `SKILL.md` and one `reference/` file per area. Tool parameters, detectors and issue codes, CLI options and LLM providers are generated from the live code. Each file carries a marker; a `SKILL.md` or reference file without it is never replaced, files are written atomically, and a rerun leaves unchanged files alone
+- 🧪 `test_mcp_guidance.py`: instructions, annotations, descriptions, prompts and resources, the skill's frontmatter, size, coverage, refusal and idempotence, both entry points, and a real MCP stdio session
+
+### Changed
+- Tool descriptions: the returns, limits and examples moved into the text an MCP client sees (fastmcp drops docstring sections such as `Returns:` from the description)
+- `analyzers/network_orchestrator.py` keeps its detectors in one registry, `DETECTOR_CLASSES`
+- `sonic.py` builds its parser in `build_parser()`; `--file` is still required for every mode except `--create-skill`
+- INTEGRATION_GUIDE.md and README.md describe `--create-skill` in place of the `--init-skills` command they named, which did not exist
+
+---
+
 ## [3.1.0] - 2026-10-25
 
 ### Added

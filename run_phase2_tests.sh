@@ -170,6 +170,15 @@ else
 fi
 echo ""
 
+# Test 9: Agent guidance (MCP instructions, tool annotations, prompts, resources, --create-skill)
+echo "✅ TEST 9: Agent Guidance and Skill Test Module"
+if python3 -c "import pytest" >/dev/null 2>&1; then
+    python3 -m pytest -q test_mcp_guidance.py
+else
+    python3 -m unittest -q test_mcp_guidance.py
+fi
+echo ""
+
 echo "🎉 Phase 2 Testing Complete!"
 echo ""
 echo "📋 Next Steps:"
