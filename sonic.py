@@ -116,8 +116,9 @@ API keys:
 
     parser.add_argument(
         "--detectors",
-        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, routing, reachability, path_mtu, "
-             "esp_overhead, tcp, tls, qos, conversations"
+        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, dmvpn_phase3, routing, reachability, "
+             "path_mtu, esp_overhead, tcp, tls, qos, conversations (the default), plus cleartext_audit and "
+             "convergence (only when named)"
     )
 
     parser.add_argument(

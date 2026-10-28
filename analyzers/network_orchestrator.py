@@ -9,10 +9,13 @@ selected detector, and returns one combined, JSON-serializable report. Detectors
 that found nothing to look at are listed as not present rather than failing, so
 the same call works on any capture: the report says which protocols were there.
 
-Detectors:
-    ipsec          IKEv1/IKEv2, ESP, NAT-T, and the encrypted/cleartext verdict
+Detectors (run by default):
+    ipsec          IKEv1/IKEv2 (proposals, DH groups, NAT detection, DPD, a diagnosis
+                   per SA), ESP (sequence, stale SPIs), NAT-T, and the encrypted/cleartext verdict
     gre_nhrp       GRE tunnels and NHRP (DMVPN registration, resolution, redirect)
-    routing        BGP, OSPF and EIGRP health with a failover timeline
+    dmvpn_phase3   the Phase 3 shortcut sequence per flow, thrashing, encrypted shortcuts
+    routing        BGP (OPEN, MSS, down cause), OSPF (incl. stuck EXSTART/EXCHANGE)
+                   and EIGRP health with a failover timeline
     reachability   ICMP echo loss/RTT/outages, ICMP errors, ARP without replies
     path_mtu       Fragmentation Needed / Packet Too Big, PMTUD black holes, IP fragments
     esp_overhead   ESP sizes against cipher families, overhead, post-encryption fragmentation
@@ -20,6 +23,9 @@ Detectors:
     tls            TLS ClientHello/ServerHello, certificate (TLS 1.2), baseline check
     qos            DSCP per flow, GRE/ESP marking copy, RTP jitter/loss/MOS with DSCP
     conversations  protocols, top conversations and top talkers
+Detectors run only when named:
+    cleartext_audit  zero-cleartext assertion against an allowlist (pass/fail)
+    convergence      failover timeline from an event or the first failure sign
 
 When SIP is present the existing SIP quality path (CallQualityScorer and the
 RTP MOS analyzer, the same functions quick_quality_check uses) runs unchanged and
@@ -38,6 +44,9 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
+from analyzers.cleartext_audit import CleartextAuditDetector
+from analyzers.convergence import ConvergenceDetector
+from analyzers.dmvpn_phase3 import DmvpnPhase3Detector
 from analyzers.gre_nhrp import GreNhrpDetector
 from analyzers.ipsec_vpn import IPsecDetector
 from analyzers.network_common import Context, SEVERITY_ORDER, iso_time, worst_status
@@ -56,6 +65,7 @@ REPORT_SCHEMA = "sonic.network_report/1"
 DETECTOR_CLASSES = {
     "ipsec": IPsecDetector,
     "gre_nhrp": GreNhrpDetector,
+    "dmvpn_phase3": DmvpnPhase3Detector,
     "routing": RoutingDetector,
     "reachability": ReachabilityDetector,
     "path_mtu": PathMtuDetector,
@@ -64,12 +74,26 @@ DETECTOR_CLASSES = {
     "tls": TlsDetector,
     "qos": QosDetector,
     "conversations": ConversationDetector,
+    "cleartext_audit": CleartextAuditDetector,
+    "convergence": ConvergenceDetector,
 }
-DETECTOR_NAMES = list(DETECTOR_CLASSES)
-VPN_DETECTORS = ["ipsec", "gre_nhrp"]
+# Run only when named: an assertion and a measurement that need the caller's intent.
+OPTIONAL_DETECTORS = ["cleartext_audit", "convergence"]
+# Run by default: each one reports not_present when its protocols are absent.
+DETECTOR_NAMES = [name for name in DETECTOR_CLASSES if name not in OPTIONAL_DETECTORS]
+ALL_DETECTORS = list(DETECTOR_CLASSES)
+VPN_DETECTORS = ["ipsec", "gre_nhrp", "dmvpn_phase3"]
 ROUTING_DETECTORS = ["routing", "reachability"]
 DATA_PLANE_DETECTORS = ["path_mtu", "esp_overhead", "tcp", "tls", "qos"]
-OPTION_KEYS = {"esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline"}}
+# Per-detector options: analyze_network_capture(options={"<detector>": {...}}).
+OPTION_KEYS = {
+    "esp_overhead": {"transport_mtu", "tunnel_mtu", "gre_header_bytes"},
+    "tls": {"baseline"},
+    "dmvpn_phase3": {"hubs"},
+    "routing": {"expected_mss"},
+    "cleartext_audit": {"allow"},
+    "convergence": {"event_time", "failed_peer", "hold_time", "silence_s"},
+}
 
 
 def _family(rec: Dict[str, Any], families: set):
@@ -163,6 +187,42 @@ def _build_detectors(names: List[str], peers: Optional[List[str]],
     return out
 
 
+def _check_control_plane_options(options: Dict[str, Dict[str, Any]]) -> Optional[str]:
+    """Validate the values of the control plane detectors' options; an error message or None."""
+    for value in options.get("dmvpn_phase3", {}).get("hubs") or []:
+        try:
+            ipaddress.ip_address(value)
+        except ValueError:
+            return f"Not an IP address in hubs: {value!r}"
+    conv = options.get("convergence", {})
+    if conv.get("failed_peer"):
+        try:
+            ipaddress.ip_address(conv["failed_peer"])
+        except ValueError:
+            return f"failed_peer is not an IP address: {conv['failed_peer']!r}"
+    for key, value in (("expected_mss", options.get("routing", {}).get("expected_mss")),
+                       ("hold_time", conv.get("hold_time")), ("silence_s", conv.get("silence_s"))):
+        if value is not None:
+            try:
+                if float(value) <= 0:
+                    return f"{key} must be a positive number"
+            except (TypeError, ValueError):
+                return f"{key} must be a number, got {value!r}"
+    if options.get("cleartext_audit", {}).get("allow") is not None:
+        from analyzers.cleartext_audit import parse_allowlist
+        try:
+            parse_allowlist(options["cleartext_audit"]["allow"])
+        except ValueError as exc:
+            return str(exc)
+    if conv.get("event_time") is not None:
+        from analyzers.convergence import parse_event_time
+        try:
+            parse_event_time(conv["event_time"], 0.0)
+        except ValueError as exc:
+            return str(exc)
+    return None
+
+
 def _error(message: str, **extra) -> Dict[str, Any]:
     out = {"status": "error", "error": message}
     out.update(extra)
@@ -185,7 +245,8 @@ def analyze_network_capture(
 
     Args:
         file_path: path to a pcap or pcapng file
-        detectors: subset of DETECTOR_NAMES to run (default: all)
+        detectors: subset of ALL_DETECTORS to run (default: DETECTOR_NAMES; the
+                   optional cleartext_audit and convergence run only when named)
         peers: IP addresses whose mutual traffic the encryption verdict judges
                (default: every pair that exchanged IKE/ESP, plus GRE tunnel endpoints)
         display_filter: Wireshark display filter applied before detection (tshark only)
@@ -193,8 +254,11 @@ def analyze_network_capture(
         include_sip: run the existing SIP quality path when SIP is present
         max_items: cap on list lengths in the report (sessions, flows, pairs, ...)
         backend: "auto", "tshark" or "scapy"
-        options: per-detector settings, {"esp_overhead": {"transport_mtu", "tunnel_mtu",
-                 "gre_header_bytes"}, "tls": {"baseline": {...}}}
+        options: per-detector settings, for example {"esp_overhead": {"transport_mtu",
+                 "tunnel_mtu", "gre_header_bytes"}, "tls": {"baseline": {...}},
+                 "dmvpn_phase3": {"hubs"}, "routing": {"expected_mss"},
+                 "cleartext_audit": {"allow"}, "convergence": {"event_time", "failed_peer",
+                 "hold_time", "silence_s"}}
 
     Returns:
         dict: the report (status "success"), or {"status": "error", "error": ...}
@@ -204,9 +268,9 @@ def analyze_network_capture(
     if not os.access(file_path, os.R_OK):
         return _error(f"File not readable: {file_path}")
     names = list(detectors) if detectors else list(DETECTOR_NAMES)
-    unknown = [name for name in names if name not in DETECTOR_NAMES]
+    unknown = [name for name in names if name not in ALL_DETECTORS]
     if unknown:
-        return _error(f"Unknown detector(s): {', '.join(unknown)}", valid_detectors=DETECTOR_NAMES)
+        return _error(f"Unknown detector(s): {', '.join(unknown)}", valid_detectors=ALL_DETECTORS)
     peer_list = list(peers or [])
     for peer in peer_list:
         try:
@@ -223,6 +287,13 @@ def analyze_network_capture(
         if not isinstance(settings, dict) or set(settings) - OPTION_KEYS[name]:
             return _error(f"Unknown option(s) for {name}: {sorted(set(settings or {}) - OPTION_KEYS[name])}",
                           valid_options=sorted(OPTION_KEYS[name]))
+    # A None value means "not given": the detector's own default applies.
+    options = {name: {k: v for k, v in settings.items() if v is not None} for name, settings in options.items()}
+    problem = _check_control_plane_options(options)
+    if problem:
+        return _error(problem)
+    if options.get("routing", {}).get("expected_mss") is not None:
+        options["routing"]["expected_mss"] = int(options["routing"]["expected_mss"])
 
     try:
         extraction = open_network_records(file_path, display_filter=display_filter,
@@ -314,17 +385,21 @@ def analyze_network_capture(
 
 
 def analyze_vpn_capture(file_path: str, peers: Optional[List[str]] = None, display_filter: Optional[str] = None,
-                        max_packets: Optional[int] = None, max_items: int = 25, backend: str = "auto") -> Dict[str, Any]:
+                        max_packets: Optional[int] = None, max_items: int = 25, backend: str = "auto",
+                        hubs: Optional[List[str]] = None) -> Dict[str, Any]:
     """
-    IPsec + GRE/NHRP only, with the encrypted/cleartext verdict lifted to the top level.
+    IPsec + GRE/NHRP + the Phase 3 sequence, with the encrypted/cleartext verdict lifted to the top level.
 
     Returns the analyze_network_capture report plus:
         encryption_verdict  "encrypted" | "cleartext_seen" | "no_esp" | "not_present"
         verdict             the one-sentence encryption verdict
+        ike_diagnoses       one diagnosis per IKE SA
+        phase3_verdict      the DMVPN Phase 3 sequence verdict
     """
     report = analyze_network_capture(file_path, detectors=VPN_DETECTORS, peers=peers,
                                      display_filter=display_filter, max_packets=max_packets,
-                                     include_sip=False, max_items=max_items, backend=backend)
+                                     include_sip=False, max_items=max_items, backend=backend,
+                                     options={"dmvpn_phase3": {"hubs": hubs}})
     if report.get("status") != "success":
         return report
     ipsec = report.get("ipsec", {})
@@ -339,19 +414,24 @@ def analyze_vpn_capture(file_path: str, peers: Optional[List[str]] = None, displ
         "verdict": ipsec.get("verdict"),
         "negotiation_verdict": ipsec.get("negotiation_verdict"),
         "overlay_verdict": overlay,
+        "phase3_verdict": report.get("dmvpn_phase3", {}).get("verdict"),
+        "ike_diagnoses": [{"initiator": sa["initiator"], "responder": sa["responder"],
+                           "initiator_spi": sa["initiator_spi"], "outcome": sa["outcome"],
+                           "diagnosis": sa.get("diagnosis")} for sa in ipsec.get("ike_sas", [])],
     }
     ordered.update(report)
     return ordered
 
 
 def analyze_routing_capture(file_path: str, display_filter: Optional[str] = None, max_packets: Optional[int] = None,
-                            max_items: int = 25, backend: str = "auto") -> Dict[str, Any]:
+                            max_items: int = 25, backend: str = "auto",
+                            expected_mss: Optional[int] = None) -> Dict[str, Any]:
     """
     Routing (BGP/OSPF/EIGRP) plus reachability, with the failover timeline lifted to the top.
     """
     report = analyze_network_capture(file_path, detectors=ROUTING_DETECTORS, display_filter=display_filter,
                                      max_packets=max_packets, include_sip=False, max_items=max_items,
-                                     backend=backend)
+                                     backend=backend, options={"routing": {"expected_mss": expected_mss}})
     if report.get("status") != "success":
         return report
     routing = report.get("routing", {})
@@ -369,6 +449,59 @@ def analyze_routing_capture(file_path: str, display_filter: Optional[str] = None
     }
     ordered.update(report)
     return ordered
+
+
+def audit_cleartext_capture(file_path: str, allow: Optional[List[str]] = None, display_filter: Optional[str] = None,
+                            max_packets: Optional[int] = None, max_items: int = 25,
+                            backend: str = "auto") -> Dict[str, Any]:
+    """
+    The zero-cleartext assertion: every frame against the allowlist, pass or fail.
+
+    Returns {"status": "success", "passed": bool, "result": "pass"|"fail", "verdict",
+    "allowlist", "frames_audited", "frames_outside_allowlist", "by_protocol",
+    "violations", "first_violation_frame", "cannot_show", "capture"} or an error.
+    """
+    report = analyze_network_capture(file_path, detectors=["cleartext_audit"], display_filter=display_filter,
+                                     max_packets=max_packets, include_sip=False, max_items=max_items,
+                                     backend=backend, options={"cleartext_audit": {"allow": allow}})
+    if report.get("status") != "success":
+        return report
+    audit = report["cleartext_audit"]
+    out = {"status": "success", "passed": audit["passed"], "result": audit["result"], "verdict": audit["verdict"]}
+    for key in ("allowlist", "frames_audited", "frames_allowed", "frames_outside_allowlist", "first_violation_frame",
+                "by_protocol", "violations", "violations_omitted", "allowed_by_rule", "cannot_show", "issues"):
+        out[key] = audit[key]
+    out["file"] = report["file"]
+    out["capture"] = report["capture"]
+    out["protocols_present"] = report["protocols_present"]
+    return out
+
+
+def analyze_convergence_capture(file_path: str, event_time=None, failed_peer: Optional[str] = None,
+                                hold_time: Optional[float] = None, silence_s: Optional[float] = None,
+                                display_filter: Optional[str] = None, max_packets: Optional[int] = None,
+                                max_items: int = 25, backend: str = "auto") -> Dict[str, Any]:
+    """
+    The failover timeline: failure sign, detection, routing reaction and traffic resumption.
+
+    Returns {"status": "success", "verdict", "driver", "failed_peer", "measurements",
+    "timeline", "traffic_shift", "cannot_show", "capture"} or an error.
+    """
+    report = analyze_network_capture(file_path, detectors=["convergence"], display_filter=display_filter,
+                                     max_packets=max_packets, include_sip=False, max_items=max_items,
+                                     backend=backend,
+                                     options={"convergence": {"event_time": event_time, "failed_peer": failed_peer,
+                                                              "hold_time": hold_time, "silence_s": silence_s}})
+    if report.get("status") != "success":
+        return report
+    conv = report["convergence"]
+    out = {"status": "success", "verdict": conv["verdict"], "driver": conv["driver"],
+           "failed_peer": conv["failed_peer"], "failed_peer_source": conv["failed_peer_source"],
+           "event_time": conv["event_time"], "event_t": conv["event_t"], "measurements": conv["measurements"],
+           "timeline": conv["timeline"], "timeline_omitted": conv["timeline_omitted"],
+           "traffic_shift": conv["traffic_shift"], "issues": conv["issues"], "cannot_show": conv["cannot_show"],
+           "file": report["file"], "capture": report["capture"], "protocols_present": report["protocols_present"]}
+    return out
 
 
 def analyze_data_plane_capture(file_path: str, tls_baseline: Optional[Dict[str, Any]] = None,

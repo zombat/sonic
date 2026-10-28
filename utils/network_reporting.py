@@ -13,9 +13,11 @@ import json
 from typing import Any, Dict, List
 
 STATUS_MARK = {"ok": "OK", "warning": "WARNING", "problem": "PROBLEM", "not_present": "not present"}
-SECTION_TITLES = [("ipsec", "IPsec / VPN"), ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("routing", "Routing protocols"),
-                  ("reachability", "Reachability (ICMP / ARP)"), ("path_mtu", "Path MTU and fragmentation"),
-                  ("esp_overhead", "ESP overhead (estimate)"), ("tcp", "TCP health"), ("tls", "TLS"), ("qos", "QoS"),
+SECTION_TITLES = [("cleartext_audit", "Zero-cleartext audit"), ("ipsec", "IPsec / VPN"),
+                  ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("dmvpn_phase3", "DMVPN Phase 3 sequence"),
+                  ("routing", "Routing protocols"), ("reachability", "Reachability (ICMP / ARP)"),
+                  ("path_mtu", "Path MTU and fragmentation"), ("esp_overhead", "ESP overhead (estimate)"),
+                  ("tcp", "TCP health"), ("tls", "TLS"), ("qos", "QoS"), ("convergence", "Convergence"),
                   ("conversations", "Conversations")]
 
 
