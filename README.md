@@ -136,12 +136,12 @@ S.O.N.I.C. integrates seamlessly with agentic platforms via its built-in MCP ser
 **Supported platforms:**
 - [NetClaw](https://github.com/automateyournetwork/netclaw) / [OpenClaw](https://github.com/automateyournetwork/openclaw) — register S.O.N.I.C. as a VoIP triage tool in your agent's toolset
 - **Claude Desktop / Cline** — MCP client config, analyze captures through natural language
-- **Claude Code / skills-based clients** — install skills with `sonic --init-skills`
+- **Claude Code / skills-based clients**: write the S.O.N.I.C. Agent Skill with `python3 sonic.py --create-skill`
 
 **Integration Guide**: See [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for:
 - How the MCP server integration works
 - Step-by-step NetClaw / OpenClaw setup (4 steps)
-- Skills-based client installation (`--init-skills`)
+- Skills-based client installation (`--create-skill`)
 - Full MCP tool reference
 
 **Quick NetClaw Workflow:**
@@ -523,7 +523,7 @@ S.O.N.I.C. supports multiple LLM providers for analysis. **Local Ollama is recom
 | Provider | Models | Cost | Setup |
 |----------|--------|------|-------|
 | **Ollama** (default) | mistral:7b, qwen2.5:0.5b | Free | Local installation |
-| **Anthropic** (optional) | Claude 3.5 Haiku, Sonnet | ~$0.01-0.03/call | API key required |
+| **Anthropic** (optional) | claude-haiku-5-5 (fast), claude-sonnet-5-5 (default), claude-opus-5-5 (deep) | Per token | API key from the environment or an env file |
 | **OpenAI** (optional) | GPT-4o-mini, GPT-4o | ~$0.01-0.05/call | API key required |
 | **Azure** (optional) | GPT models via Azure | Varies | Azure OpenAI setup |
 | **None** (quality-only) | N/A - no LLM | Free | Use --quality-only flag |
@@ -540,12 +540,29 @@ python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_r
 ### Advanced Options
 
 ```bash
-# Override model name for a provider
+# Run the analysis on one model of your choosing (one pass; not with --model all)
 python3 sonic.py --file capture.pcapng --provider ollama --model-name "llama3:8b"
 
-# Pass API key directly (use with caution)
-python3 sonic.py --file capture.pcapng --provider openai --api-key sk-...
+# The provider's most capable model (anthropic: claude-opus-5-5)
+python3 sonic.py --file capture.pcapng --provider anthropic --model deep
 ```
+
+### API keys: environment or a passthrough env file
+
+S.O.N.I.C. looks for `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY`, `AZURE_OPENAI_KEY`) in this order:
+
+1. the process environment;
+2. a dotenv file named by `--env-file PATH` (on `sonic.py` and `mcp_server.py`) or, without the flag, by `SONIC_ENV_FILE`.
+
+```bash
+# Keep the key in a file you control; S.O.N.I.C. reads only the key names above from it
+SONIC_ENV_FILE=~/secrets/anthropic.env python3 sonic.py --file capture.pcapng --provider anthropic --model fast
+python3 sonic.py --env-file ~/secrets/anthropic.env --file capture.pcapng --provider anthropic
+```
+
+The file is parsed as data (`KEY=VALUE`, optional `export`, single or double quotes, `#` comments), never through a shell, and a value is never copied into the environment, so child processes such as tshark do not inherit it. This keeps the key out of an AI assistant's context: the assistant (or an MCP client config) only ever handles the file's path.
+
+A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value (and anything shaped like `sk-ant-...` by pattern) from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). There is no option that takes a key: one typed on the command line lands in shell history and the process list, so put it in the environment or in the file `--env-file` or `SONIC_ENV_FILE` names.
 
 ## 🤖 MCP Integration
 
@@ -555,7 +572,7 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
 
 - **Claude Desktop** - Anthropic's desktop application
 - **Cline** - VSCode AI coding and analysis assistant
-- **Claude Code / skills-based clients** - Install S.O.N.I.C. skills with `sonic --init-skills`
+- **Claude Code / skills-based clients** - Write the S.O.N.I.C. Agent Skill with `python3 sonic.py --create-skill` (see Agent guidance below)
 - **Any MCP-compatible client** - Custom integrations
 
 ### Quick Setup for Claude Desktop
@@ -587,13 +604,16 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
    }
    ```
    
-   **Optional**: Use cloud provider by adding API key to `env`:
+   **Optional**: use a cloud provider. Point the server at an env file holding the key, so the key itself never sits in the client config or the assistant's context:
    ```json
          "env": {
            "SONIC_LLM_PROVIDER": "anthropic",
-           "ANTHROPIC_API_KEY": "your-api-key-here"
+           "SONIC_ENV_FILE": "/home/you/secrets/anthropic.env"
          }
    ```
+   or pass a key the client already has through its own environment, if your client expands variables there (for example `"ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"`). The environment wins over the file.
+
+   `SONIC_LLM_PROVIDER` is the provider every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) uses when a call does not pass `provider`; without it the default is `ollama`.
    
    Replace `/absolute/path/to/sonic/mcp_server.py` with your actual path.
 
@@ -709,6 +729,25 @@ Claude: Merge /run/wan1.pcap and /run/lan.pcap and check the failover finished w
 ```
 
 Each tool's description (what an MCP client shows the agent) explains its inputs, outputs, verdict values and limits, so an agent can learn the tool from the tool itself.
+
+### Agent guidance: instructions, prompts, resources and a skill
+
+The server teaches the agent that connects to it, so the agent does not need this README:
+
+- **Instructions**: the MCP initialize result carries a short guide (under 2 KB): what S.O.N.I.C. answers, which tool fits which question, the order of a typical investigation, which tools call an LLM, size limits and what every tool returns.
+- **Tools**: each tool has a title, annotations (all read-only; the deterministic tools are idempotent, the LLM tools are marked open world) and a description saying when to use it, what it needs, what it costs and what it returns.
+- **Prompts**: `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call` walk the agent through a common investigation.
+- **Resources**: `sonic://guide/overview` and one page per area (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`), read only when the agent needs that area.
+
+For skills-based clients such as Claude Code, write the same guidance as an Agent Skill:
+
+```bash
+python3 sonic.py --create-skill                 # writes .claude/skills/sonic in the current directory
+python3 sonic.py --create-skill ~/.claude/skills/sonic
+python3 mcp_server.py --create-skill DIR        # the same skill, from the MCP server's entry point
+```
+
+The skill uses progressive disclosure: `SKILL.md` holds the overview, the table of which tool or command answers which question, and links; `reference/` holds one file per area, loaded only when needed. The tool parameters, detectors and their issue codes, CLI options and LLM providers are read from the code when the skill is written, so it matches the installed version. Run the command again after an upgrade: it replaces only files it wrote (each carries a `written by sonic --create-skill` marker), refuses to touch a `SKILL.md` or reference file it did not write, writes each file atomically, and leaves unchanged files alone.
 
 ### Setup for Cline (VSCode)
 

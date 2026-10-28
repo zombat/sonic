@@ -25,11 +25,15 @@ from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer, print_mos_analysi
 from extractors.tshark import extract_sip_data
 from extractors.auth_info import extract_auth_and_registration_info
 from utils.reporting import print_diagnostic_report, save_report_to_file
+from utils.agent_guide import DEFAULT_SKILL_DIR
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     """
-    Main entry point for S.O.N.I.C. command-line interface.
+    Build the S.O.N.I.C. command-line parser.
+
+    The generated agent skill (--create-skill) reads its CLI reference from this
+    parser, so every option documented there is one the CLI really accepts.
     """
     parser = argparse.ArgumentParser(
         description="Run SIP diagnostic analysis on a pcap file to identify call quality issues like choppy audio and unexpected disconnects.",
@@ -44,26 +48,31 @@ Examples:
   %(prog)s --file wan.pcap --network-only                                          # IPsec/GRE/NHRP/BGP/OSPF/EIGRP/ICMP detectors (no AI)
   %(prog)s --file wan.pcap --network-only --detectors ipsec,gre_nhrp --json        # VPN detectors only, JSON on stdout
   %(prog)s --file wan.pcap --network-only --save_file wan-report.json              # write the report as JSON
+  %(prog)s --create-skill                                                          # write the agent skill to .claude/skills/sonic
 
 Providers:
   ollama     - Local inference (free, default) - requires Ollama installed
-  anthropic  - Claude models (requires ANTHROPIC_API_KEY)
+  anthropic  - Claude models (ANTHROPIC_API_KEY from the environment or --env-file / SONIC_ENV_FILE)
   openai     - GPT models (requires OPENAI_API_KEY)
   azure      - Azure OpenAI (requires AZURE_OPENAI_KEY and endpoint config)
+
+API keys:
+  Read from the environment, then from the dotenv file named by --env-file or SONIC_ENV_FILE.
+  There is no key option: a key typed on the command line lands in shell history and ps output.
         """
     )
     
     parser.add_argument(
-        "--file", 
-        required=True,
-        help="Path to the SIP capture file (pcap/pcapng) to analyze."
+        "--file",
+        help="Path to the capture file (pcap/pcapng) to analyze. Required for every mode except --create-skill."
     )
     
     parser.add_argument(
         "--model",
-        choices=["fast", "detailed", "combined", "all"],
+        choices=["fast", "detailed", "deep", "combined", "all"],
         default="combined",
-        help="Analysis mode: 'combined' (recommended), 'fast', 'detailed', or 'all'. Available models: qwen2.5:0.5b, qwen2.5vl:7b"
+        help="Analysis mode: 'combined' (recommended), 'fast', 'detailed', 'deep' (the provider's most capable model, "
+             "for example claude-opus-5-5), or 'all'"
     )
     
     parser.add_argument(
@@ -143,14 +152,20 @@ Providers:
     
     parser.add_argument(
         "--model-name",
-        help="Override default model name for the provider (advanced users only)"
+        metavar="NAME",
+        help="Run the LLM analysis on this model of --provider (for example llama3:8b with ollama) instead of "
+             "the ones --model picks; fast, detailed, deep and combined then make one pass on it. "
+             "Not with --model all"
     )
     
     parser.add_argument(
-        "--api-key",
-        help="API key for cloud providers (optional, prefers environment variable - ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)"
+        "--env-file",
+        metavar="PATH",
+        help="Dotenv file to read API keys from when they are not in the environment "
+             "(default: $SONIC_ENV_FILE). Only ANTHROPIC_API_KEY, OPENAI_API_KEY and AZURE_OPENAI_KEY are read; "
+             "values are never printed"
     )
-    
+
     # Batch and streaming options
     parser.add_argument(
         "--batch-dir",
@@ -182,8 +197,42 @@ Providers:
         action="store_true",
         help="Return quality/MOS metrics immediately, then stream LLM analysis (requires --stream)"
     )
-    
+
+    parser.add_argument(
+        "--create-skill",
+        nargs="?",
+        const=DEFAULT_SKILL_DIR,
+        metavar="DIR",
+        help="Write an Agent Skill that teaches an AI agent to use S.O.N.I.C. (SKILL.md plus reference/ files "
+             f"read on demand) into DIR (default: {DEFAULT_SKILL_DIR}), then exit. Refuses to replace a "
+             "SKILL.md it did not write."
+    )
+
+    return parser
+
+
+def main():
+    """
+    Main entry point for S.O.N.I.C. command-line interface.
+    """
+    parser = build_parser()
     args = parser.parse_args()
+
+    from utils.credentials import EnvFileError, configure, install_output_redaction
+    install_output_redaction()
+    try:
+        configure(args.env_file)
+    except EnvFileError as exc:
+        parser.error(str(exc))
+
+    if args.create_skill:
+        from utils.agent_guide import create_skill_command
+        sys.exit(create_skill_command(args.create_skill))
+
+    if not args.file:
+        parser.error("the following arguments are required: --file (unless --create-skill)")
+    if args.model_name and args.model == "all":
+        parser.error("--model-name cannot be used with --model all, which tests its own models")
 
     # Handle network-only mode (its default report path is next to the capture)
     if args.network_only:
@@ -210,7 +259,8 @@ Providers:
         return
     
     # Standard analysis mode
-    result = run_analysis_mode(args.file, args.model, enable_quality=args.quality, enable_mos=args.mos, provider=args.provider)
+    result = run_analysis_mode(args.file, args.model, enable_quality=args.quality, enable_mos=args.mos,
+                               provider=args.provider, model_name=args.model_name)
     
     # Extract auth data for reporting
     auth_data = None
@@ -414,7 +464,8 @@ def handle_batch_analysis(args):
         model=args.model,
         mode=mode,
         max_workers=args.batch_workers,
-        on_file_progress=batch_progress
+        on_file_progress=batch_progress,
+        model_name=args.model_name,
     )
     
     # Print summary
@@ -459,7 +510,8 @@ def handle_streaming_analysis(args):
             args.file,
             provider=args.provider,
             on_token=token_callback,
-            on_partial_result=partial_callback
+            on_partial_result=partial_callback,
+            model_name=args.model_name,
         )
         
         print("\n\n" + "="*80)
@@ -494,7 +546,8 @@ def handle_streaming_analysis(args):
             args.file,
             provider=args.provider,
             on_token=token_callback,
-            on_progress=progress_callback
+            on_progress=progress_callback,
+            model_name=args.model_name,
         )
         
         print("\n\n" + "="*80)

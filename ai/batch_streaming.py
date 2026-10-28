@@ -15,6 +15,8 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from pathlib import Path
 
+from llm_config import resolve_provider
+
 
 class ProcessingMode(Enum):
     """Batch processing modes"""
@@ -40,7 +42,7 @@ class BatchProgress:
 
 def analyze_batch(
     file_paths: List[str],
-    provider: str = "anthropic",
+    provider: Optional[str] = None,
     model: str = "fast",
     enable_quality: bool = True,
     enable_mos: bool = True,
@@ -48,14 +50,17 @@ def analyze_batch(
     max_workers: int = 3,
     on_file_progress: Optional[Callable[[BatchProgress], None]] = None,
     on_token: Optional[Callable[[str], None]] = None,
+    model_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Analyze multiple pcap files with streaming and progress tracking.
     
     Args:
         file_paths: List of absolute paths to pcap files
-        provider: LLM provider
+        provider: LLM provider (default: llm_config.resolve_provider, so
+            SONIC_LLM_PROVIDER, else ollama)
         model: Analysis mode (fast/detailed)
+        model_name: Run every file on this model instead of the provider's default (optional)
         enable_quality: Include quality scoring
         enable_mos: Include MOS analysis
         mode: SEQUENTIAL or PARALLEL processing
@@ -76,9 +81,7 @@ def analyze_batch(
         ...     on_file_progress=progress_cb
         ... )
     """
-    from ai.streaming_analysis import run_combined_analysis_streaming
-    from extractors.tshark import extract_sip_data
-    
+    provider = resolve_provider(provider)
     results = {
         "status": "success",
         "batch_metadata": {
@@ -108,7 +111,7 @@ def analyze_batch(
         for idx, file_path in enumerate(file_paths):
             result = _analyze_single_file(
                 file_path, idx, len(file_paths), provider, model,
-                enable_quality, enable_mos, on_file_progress, on_token
+                enable_quality, enable_mos, on_file_progress, on_token, model_name
             )
             file_results.append(result)
     
@@ -118,7 +121,7 @@ def analyze_batch(
                 executor.submit(
                     _analyze_single_file,
                     file_paths[idx], idx, len(file_paths), provider, model,
-                    enable_quality, enable_mos, on_file_progress, on_token
+                    enable_quality, enable_mos, on_file_progress, on_token, model_name
                 ): idx for idx in range(len(file_paths))
             }
             
@@ -165,7 +168,8 @@ def _analyze_single_file(
     enable_quality: bool,
     enable_mos: bool,
     on_file_progress: Optional[Callable],
-    on_token: Optional[Callable]
+    on_token: Optional[Callable],
+    model_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Analyze a single file with streaming"""
     from ai.streaming_analysis import run_combined_analysis_streaming
@@ -191,7 +195,7 @@ def _analyze_single_file(
             raise ValueError("No SIP data found")
         
         result = run_combined_analysis_streaming(
-            sip_data, file_path, provider, on_token=token_callback
+            sip_data, file_path, provider, on_token=token_callback, model_name=model_name
         )
         
         elapsed = time.time() - file_start

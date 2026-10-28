@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🧭 **MCP guidance built into the server** (`utils/agent_guide.py`)
+  - Instructions in the initialize result, under 2 KB: which tool answers which question, the order of a typical investigation, which tools call an LLM, result shape, size limits and what packets cannot show
+  - Every tool has a title and annotations (read-only, not destructive; deterministic tools idempotent and closed world, LLM tools open world), and a description that says when to use it, what it needs, what it costs and what it returns
+  - Prompts `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call`
+  - Resources `sonic://guide/overview` and `sonic://guide/<topic>` (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`)
+- 🎓 **Agent Skill by progressive disclosure**: `python3 sonic.py --create-skill [DIR]` and `python3 mcp_server.py --create-skill [DIR]` (default `.claude/skills/sonic`) write a short `SKILL.md` and one `reference/` file per area. Tool parameters, detectors and issue codes, CLI options and LLM providers are generated from the live code. Each file carries a marker; a `SKILL.md` or reference file without it is never replaced, files are written atomically, and a rerun leaves unchanged files alone
+- 🔑 **Anthropic with a passthrough key** (`utils/credentials.py`): API keys come from the process environment (an MCP client's `env` block passes one through), then from a dotenv file named by `--env-file PATH` (`sonic.py`, `mcp_server.py`) or `SONIC_ENV_FILE`. The file is parsed as literal data, only `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `AZURE_OPENAI_KEY` are kept, and a value is never copied into the environment
+- 🙈 **Keys never shown**: redacted by value (and `sk-ant-...` by pattern) from every MCP tool result, CLI output, log records, saved reports and the prompts sent to the LLM (`RedactingLM`); `list_llm_providers` reports only `configured` and the source (`environment` or the env file path)
+- 🧪 `test_credentials.py`: parser, precedence, redaction of every output path with dummy keys, the CLI and a real MCP stdio session
+- 🧪 `test_mcp_guidance.py`: instructions, annotations, descriptions, prompts and resources, the skill's frontmatter, size, coverage, refusal and idempotence, both entry points, and a real MCP stdio session
 - **Data plane detectors** (deterministic, no LLM), run by default in `analyze_network_capture`:
   - `path_mtu`: ICMP Fragmentation Needed / Packet Too Big with the advertised MTU matched to the probe frame, PMTUD black holes for DF pings and TCP (with the bracket the path MTU lies in), IP fragments complete, incomplete and overlapping, reassembly timeouts
   - `esp_overhead`: ESP sizes per SA tested against cipher families, inner size bounds and overhead in tunnel and transport-over-GRE mode, tunnel MTU fit against the transport MTU, ESP fragmented after encryption; labelled as estimates
@@ -17,10 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-capture tools**: `correlate_captures` (`analyzers/correlate.py`) follows packets across labelled captures for NAT translations, lost replies, asymmetric paths, stopped probes, transit time, TTL decrement and DSCP rewrites, streaming with a bounded match window; `merge_timelines` (`analyzers/timeline.py`) merges every detector's events from several captures and measures deltas between chosen events against thresholds, optionally writing JSON
 - **MCP tools**: `analyze_data_plane_pcap`, `correlate_pcaps`, `merge_pcap_timelines`; `analyze_network_pcap` takes per-detector `options`
 - **Tests**: `test_dataplane_detectors.py` (both backends, synthetic fixtures from `tests/fixtures/generate_dataplane_fixtures.py`, real lab captures when present) and new MCP tool tests
+- The three data plane MCP tools follow the guidance conventions: titles, annotations, descriptions with returns, cost and limits in the visible text, results through `redact_result`, rows in the instructions and the generated skill
 
 ### Changed
+- Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
+- Tool descriptions: the returns, limits and examples moved into the text an MCP client sees (fastmcp drops docstring sections such as `Returns:` from the description)
+- `analyzers/network_orchestrator.py` keeps its detectors in one registry, `DETECTOR_CLASSES`
+- `sonic.py` builds its parser in `build_parser()`; `--file` is still required for every mode except `--create-skill`
+- INTEGRATION_GUIDE.md and README.md describe `--create-skill` in place of the `--init-skills` command they named, which did not exist
 - Every network record carries `dp` (IP identification, DF/MF, fragment offset, DSCP/ECN, raw TCP sequence numbers, window and options, payload head and hash, ICMP next-hop MTU) from both backends (`extractors/dataplane.py`)
 - tshark runs with `ip.defragment:FALSE`, so fragments stay one record per frame as on the scapy backend; the scapy backend reports a UDP length from the header, as tshark does
+- `DETECTOR_CLASSES` also holds `path_mtu`, `esp_overhead`, `tcp`, `tls` and `qos`; `_build_detectors` builds from it and passes per-detector `options`
+
+### Fixed
+- The MCP server's stdout carries only JSON-RPC (`utils/protocol_stdout.py`). Before serving it keeps the real stdout for the protocol and points descriptor 1 and `sys.stdout` at stderr, so the SIP, network, extractor and reporting prints (and child processes) no longer corrupt the stdio channel; the CLI's output is unchanged. `test_mcp_stdio.py` runs a real stdio session, calls the SIP and network tools on a sample capture and parses every byte written to stdout through the server's exit
+- Every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) and every LLM path behind them uses one provider: the call's `provider`, else `SONIC_LLM_PROVIDER`, else `ollama` (`llm_config.resolve_provider`). The batch and streaming tools used to default to `anthropic`, and `SONIC_LLM_PROVIDER` changed none of them; `list_llm_providers` reports the resolved provider as `current_config.provider`
+- `sonic.py --model-name NAME` now runs the LLM analysis on that model (one pass in the fast, detailed, deep and combined modes, and in batch and streaming); it was parsed and ignored. It is refused with `--model all`
+- `analyze_pcap_partial_streaming` (and `--stream --partial`) failed on every call: `ai/partial_streaming.py` imported `utils.serialization`, which never existed. It now converts the quality and MOS results with `utils.credentials.redact`, the converter every MCP tool result already goes through. `test_mcp_stdio.py` calls the tool over a real stdio session with only the streaming LLM stubbed (`tests/stub_llm_mcp_server.py`)
+- `sonic.py --api-key` is removed: it was never used, and a key typed on the command line lands in shell history and `ps` output. Keys come from the environment, then from the file `--env-file` or `SONIC_ENV_FILE` names
 
 ---
 

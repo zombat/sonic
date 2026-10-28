@@ -51,8 +51,21 @@ from analyzers.tls_inspect import TlsDetector
 from extractors.network import open_network_records
 
 REPORT_SCHEMA = "sonic.network_report/1"
-DETECTOR_NAMES = ["ipsec", "gre_nhrp", "routing", "reachability", "path_mtu", "esp_overhead", "tcp", "tls", "qos",
-                  "conversations"]
+# The detector registry: name -> class, in report order. DETECTOR_NAMES, the
+# validation of a detectors list, and the generated agent guide all read it.
+DETECTOR_CLASSES = {
+    "ipsec": IPsecDetector,
+    "gre_nhrp": GreNhrpDetector,
+    "routing": RoutingDetector,
+    "reachability": ReachabilityDetector,
+    "path_mtu": PathMtuDetector,
+    "esp_overhead": EspOverheadDetector,
+    "tcp": TcpHealthDetector,
+    "tls": TlsDetector,
+    "qos": QosDetector,
+    "conversations": ConversationDetector,
+}
+DETECTOR_NAMES = list(DETECTOR_CLASSES)
 VPN_DETECTORS = ["ipsec", "gre_nhrp"]
 ROUTING_DETECTORS = ["routing", "reachability"]
 DATA_PLANE_DETECTORS = ["path_mtu", "esp_overhead", "tcp", "tls", "qos"]
@@ -137,21 +150,17 @@ def _sip_quality(file_path: str) -> Dict[str, Any]:
     return result
 
 
-def _build_detectors(names: List[str], peers: Optional[List[str]], options: Optional[Dict[str, Dict[str, Any]]] = None):
+def _build_detectors(names: List[str], peers: Optional[List[str]],
+                     options: Optional[Dict[str, Dict[str, Any]]] = None):
+    """Build the named detectors from DETECTOR_CLASSES; ipsec takes peers, others their options."""
     options = options or {}
-    builders = {
-        "ipsec": lambda: IPsecDetector(peers=peers),
-        "gre_nhrp": GreNhrpDetector,
-        "routing": RoutingDetector,
-        "reachability": ReachabilityDetector,
-        "path_mtu": PathMtuDetector,
-        "esp_overhead": lambda: EspOverheadDetector(**options.get("esp_overhead", {})),
-        "tcp": TcpHealthDetector,
-        "tls": lambda: TlsDetector(**options.get("tls", {})),
-        "qos": QosDetector,
-        "conversations": ConversationDetector,
-    }
-    return [builders[name]() for name in names]
+    out = []
+    for name in names:
+        if name == "ipsec":
+            out.append(IPsecDetector(peers=peers))
+        else:
+            out.append(DETECTOR_CLASSES[name](**options.get(name, {})))
+    return out
 
 
 def _error(message: str, **extra) -> Dict[str, Any]:

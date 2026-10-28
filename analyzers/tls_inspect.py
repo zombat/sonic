@@ -441,7 +441,7 @@ class TlsDetector:
     def present(self) -> bool:
         return bool(self.sessions)
 
-    def _check(self, session) -> List[Dict[str, str]]:
+    def _check(self, session) -> List[Dict[str, Any]]:
         violations = []
         base = self.baseline
         ch, sh = session["client_hello"] or {}, session["server_hello"] or {}
@@ -452,33 +452,32 @@ class TlsDetector:
         min_version = normalize_version(base["min_version"]) if base.get("min_version") else None
         if chosen_version and chosen_version in VERSION_RANK:
             if allowed_versions and chosen_version not in allowed_versions:
-                violations.append({"code": "TLS_BASELINE_VERSION", "severity": "error",
-                                   "message": f"negotiated {chosen_version}, baseline allows {', '.join(allowed_versions)}"})
+                violations.append(make_issue("error", "TLS_BASELINE_VERSION",
+                                             f"negotiated {chosen_version}, baseline allows {', '.join(allowed_versions)}"))
             elif min_version and VERSION_RANK[chosen_version] < VERSION_RANK[min_version]:
-                violations.append({"code": "TLS_BASELINE_VERSION", "severity": "error",
-                                   "message": f"negotiated {chosen_version}, below the baseline minimum {min_version}"})
+                violations.append(make_issue("error", "TLS_BASELINE_VERSION",
+                                             f"negotiated {chosen_version}, below the baseline minimum {min_version}"))
             elif not allowed_versions and not min_version and VERSION_RANK[chosen_version] < VERSION_RANK["TLS1.2"]:
-                violations.append({"code": "TLS_OLD_VERSION", "severity": "warning",
-                                   "message": f"negotiated {chosen_version} (deprecated by RFC 8996)"})
+                violations.append(make_issue("warning", "TLS_OLD_VERSION",
+                                             f"negotiated {chosen_version} (deprecated by RFC 8996)"))
         if chosen_suite:
             allowed = [normalize_suite(s).upper() for s in base.get("cipher_suites", [])]
             if allowed and chosen_suite.upper() not in allowed:
-                violations.append({"code": "TLS_BASELINE_CIPHER", "severity": "error",
-                                   "message": f"chose {chosen_suite}, not in the baseline list"})
+                violations.append(make_issue("error", "TLS_BASELINE_CIPHER",
+                                             f"chose {chosen_suite}, not in the baseline list"))
             if suite_is_weak(chosen_suite):
-                violations.append({"code": "TLS_WEAK_CIPHER_CHOSEN", "severity": "error",
-                                   "message": f"chose a weak cipher suite {chosen_suite}"})
+                violations.append(make_issue("error", "TLS_WEAK_CIPHER_CHOSEN",
+                                             f"chose a weak cipher suite {chosen_suite}"))
             if base.get("require_forward_secrecy") and not suite_has_forward_secrecy(chosen_suite):
-                violations.append({"code": "TLS_NO_FORWARD_SECRECY", "severity": "error",
-                                   "message": f"chose {chosen_suite}: static RSA key exchange, no forward secrecy"})
+                violations.append(make_issue("error", "TLS_NO_FORWARD_SECRECY",
+                                             f"chose {chosen_suite}: static RSA key exchange, no forward secrecy"))
         if base.get("require_sni") and ch and not ch.get("sni"):
-            violations.append({"code": "TLS_BASELINE_SNI", "severity": "warning",
-                               "message": "ClientHello carries no SNI"})
+            violations.append(make_issue("warning", "TLS_BASELINE_SNI", "ClientHello carries no SNI"))
         if base.get("alpn") and sh and chosen_version != "TLS1.3":  # TLS 1.3 sends the choice encrypted
             allowed_alpn = list(base["alpn"])
             if sh.get("alpn") not in allowed_alpn:
-                violations.append({"code": "TLS_BASELINE_ALPN", "severity": "warning",
-                                   "message": f"ALPN {sh.get('alpn')!r} not in {allowed_alpn}"})
+                violations.append(make_issue("warning", "TLS_BASELINE_ALPN",
+                                             f"ALPN {sh.get('alpn')!r} not in {allowed_alpn}"))
         if ch:
             weak = [s for s in ch.get("cipher_suites", []) if suite_is_weak(s)]
             old = [v for v in ch.get("versions", []) if v in VERSION_RANK and VERSION_RANK[v] < VERSION_RANK["TLS1.2"]]
@@ -489,12 +488,11 @@ class TlsDetector:
                     text += f" weak suites {', '.join(weak[:5])}"
                 if old:
                     text += f"{' and' if weak else ''} versions {', '.join(old)}"
-                violations.append({"code": "TLS_WEAK_OFFERED", "severity": severity, "message": text})
+                violations.append(make_issue(severity, "TLS_WEAK_OFFERED", text))
         cert = session.get("certificate")
         if cert and cert.get("parsed") and not cert.get("valid_at_capture_time"):
-            violations.append({"code": "TLS_CERT_NOT_VALID", "severity": "error",
-                               "message": f"server certificate valid {cert['not_before']} to {cert['not_after']}, "
-                                          "not at capture time"})
+            violations.append(make_issue("error", "TLS_CERT_NOT_VALID", f"server certificate valid {cert['not_before']} to {cert['not_after']}, "
+                                          "not at capture time"))
         return violations
 
     def report(self, ctx: Context) -> Dict[str, Any]:
@@ -529,7 +527,7 @@ class TlsDetector:
                 issues.append(make_issue("warning", "TLS_NO_SERVER_HELLO", text, frames))
                 events.append(make_event(ctx, session["first_t"], "tls", "no_server_hello", text, frames[0] if frames else None))
             for v in violations:
-                issues.append(make_issue(v["severity"], v["code"], f"TLS {label} (SNI {sni}): {v['message']}", frames))
+                issues.append(dict(v, message=f"TLS {label} (SNI {sni}): {v['message']}", frames=frames))
             if sh:
                 events.append(make_event(ctx, session.get("server_hello_t", session["first_t"]), "tls", "handshake",
                                          f"TLS {label} SNI {sni}: {version} {sh['cipher_suite']}",
