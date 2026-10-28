@@ -637,8 +637,8 @@ def save_report_to_file(report: Dict[str, Any], sip_data: str = None, file_path:
 """
         
         # Write to file
-        with open(save_path, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
+        from utils.credentials import write_redacted
+        write_redacted(save_path, markdown_content)
         
         print(f"\n💾 Report saved to: {save_path}")
         

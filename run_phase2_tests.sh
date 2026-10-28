@@ -170,19 +170,19 @@ else
 fi
 echo ""
 
-# Test 9: Agent guidance (MCP instructions, tool annotations, prompts, resources, --create-skill)
+# Test 9: Agent guidance (MCP instructions, tool annotations, prompts, resources, --create-skill) and key redaction
 echo "✅ TEST 9: Agent Guidance and Skill Test Module"
 if python3 -c "import pytest" >/dev/null 2>&1; then
-    python3 -m pytest -q test_mcp_guidance.py
+    python3 -m pytest -q test_mcp_guidance.py test_credentials.py
 else
-    python3 -m unittest -q test_mcp_guidance.py
+    python3 -m unittest -q test_mcp_guidance.py test_credentials.py
 fi
 echo ""
 
 echo "🎉 Phase 2 Testing Complete!"
 echo ""
 echo "📋 Next Steps:"
-echo "  1. Set API key: export ANTHROPIC_API_KEY=your-key"
+echo "  1. Set API key: export ANTHROPIC_API_KEY, or SONIC_ENV_FILE=/path/to/file.env"
 echo "  2. Test streaming: python3 sonic.py --file FILE --provider anthropic --stream"
 echo "  3. Test batch: python3 sonic.py --batch-dir . --provider anthropic"
 echo "  4. Test MCP: python3 mcp_server.py"

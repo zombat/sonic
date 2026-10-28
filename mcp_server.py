@@ -17,6 +17,11 @@ investigations are prompts. All of it comes from utils/agent_guide.py.
 Usage:
     python3 mcp_server.py                     # serve MCP over stdio
     python3 mcp_server.py --create-skill [DIR]  # write the Agent Skill and exit
+    python3 mcp_server.py --env-file PATH       # read API keys from a dotenv file
+
+API keys come from the environment (an MCP client's "env" block passes them
+through) and then from the dotenv file named by --env-file or SONIC_ENV_FILE.
+They are redacted from every tool result, log line and prompt (utils/credentials.py).
 
 Configure in Claude Desktop mcp.json:
     {
@@ -54,6 +59,13 @@ from analyzers.network_orchestrator import (
     analyze_routing_capture,
     analyze_vpn_capture,
 )
+from utils.credentials import (
+    EnvFileError,
+    configure as configure_credentials,
+    credential_status,
+    install_output_redaction,
+    redact_result,
+)
 from utils.agent_guide import (
     DEFAULT_SKILL_DIR,
     TOPICS,
@@ -73,6 +85,7 @@ mcp = FastMCP("S.O.N.I.C. VoIP and Network Analyzer", instructions=build_instruc
 
 
 @mcp.tool(**tool_options("analyze_pcap"))
+@redact_result
 def analyze_pcap(
     file_path: str,
     provider: str = "ollama",
@@ -101,9 +114,11 @@ def analyze_pcap(
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
         provider: LLM provider: "ollama" (local, default), "anthropic", "openai" or "azure".
-            Cloud providers need their API key in the server's environment.
-        model: "fast" (small model, quickest), "detailed" (larger model) or "combined"
-            (both, recommended, slowest).
+            Cloud providers need their API key in the server's environment or in the
+            env file named by --env-file or SONIC_ENV_FILE.
+        model: "fast" (small model, quickest), "detailed" (the provider's default model),
+            "deep" (its most capable model, for example claude-opus-5-5) or "combined"
+            (fast and detailed, recommended).
         enable_quality: Also run the deterministic call quality scoring (default true).
         enable_mos: Also run the RTP MOS analysis per stream (default true).
     """
@@ -141,6 +156,7 @@ def analyze_pcap(
 
 
 @mcp.tool(**tool_options("quick_quality_check"))
+@redact_result
 def quick_quality_check(file_path: str) -> Dict[str, Any]:
     """
     Score SIP/RTP call quality without an LLM: the first tool for "how good were the
@@ -208,6 +224,7 @@ def quick_quality_check(file_path: str) -> Dict[str, Any]:
 
 
 @mcp.tool(**tool_options("list_llm_providers"))
+@redact_result
 def list_llm_providers() -> Dict[str, Any]:
     """
     List the LLM providers and models the LLM tools (analyze_pcap,
@@ -215,19 +232,23 @@ def list_llm_providers() -> Dict[str, Any]:
     cloud API key is set. No LLM is called; instant. Call it before choosing a
     provider other than ollama.
 
-    Returns a JSON object with providers (names), models (provider to its "fast" and
-    "detailed" model names), default, and current_config (the SONIC_LLM_PROVIDER value
-    and true/false for whether ANTHROPIC_API_KEY and OPENAI_API_KEY are set; never
-    the keys themselves). For example, list_llm_providers().
+    Returns a JSON object with providers (names), models (provider to its "fast",
+    "detailed" and, for anthropic, "deep" model names), default, and current_config:
+    the SONIC_LLM_PROVIDER value and credentials, which says for each API key only
+    whether it is configured and where it came from ("environment" or the env file's
+    path), never any part of the key. For example, list_llm_providers().
     """
     try:
         providers = list_available_providers()
         
-        # Add current config
+        # Add current config: whether each key is configured and where it came
+        # from (environment or env file path), never any part of a value.
+        credentials = credential_status()
         providers["current_config"] = {
             "provider": os.getenv("SONIC_LLM_PROVIDER", "ollama"),
-            "anthropic_key_set": bool(os.getenv("ANTHROPIC_API_KEY")),
-            "openai_key_set": bool(os.getenv("OPENAI_API_KEY"))
+            "credentials": credentials,
+            "anthropic_key_set": credentials["ANTHROPIC_API_KEY"]["configured"],
+            "openai_key_set": credentials["OPENAI_API_KEY"]["configured"],
         }
         
         return providers
@@ -240,6 +261,7 @@ def list_llm_providers() -> Dict[str, Any]:
 
 
 @mcp.tool(**tool_options("analyze_batch_pcaps"))
+@redact_result
 def analyze_batch_pcaps(
     directory: str,
     provider: str = "anthropic",
@@ -297,6 +319,7 @@ def analyze_batch_pcaps(
 
 
 @mcp.tool(**tool_options("analyze_pcap_partial_streaming"))
+@redact_result
 def analyze_pcap_partial_streaming(
     file_path: str,
     provider: str = "anthropic"
@@ -338,6 +361,7 @@ def analyze_pcap_partial_streaming(
 
 
 @mcp.tool(**tool_options("analyze_network_pcap"))
+@redact_result
 def analyze_network_pcap(
     file_path: str,
     detectors: Optional[List[str]] = None,
@@ -426,6 +450,7 @@ def analyze_network_pcap(
 
 
 @mcp.tool(**tool_options("analyze_vpn_pcap"))
+@redact_result
 def analyze_vpn_pcap(
     file_path: str,
     peers: Optional[List[str]] = None,
@@ -482,6 +507,7 @@ def analyze_vpn_pcap(
 
 
 @mcp.tool(**tool_options("analyze_routing_pcap"))
+@redact_result
 def analyze_routing_pcap(
     file_path: str,
     display_filter: Optional[str] = None,
@@ -589,7 +615,16 @@ def main(argv=None) -> int:
     parser.add_argument("--create-skill", nargs="?", const=DEFAULT_SKILL_DIR, metavar="DIR",
                         help="Write the S.O.N.I.C. Agent Skill into DIR (default: "
                              f"{DEFAULT_SKILL_DIR}) and exit instead of serving.")
+    parser.add_argument("--env-file", metavar="PATH",
+                        help="Dotenv file to read API keys from when they are not in the environment "
+                             "(default: $SONIC_ENV_FILE). Values are never printed or returned.")
     args = parser.parse_args(argv)
+    # stdout is the JSON-RPC stream; tool results are redacted by redact_result.
+    install_output_redaction(stdout=False)
+    try:
+        configure_credentials(args.env_file)
+    except EnvFileError as exc:
+        parser.error(str(exc))
     if args.create_skill:
         return create_skill_command(args.create_skill)
     mcp.run()

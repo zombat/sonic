@@ -14,9 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prompts `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call`
   - Resources `sonic://guide/overview` and `sonic://guide/<topic>` (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`)
 - 🎓 **Agent Skill by progressive disclosure**: `python3 sonic.py --create-skill [DIR]` and `python3 mcp_server.py --create-skill [DIR]` (default `.claude/skills/sonic`) write a short `SKILL.md` and one `reference/` file per area. Tool parameters, detectors and issue codes, CLI options and LLM providers are generated from the live code. Each file carries a marker; a `SKILL.md` or reference file without it is never replaced, files are written atomically, and a rerun leaves unchanged files alone
+- 🔑 **Anthropic with a passthrough key** (`utils/credentials.py`): API keys come from the process environment (an MCP client's `env` block passes one through), then from a dotenv file named by `--env-file PATH` (`sonic.py`, `mcp_server.py`) or `SONIC_ENV_FILE`. The file is parsed as literal data, only `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `AZURE_OPENAI_KEY` are kept, and a value is never copied into the environment
+- 🙈 **Keys never shown**: redacted by value (and `sk-ant-...` by pattern) from every MCP tool result, CLI output, log records, saved reports and the prompts sent to the LLM (`RedactingLM`); `list_llm_providers` reports only `configured` and the source (`environment` or the env file path)
+- 🧪 `test_credentials.py`: parser, precedence, redaction of every output path with dummy keys, the CLI and a real MCP stdio session
 - 🧪 `test_mcp_guidance.py`: instructions, annotations, descriptions, prompts and resources, the skill's frontmatter, size, coverage, refusal and idempotence, both entry points, and a real MCP stdio session
 
 ### Changed
+- Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
 - Tool descriptions: the returns, limits and examples moved into the text an MCP client sees (fastmcp drops docstring sections such as `Returns:` from the description)
 - `analyzers/network_orchestrator.py` keeps its detectors in one registry, `DETECTOR_CLASSES`
 - `sonic.py` builds its parser in `build_parser()`; `--file` is still required for every mode except `--create-skill`

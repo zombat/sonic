@@ -449,13 +449,20 @@ def render_sip_rtp() -> str:
         "## LLM providers and models",
         "",
         "Pass `provider` explicitly on every LLM tool. Analysis modes: `fast` (small model), `detailed` "
-        "(larger model), `combined` (both, recommended), `all` (CLI only).",
+        "(the provider's default model), `deep` (its most capable model), `combined` (fast and detailed, "
+        "recommended), `all` (CLI only).",
         "",
-        "| Provider | Fast model | Detailed model |",
-        "|---|---|---|",
+        "API keys come from the server's environment (an MCP client's `env` block passes them through), then "
+        "from the dotenv file named by `--env-file` or `SONIC_ENV_FILE`. `list_llm_providers` says whether each "
+        "key is configured and where it came from; no tool ever returns a key, and keys are redacted from "
+        "results, logs, reports and prompts. Never ask the user to paste a key into the conversation.",
+        "",
+        "| Provider | Fast model | Detailed (default) model | Deep model |",
+        "|---|---|---|---|",
     ]
     for provider, models in LLMConfig.PROVIDER_MODELS.items():
-        lines.append(f"| `{provider}` | `{models.get('fast', '')}` | `{models.get('detailed', '')}` |")
+        deep = models.get("deep", models.get("detailed", ""))
+        lines.append(f"| `{provider}` | `{models.get('fast', '')}` | `{models.get('detailed', '')}` | `{deep}` |")
     lines += [
         "",
         "## What the SIP path covers",

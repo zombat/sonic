@@ -485,7 +485,7 @@ S.O.N.I.C. supports multiple LLM providers for analysis. **Local Ollama is recom
 | Provider | Models | Cost | Setup |
 |----------|--------|------|-------|
 | **Ollama** (default) | mistral:7b, qwen2.5:0.5b | Free | Local installation |
-| **Anthropic** (optional) | Claude 3.5 Haiku, Sonnet | ~$0.01-0.03/call | API key required |
+| **Anthropic** (optional) | claude-haiku-5-5 (fast), claude-sonnet-5-5 (default), claude-opus-5-5 (deep) | Per token | API key from the environment or an env file |
 | **OpenAI** (optional) | GPT-4o-mini, GPT-4o | ~$0.01-0.05/call | API key required |
 | **Azure** (optional) | GPT models via Azure | Varies | Azure OpenAI setup |
 | **None** (quality-only) | N/A - no LLM | Free | Use --quality-only flag |
@@ -505,9 +505,26 @@ python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_r
 # Override model name for a provider
 python3 sonic.py --file capture.pcapng --provider ollama --model-name "llama3:8b"
 
-# Pass API key directly (use with caution)
-python3 sonic.py --file capture.pcapng --provider openai --api-key sk-...
+# The provider's most capable model (anthropic: claude-opus-5-5)
+python3 sonic.py --file capture.pcapng --provider anthropic --model deep
 ```
+
+### API keys: environment or a passthrough env file
+
+S.O.N.I.C. looks for `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY`, `AZURE_OPENAI_KEY`) in this order:
+
+1. the process environment;
+2. a dotenv file named by `--env-file PATH` (on `sonic.py` and `mcp_server.py`) or, without the flag, by `SONIC_ENV_FILE`.
+
+```bash
+# Keep the key in a file you control; S.O.N.I.C. reads only the key names above from it
+SONIC_ENV_FILE=~/secrets/anthropic.env python3 sonic.py --file capture.pcapng --provider anthropic --model fast
+python3 sonic.py --env-file ~/secrets/anthropic.env --file capture.pcapng --provider anthropic
+```
+
+The file is parsed as data (`KEY=VALUE`, optional `export`, single or double quotes, `#` comments), never through a shell, and a value is never copied into the environment, so child processes such as tshark do not inherit it. This keeps the key out of an AI assistant's context: the assistant (or an MCP client config) only ever handles the file's path.
+
+A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value (and anything shaped like `sk-ant-...` by pattern) from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). Avoid passing a key on the command line, where it lands in shell history and the process list.
 
 ## 🤖 MCP Integration
 
@@ -549,13 +566,14 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
    }
    ```
    
-   **Optional**: Use cloud provider by adding API key to `env`:
+   **Optional**: use a cloud provider. Point the server at an env file holding the key, so the key itself never sits in the client config or the assistant's context:
    ```json
          "env": {
            "SONIC_LLM_PROVIDER": "anthropic",
-           "ANTHROPIC_API_KEY": "your-api-key-here"
+           "SONIC_ENV_FILE": "/home/you/secrets/anthropic.env"
          }
    ```
+   or pass a key the client already has through its own environment, if your client expands variables there (for example `"ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"`). The environment wins over the file.
    
    Replace `/absolute/path/to/sonic/mcp_server.py` with your actual path.
 

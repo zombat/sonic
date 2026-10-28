@@ -5,11 +5,24 @@ S.O.N.I.C. LLM Configuration Module
 Provides provider-agnostic LLM configuration for DSPy.
 Supports: Ollama (local), Anthropic, OpenAI, Azure
 Includes streaming LLM support for real-time token feedback.
+
+API keys come from utils.credentials: the process environment first, then the
+dotenv file named by --env-file or SONIC_ENV_FILE. A key is handed to the LLM
+client directly and is redacted from everything S.O.N.I.C. prints or returns,
+including the prompts sent to the model.
+
+Profiles: "fast" (quick, cheap), "detailed" (the provider's default model) and
+"deep" (the most capable model; falls back to "detailed" where a provider has
+no deeper one).
 """
 
 import os
 from typing import Optional, Callable, Iterator, Dict, Any
 import dspy
+
+from utils.credentials import get_secret, redact, redact_text
+
+PROFILES = ("fast", "detailed", "deep")
 
 
 class LLMConfig:
@@ -21,8 +34,9 @@ class LLMConfig:
             "detailed": "mistral:7b"  # Best available local model
         },
         "anthropic": {
-            "fast": "claude-3-5-haiku-20241022",
-            "detailed": "claude-3-5-sonnet-20241022"
+            "fast": "claude-haiku-5-5",
+            "detailed": "claude-sonnet-5-5",  # the default Anthropic model
+            "deep": "claude-opus-5-5"
         },
         "openai": {
             "fast": "gpt-4o-mini",
@@ -42,24 +56,52 @@ class LLMConfig:
         self.max_tokens = int(os.getenv("SONIC_LLM_MAX_TOKENS", "4000"))
     
     def _get_api_key(self) -> Optional[str]:
-        """Get API key from environment based on provider"""
-        if self.provider == "anthropic":
-            return os.getenv("ANTHROPIC_API_KEY")
-        elif self.provider == "openai":
-            return os.getenv("OPENAI_API_KEY")
-        elif self.provider == "azure":
-            return os.getenv("AZURE_OPENAI_KEY")
-        return None
+        """Get the provider's API key: the environment first, then the env file (utils.credentials)."""
+        names = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY", "azure": "AZURE_OPENAI_KEY"}
+        name = names.get(self.provider)
+        return get_secret(name) if name else None
     
     def get_model_name(self, profile: str = "fast") -> str:
         """Get model name for provider and profile"""
         if self.model_name:
             return self.model_name
         
-        if profile not in ["fast", "detailed"]:
+        if profile not in PROFILES:
             profile = "fast"
-        
-        return self.PROVIDER_MODELS.get(self.provider, {}).get(profile, "qwen2.5:0.5b")
+
+        models = self.PROVIDER_MODELS.get(self.provider, {})
+        if profile == "deep" and "deep" not in models:
+            profile = "detailed"
+        return models.get(profile, "qwen2.5:0.5b")
+
+
+class RedactingLM(dspy.LM):
+    """
+    A dspy.LM that redacts every known API key from the prompt and messages before
+    they are sent, so a key can never reach the model, its response or DSPy's history.
+    """
+
+    def __call__(self, prompt=None, *, messages=None, **kwargs):
+        return super().__call__(_redact_prompt(prompt), messages=_redact_messages(messages), **kwargs)
+
+    async def acall(self, prompt=None, *, messages=None, **kwargs):
+        return await super().acall(_redact_prompt(prompt), messages=_redact_messages(messages), **kwargs)
+
+    def forward(self, prompt=None, messages=None, **kwargs):
+        return super().forward(_redact_prompt(prompt), _redact_messages(messages), **kwargs)
+
+    async def aforward(self, prompt=None, messages=None, **kwargs):
+        return await super().aforward(_redact_prompt(prompt), _redact_messages(messages), **kwargs)
+
+
+def _redact_prompt(prompt):
+    return redact_text(prompt) if isinstance(prompt, str) else prompt
+
+
+def _redact_messages(messages):
+    if not isinstance(messages, list):
+        return messages
+    return [redact(m) if isinstance(m, dict) else m for m in messages]
 
 
 def get_llm(profile: str = "fast", provider: str = None, model_name: str = None, api_key: str = None) -> dspy.LM:
@@ -67,7 +109,7 @@ def get_llm(profile: str = "fast", provider: str = None, model_name: str = None,
     Factory function to create configured DSPy LM instance.
     
     Args:
-        profile: "fast" or "detailed" - determines model selection
+        profile: "fast", "detailed" or "deep" - determines model selection
         provider: LLM provider (ollama, anthropic, openai, azure)
         model_name: Override model name (optional)
         api_key: API key for cloud providers (optional, prefers env var)
@@ -77,7 +119,7 @@ def get_llm(profile: str = "fast", provider: str = None, model_name: str = None,
     
     Examples:
         >>> lm = get_llm("fast", "ollama")  # Local qwen2.5:0.5b
-        >>> lm = get_llm("detailed", "anthropic")  # Claude Sonnet
+        >>> lm = get_llm("detailed", "anthropic")  # anthropic/claude-sonnet-5-5
         >>> lm = get_llm("fast", "openai")  # GPT-4o-mini
     """
     config = LLMConfig(provider, model_name, api_key)
@@ -99,9 +141,12 @@ def get_llm(profile: str = "fast", provider: str = None, model_name: str = None,
     # Create LM instance
     lm_kwargs = {
         "model": model_str,
-        "temperature": config.temperature,
         "max_tokens": config.max_tokens
     }
+    # Current Claude models reject a non-default temperature with a 400, so
+    # Anthropic requests leave sampling at the model's default.
+    if config.provider != "anthropic":
+        lm_kwargs["temperature"] = config.temperature
     
     # Add API key if needed
     if config.api_key:
@@ -113,7 +158,7 @@ def get_llm(profile: str = "fast", provider: str = None, model_name: str = None,
         if base_url:
             lm_kwargs["api_base"] = base_url
     
-    return dspy.LM(**lm_kwargs)
+    return RedactingLM(**lm_kwargs)
 
 
 def list_available_providers():
@@ -140,6 +185,7 @@ class StreamingLLMConfig(LLMConfig):
         }
         
         if self.provider == "anthropic":
+            params.pop("temperature")  # current Claude models reject non-default sampling
             params["stream"] = True
         elif self.provider in ["openai", "azure"]:
             params["stream"] = True
@@ -198,12 +244,12 @@ def _create_anthropic_stream(config: StreamingLLMConfig, on_token: Optional[Call
     client = anthropic.Anthropic(api_key=config.api_key)
     
     def stream_response(prompt: str) -> Iterator[str]:
-        """Stream response from Claude"""
+        """Stream response from Claude (the prompt is redacted of any known key first)"""
         with client.messages.stream(
             model=config.get_model_name(profile="fast"),
             max_tokens=config.max_tokens,
-            temperature=config.temperature,
-            messages=[{"role": "user", "content": prompt}]
+            # no temperature: current Claude models reject non-default sampling
+            messages=[{"role": "user", "content": redact_text(prompt)}]
         ) as stream:
             for text in stream.text_stream:
                 if on_token:

@@ -10,7 +10,10 @@
   }
 }
 
-// Optional: Use cloud provider
+// Optional: Use Anthropic with the key kept in a dotenv file.
+// The client config and the assistant only ever see the file's PATH; SONIC reads
+// ANTHROPIC_API_KEY from it and redacts the value from every result and log.
+// (Equivalent: "args": ["/absolute/path/to/sonic/mcp_server.py", "--env-file", "/home/you/secrets/anthropic.env"])
 // {
 //   "mcpServers": {
 //     "sonic-voip-analyzer": {
@@ -18,7 +21,22 @@
 //       "args": ["/absolute/path/to/sonic/mcp_server.py"],
 //       "env": {
 //         "SONIC_LLM_PROVIDER": "anthropic",
-//         "ANTHROPIC_API_KEY": "your-api-key-here"
+//         "SONIC_ENV_FILE": "/home/you/secrets/anthropic.env"
+//       }
+//     }
+//   }
+// }
+
+// Optional: Pass through a key the client already holds in its own environment
+// (for clients that expand ${VAR} in "env"). The environment wins over SONIC_ENV_FILE.
+// {
+//   "mcpServers": {
+//     "sonic-voip-analyzer": {
+//       "command": "python3",
+//       "args": ["/absolute/path/to/sonic/mcp_server.py"],
+//       "env": {
+//         "SONIC_LLM_PROVIDER": "anthropic",
+//         "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
 //       }
 //     }
 //   }

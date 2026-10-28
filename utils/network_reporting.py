@@ -189,10 +189,9 @@ def build_network_markdown(report: Dict[str, Any]) -> str:
 
 
 def save_network_report(report: Dict[str, Any], path: str) -> None:
-    """Write the report as JSON (path ending in .json) or markdown (anything else)."""
-    with open(path, "w", encoding="utf-8") as handle:
-        if path.lower().endswith(".json"):
-            json.dump(report, handle, indent=2)
-            handle.write("\n")
-        else:
-            handle.write(build_network_markdown(report))
+    """Write the report as JSON (path ending in .json) or markdown (anything else), keys redacted."""
+    from utils.credentials import redact, write_redacted
+    if path.lower().endswith(".json"):
+        write_redacted(path, json.dumps(redact(report), indent=2) + "\n")
+    else:
+        write_redacted(path, build_network_markdown(report))
