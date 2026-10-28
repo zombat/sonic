@@ -13,8 +13,10 @@ import json
 from typing import Any, Dict, List
 
 STATUS_MARK = {"ok": "OK", "warning": "WARNING", "problem": "PROBLEM", "not_present": "not present"}
-SECTION_TITLES = [("ipsec", "IPsec / VPN"), ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("routing", "Routing protocols"),
-                  ("reachability", "Reachability (ICMP / ARP)"), ("conversations", "Conversations")]
+SECTION_TITLES = [("cleartext_audit", "Zero-cleartext audit"), ("ipsec", "IPsec / VPN"),
+                  ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("dmvpn_phase3", "DMVPN Phase 3 sequence"),
+                  ("routing", "Routing protocols"), ("reachability", "Reachability (ICMP / ARP)"),
+                  ("convergence", "Convergence"), ("conversations", "Conversations")]
 
 
 def print_network_summary(report: Dict[str, Any]) -> None:

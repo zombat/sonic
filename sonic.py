@@ -107,7 +107,8 @@ Providers:
 
     parser.add_argument(
         "--detectors",
-        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, routing, reachability, conversations"
+        help="Comma-separated subset for --network-only: ipsec, gre_nhrp, dmvpn_phase3, routing, reachability, "
+             "conversations (default), plus cleartext_audit and convergence (only when named)"
     )
 
     parser.add_argument(
