@@ -30,7 +30,8 @@ Record keys (a key is present only when the frame carries that protocol):
                   "ke_group": int|None, "natd_src": [hex], "natd_dst": [hex],
                   "invalid_ke_group": int|None, "invalid_spis": [hex]}
                  Both backends parse the IKE bytes with parse_ike (tshark hands over
-                 udp.payload), so the decoded fields are identical by construction.
+                 udp.payload, read through the dataplane field list), so the decoded fields are
+                 identical by construction.
     esp          {"spi", "seq", "udp": bool}
     nat_keepalive True for a NAT-T keepalive (a one-byte 0xFF on UDP 4500)
     gre          {"key": int|None, "ptype": int}
@@ -50,6 +51,12 @@ Record keys (a key is present only when the frame carries that protocol):
                   "tunneled": bool, "orig": {"src", "dst", "proto", "dport"}|None}
     arp          {"op", "spa", "tpa", "sha"}
     sip          True when the frame is SIP (the SIP path in analyzers/ handles it)
+    dp           data plane header detail on every IP frame (IP id/DF/MF/offset/DSCP, raw TCP
+                 sequence/window/options, payload head and hash, ICMP next-hop MTU): see
+                 extractors/dataplane.py
+
+tshark runs with ip.defragment off so a fragment stays one record per frame, as the
+scapy backend sees it.
 
 Author: Raymond A Rizzo | Zombat
 """
@@ -62,6 +69,10 @@ import sys
 import tempfile
 import ipaddress
 from typing import Any, Dict, Iterator, List, Optional
+
+from extractors.dataplane import (
+    DATAPLANE_TSHARK_FIELDS, TSHARK_OPTIONS, fill_from_bytes as _dp_from_bytes, fill_from_tshark as _dp_from_tshark,
+)
 
 # ---------------------------------------------------------------------------
 # tshark backend
@@ -89,11 +100,9 @@ TSHARK_FIELDS = [
     ("tcp.dstport", ["tcp.dstport"]),
     ("tcp.flags", ["tcp.flags"]),
     ("tcp.len", ["tcp.len"]),
-    ("tcp.mss", ["tcp.options.mss_val"]),
     ("udp.srcport", ["udp.srcport"]),
     ("udp.dstport", ["udp.dstport"]),
     ("udp.length", ["udp.length"]),
-    ("udp.payload", ["udp.payload"]),
     ("udpencap.non_esp_marker", ["udpencap.non_esp_marker"]),
     ("udpencap.nat_keepalive", ["udpencap.nat_keepalive"]),
     ("isakmp.ispi", ["isakmp.ispi"]),
@@ -177,6 +186,7 @@ TSHARK_FIELDS = [
     ("arp.tpa", ["arp.dst.proto_ipv4"]),
     ("arp.sha", ["arp.src.hw_mac"]),
 ]
+TSHARK_FIELDS += DATAPLANE_TSHARK_FIELDS  # rec["dp"]: header detail for the data plane detectors
 
 # Field keys whose absence matters to a detector (used to report degraded coverage).
 _ESSENTIAL_PREFIXES = ("frame.", "ip.", "tcp.", "udp.")
@@ -307,16 +317,16 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
     if row.has("tcp.srcport") and l4_proto == 6:
         target["tcp"] = {"sport": row.int("tcp.srcport"), "dport": row.int("tcp.dstport"),
                          "flags": row.int("tcp.flags") or 0, "len": row.int("tcp.len") or 0}
-        if target["tcp"]["flags"] & 0x02 and row.has("tcp.mss"):
-            target["tcp"]["mss"] = row.int("tcp.mss")
+        if target["tcp"]["flags"] & 0x02 and row.has("dp.tcp.mss"):
+            target["tcp"]["mss"] = row.int("dp.tcp.mss")  # field shared with extractors/dataplane.py
     if row.has("udp.srcport") and l4_proto == 17:
         length = row.int("udp.length")
         target["udp"] = {"sport": row.int("udp.srcport"), "dport": row.int("udp.dstport"),
                          "len": max((length or 8) - 8, 0)}
 
     ike_from_bytes = None
-    if row.has("isakmp.exchtype") and row.has("udp.payload") and "udp" in target:
-        raw = bytes.fromhex(_hex_bytes(row.first("udp.payload")) or "")
+    if row.has("isakmp.exchtype") and row.has("dp.udp.payload") and "udp" in target:
+        raw = bytes.fromhex(_hex_bytes(row.first("dp.udp.payload")) or "")  # shared with dataplane.py
         ports = (target["udp"]["sport"], target["udp"]["dport"])
         if 4500 in ports and raw[:4] == b"\x00\x00\x00\x00":
             ike_from_bytes = parse_ike(raw[4:], natt=True)
@@ -448,6 +458,7 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
 
     if ":sip" in protocols:
         rec["sip"] = True
+    _dp_from_tshark(rec, row)
     return rec
 
 
@@ -503,7 +514,7 @@ def iter_records_tshark(file_path: str, display_filter: Optional[str] = None,
     missing = [key for key, _ in TSHARK_FIELDS if key not in resolved]
     if status is not None:
         status["missing_fields"] = missing
-    command = ["tshark", "-n", "-r", file_path, "-T", "fields",
+    command = ["tshark", "-n", *TSHARK_OPTIONS, "-r", file_path, "-T", "fields",
                "-E", "separator=\t", "-E", "occurrence=a", "-E", "aggregator=|", "-E", "quote=n"]
     for key in keys:
         command += ["-e", resolved[key]]
@@ -917,6 +928,7 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
                 payload = raw[ihl:total]
                 rec["ip"] = {"v": 4, "src": ip.src, "dst": ip.dst, "proto": int(ip.proto), "ttl": int(ip.ttl)}
                 if ip.frag:
+                    _dp_from_bytes(rec, raw)
                     yield rec
                     continue
             elif IPv6 in pkt:
@@ -939,6 +951,7 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
                 yield rec
                 continue
             _fill_l4(rec, rec["ip"], payload, bgp)
+            _dp_from_bytes(rec, raw)
             yield rec
 
 
@@ -986,7 +999,7 @@ def _fill_l4(rec: Dict[str, Any], ip: Dict[str, Any], payload: bytes, bgp: _BgpR
     elif proto == 17 and len(payload) >= 8:
         sport, dport, length = struct.unpack("!HHH", payload[0:6])
         data = payload[8:length] if length >= 8 else payload[8:]
-        rec["udp"] = {"sport": sport, "dport": dport, "len": len(data)}
+        rec["udp"] = {"sport": sport, "dport": dport, "len": max(length - 8, 0)}  # header length, as tshark reports
         if 4500 in (sport, dport):
             if data == b"\xff":
                 rec["nat_keepalive"] = True

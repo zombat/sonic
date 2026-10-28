@@ -149,7 +149,9 @@ class TestSkill(unittest.TestCase):
                      "OSPF_HELLO_INTERVAL_MISMATCH", "BGP_TCP_REFUSED", "EIGRP_K_VALUE_MISMATCH", "ICMP_LOSS",
                      "CLEARTEXT_OUTSIDE_ALLOWLIST", "IKE_NAT_T_MISSING", "IKE_LIVENESS_UNANSWERED", "ESP_STALE_SPI",
                      "NHRP_RESOLUTION_THRASHING", "PHASE3_NO_REDIRECT", "PHASE3_MISSING_<...>", "BGP_MSS_NOT_CLAMPED",
-                     "OSPF_<...>_STUCK", "CONVERGENCE_NOT_SEEN"):
+                     "OSPF_<...>_STUCK", "CONVERGENCE_NOT_SEEN",
+                     "PMTU_BLACK_HOLE", "ESP_OUTER_FRAGMENTED", "TCP_ZERO_WINDOW", "TLS_BASELINE_VERSION",
+                     "QOS_RTP_NOT_EF"):
             self.assertIn(f"`{code}`", detectors_md)
         cli_md = self.read("reference/cli.md")
         for option in ("--network-only", "--detectors", "--peers", "--quality-only", "--create-skill"):

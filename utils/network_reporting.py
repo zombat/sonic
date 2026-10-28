@@ -16,7 +16,9 @@ STATUS_MARK = {"ok": "OK", "warning": "WARNING", "problem": "PROBLEM", "not_pres
 SECTION_TITLES = [("cleartext_audit", "Zero-cleartext audit"), ("ipsec", "IPsec / VPN"),
                   ("gre_nhrp", "GRE / NHRP (DMVPN)"), ("dmvpn_phase3", "DMVPN Phase 3 sequence"),
                   ("routing", "Routing protocols"), ("reachability", "Reachability (ICMP / ARP)"),
-                  ("convergence", "Convergence"), ("conversations", "Conversations")]
+                  ("path_mtu", "Path MTU and fragmentation"), ("esp_overhead", "ESP overhead (estimate)"),
+                  ("tcp", "TCP health"), ("tls", "TLS"), ("qos", "QoS"), ("convergence", "Convergence"),
+                  ("conversations", "Conversations")]
 
 
 def print_network_summary(report: Dict[str, Any]) -> None:

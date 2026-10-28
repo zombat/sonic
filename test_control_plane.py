@@ -391,12 +391,33 @@ class TestControlPlaneArguments(unittest.TestCase):
         bad = analyze_network_capture(fixture("gre_nhrp.pcap"), options={"colour": "blue"})
         self.assertEqual(bad["status"], "error")
 
+    def test_synthetic_audit_follows_fragments_of_an_allowed_datagram(self):
+        import tempfile
+        from scapy.all import IP, UDP, Ether, Raw, fragment, wrpcap
+        big = IP(src="198.51.100.2", dst="192.0.2.1", id=4242) / UDP(sport=4500, dport=4500) / Raw(
+            b"\x00\x00\x00\x00" + bytes(1600))  # an IKE_AUTH large enough to fragment
+        stray = IP(src="198.51.100.2", dst="192.0.2.1", id=777) / UDP(sport=40000, dport=53) / Raw(bytes(1600))
+        frames = [Ether() / f for f in fragment(big, fragsize=1000)] + [Ether() / fragment(stray, fragsize=1000)[1]]
+        for index, frame in enumerate(frames):
+            frame.time = BASE_TIME + index
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "synthetic_fragments.pcap")
+            wrpcap(path, frames)
+            backends = ["scapy"] + (["tshark"] if HAVE_TSHARK else [])
+            for backend in backends:
+                with self.subTest(backend=backend):
+                    audit = audit_cleartext_capture(path, backend=backend)
+                    self.assertEqual(audit["frames_allowed"], 2)  # both fragments of the UDP 4500 datagram
+                    self.assertEqual([v["protocol"] for v in audit["violations"]], ["udp"])  # orphan fragment
+                    self.assertEqual(audit["first_violation_frame"], 3)
+
     def test_optional_detectors_run_only_when_named(self):
         report = analyze_network_capture(fixture("audit_one_leak.pcap"), include_sip=False)
         self.assertNotIn("cleartext_audit", report)
         self.assertNotIn("convergence", report)
         named = analyze_network_capture(fixture("audit_one_leak.pcap"), include_sip=False,
-                                        detectors=["cleartext_audit", "ipsec"], options={"allow": ["crypto"]})
+                                        detectors=["cleartext_audit", "ipsec"],
+                                        options={"cleartext_audit": {"allow": ["crypto"]}})
         self.assertEqual(named["cleartext_audit"]["result"], "fail")
         self.assertEqual(named["overall_status"], "problem")
 
