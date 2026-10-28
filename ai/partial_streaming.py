@@ -17,7 +17,9 @@ from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer
 from ai.streaming_analysis import run_combined_analysis_streaming
 from llm_config import resolve_provider
 from extractors.auth_info import extract_auth_and_registration_info
-from utils.serialization import ResultSerializer
+# redact() is the converter every MCP tool result goes through: dataclasses and enums
+# become plain JSON types, and every known API key is redacted.
+from utils.credentials import redact
 
 
 def run_partial_analysis_streaming(
@@ -139,7 +141,7 @@ def _run_quality(sip_data: str, file_path: str) -> Dict[str, Any]:
             file_path,
             auth_data=auth_data,
         )
-        return ResultSerializer.convert_result(result)
+        return redact(result)
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -149,6 +151,6 @@ def _run_mos(sip_data: str, file_path: str) -> Dict[str, Any]:
     try:
         analyzer = AdvancedRTPMOSAnalyzer()
         result = analyzer.analyze_rtp_streams(sip_data, file_path)
-        return ResultSerializer.convert_result(result)
+        return redact(result)
     except Exception as e:
         return {"status": "error", "error": str(e)}
