@@ -30,7 +30,8 @@ Record keys (a key is present only when the frame carries that protocol):
                   "ke_group": int|None, "natd_src": [hex], "natd_dst": [hex],
                   "invalid_ke_group": int|None, "invalid_spis": [hex]}
                  Both backends parse the IKE bytes with parse_ike (tshark hands over
-                 udp.payload), so the decoded fields are identical by construction.
+                 udp.payload, read through the dataplane field list), so the decoded fields are
+                 identical by construction.
     esp          {"spi", "seq", "udp": bool}
     nat_keepalive True for a NAT-T keepalive (a one-byte 0xFF on UDP 4500)
     gre          {"key": int|None, "ptype": int}
@@ -99,11 +100,9 @@ TSHARK_FIELDS = [
     ("tcp.dstport", ["tcp.dstport"]),
     ("tcp.flags", ["tcp.flags"]),
     ("tcp.len", ["tcp.len"]),
-    ("tcp.mss", ["tcp.options.mss_val"]),
     ("udp.srcport", ["udp.srcport"]),
     ("udp.dstport", ["udp.dstport"]),
     ("udp.length", ["udp.length"]),
-    ("udp.payload", ["udp.payload"]),
     ("udpencap.non_esp_marker", ["udpencap.non_esp_marker"]),
     ("udpencap.nat_keepalive", ["udpencap.nat_keepalive"]),
     ("isakmp.ispi", ["isakmp.ispi"]),
@@ -318,16 +317,16 @@ def _record_from_tshark(row: _Row) -> Dict[str, Any]:
     if row.has("tcp.srcport") and l4_proto == 6:
         target["tcp"] = {"sport": row.int("tcp.srcport"), "dport": row.int("tcp.dstport"),
                          "flags": row.int("tcp.flags") or 0, "len": row.int("tcp.len") or 0}
-        if target["tcp"]["flags"] & 0x02 and row.has("tcp.mss"):
-            target["tcp"]["mss"] = row.int("tcp.mss")
+        if target["tcp"]["flags"] & 0x02 and row.has("dp.tcp.mss"):
+            target["tcp"]["mss"] = row.int("dp.tcp.mss")  # field shared with extractors/dataplane.py
     if row.has("udp.srcport") and l4_proto == 17:
         length = row.int("udp.length")
         target["udp"] = {"sport": row.int("udp.srcport"), "dport": row.int("udp.dstport"),
                          "len": max((length or 8) - 8, 0)}
 
     ike_from_bytes = None
-    if row.has("isakmp.exchtype") and row.has("udp.payload") and "udp" in target:
-        raw = bytes.fromhex(_hex_bytes(row.first("udp.payload")) or "")
+    if row.has("isakmp.exchtype") and row.has("dp.udp.payload") and "udp" in target:
+        raw = bytes.fromhex(_hex_bytes(row.first("dp.udp.payload")) or "")  # shared with dataplane.py
         ports = (target["udp"]["sport"], target["udp"]["dport"])
         if 4500 in ports and raw[:4] == b"\x00\x00\x00\x00":
             ike_from_bytes = parse_ike(raw[4:], natt=True)

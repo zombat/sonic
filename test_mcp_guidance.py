@@ -142,11 +142,16 @@ class TestSkill(unittest.TestCase):
             for pname in tool.parameters.get("properties", {}):
                 self.assertIn(f"`{pname}`", tools_md)
         detectors_md = self.read("reference/network-detectors.md")
-        for name in orch.DETECTOR_NAMES:
+        for name in orch.DETECTOR_CLASSES:  # the default detectors and the ones run only when named
             self.assertIn(f"`{name}`", detectors_md)
         self.assertNotIn("<computed>", detectors_md)
         for code in ("IKE_NO_RESPONSE", "CLEARTEXT_BETWEEN_PEERS", "NHRP_REGISTRATION_REFUSED",
-                     "OSPF_HELLO_INTERVAL_MISMATCH", "BGP_TCP_REFUSED", "EIGRP_K_VALUE_MISMATCH", "ICMP_LOSS"):
+                     "OSPF_HELLO_INTERVAL_MISMATCH", "BGP_TCP_REFUSED", "EIGRP_K_VALUE_MISMATCH", "ICMP_LOSS",
+                     "CLEARTEXT_OUTSIDE_ALLOWLIST", "IKE_NAT_T_MISSING", "IKE_LIVENESS_UNANSWERED", "ESP_STALE_SPI",
+                     "NHRP_RESOLUTION_THRASHING", "PHASE3_NO_REDIRECT", "PHASE3_MISSING_<...>", "BGP_MSS_NOT_CLAMPED",
+                     "OSPF_<...>_STUCK", "CONVERGENCE_NOT_SEEN",
+                     "PMTU_BLACK_HOLE", "ESP_OUTER_FRAGMENTED", "TCP_ZERO_WINDOW", "TLS_BASELINE_VERSION",
+                     "QOS_RTP_NOT_EF"):
             self.assertIn(f"`{code}`", detectors_md)
         cli_md = self.read("reference/cli.md")
         for option in ("--network-only", "--detectors", "--peers", "--quality-only", "--create-skill"):
@@ -159,7 +164,7 @@ class TestSkill(unittest.TestCase):
 
     def test_issue_codes_come_from_every_make_issue_call(self):
         groups = guide.detector_modules()
-        self.assertEqual(sorted(n for g in groups for n in g["names"]), sorted(orch.DETECTOR_NAMES))
+        self.assertEqual(sorted(n for g in groups for n in g["names"]), sorted(orch.DETECTOR_CLASSES))
         codes = {c for g in groups for c in g["codes"]}
         self.assertIn("OSPF_AREA_MISMATCH", codes)  # resolved from the checks table a loop walks
         self.assertIn("IKE_<...>", codes)  # an f-string code

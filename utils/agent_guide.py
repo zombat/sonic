@@ -53,21 +53,31 @@ SKILL_DESCRIPTION = (
 
 # One row per MCP tool, in the order an agent should consider them.
 TOOL_GUIDE: List[Dict[str, Any]] = [
-    {"name": "analyze_network_pcap", "short": "first call on any capture; protocols present, every detector", "title": "Analyze any capture with the network detectors", "llm": False,
+    {"name": "analyze_network_pcap", "short": "first call on any capture; every detector", "title": "Analyze any capture with the network detectors", "llm": False,
      "question": "Unknown capture, or anything that is not only VoIP: which protocols are present and what is wrong"},
-    {"name": "analyze_vpn_pcap", "short": "is inter-site traffic encrypted, did IKE/IPsec and DMVPN come up", "title": "Prove VPN encryption and IPsec/DMVPN setup", "llm": False,
+    {"name": "analyze_vpn_pcap", "short": "encrypted? did IKE/IPsec and DMVPN come up", "title": "Prove VPN encryption and IPsec/DMVPN setup", "llm": False,
      "question": "Is inter-site traffic encrypted? Did IKE/IPsec negotiate? Did DMVPN spokes register?"},
-    {"name": "analyze_routing_pcap", "short": "BGP/OSPF/EIGRP adjacencies, failover timeline, ping loss", "title": "Check routing adjacencies, reachability and failover", "llm": False,
+    {"name": "analyze_routing_pcap", "short": "BGP/OSPF/EIGRP adjacencies, ping loss", "title": "Check routing adjacencies, reachability and failover", "llm": False,
      "question": "Did BGP/OSPF/EIGRP adjacencies form, and if not why; how long did a failover take; is ping lost?"},
-    {"name": "quick_quality_check", "short": "SIP call quality grade and MOS per RTP stream", "title": "Score SIP/RTP call quality without an LLM", "llm": False,
+    {"name": "analyze_data_plane_pcap", "short": "MTU, ESP, TCP, TLS baseline, DSCP/RTP", "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS", "llm": False,
+     "question": "Do packets get through: path MTU and fragmentation, ESP overhead, TCP retransmissions or zero window, TLS policy, DSCP and RTP quality"},
+    {"name": "audit_cleartext_pcap", "short": "pass/fail: only allowlisted traffic on a link", "title": "Assert a transport link carried no cleartext", "llm": False,
+     "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, ...) cross the link?"},
+    {"name": "correlate_pcaps", "short": "2+ capture points: NAT, lost replies, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
+     "question": "With captures from two or more points: NAT translations, where a reply was dropped, asymmetric paths, probes an ACL stopped"},
+    {"name": "analyze_convergence_pcap", "short": "failover timed from an event, DPD or hold timer", "title": "Time a failover and name what drove it", "llm": False,
+     "question": "How long after an event did detection, the BGP reaction and traffic resumption take, and was it DPD or the hold timer?"},
+    {"name": "merge_pcap_timelines", "short": "multi-point failover timeline vs thresholds", "title": "Merge capture timelines and time a failover", "llm": False,
+     "question": "A chaos or failover run captured at several points: one timeline, and failover time against the design threshold"},
+    {"name": "quick_quality_check", "short": "SIP call grade and MOS per RTP stream", "title": "Score SIP/RTP call quality without an LLM", "llm": False,
      "question": "How good were the calls: quality grade, MOS per RTP stream, jitter, loss, SIP auth posture"},
-    {"name": "analyze_pcap", "short": "written diagnosis of SIP calls (drops, one-way audio)", "title": "Diagnose SIP calls with an LLM", "llm": True,
+    {"name": "analyze_pcap", "short": "written diagnosis of SIP calls", "title": "Diagnose SIP calls with an LLM", "llm": True,
      "question": "A written diagnosis of SIP calls: why a call dropped, failed, or had one-way or choppy audio"},
-    {"name": "analyze_pcap_partial_streaming", "short": "SIP quality plus LLM diagnosis, with timings", "title": "SIP quality first, then the LLM diagnosis", "llm": True,
+    {"name": "analyze_pcap_partial_streaming", "short": "SIP quality, then LLM diagnosis", "title": "SIP quality first, then the LLM diagnosis", "llm": True,
      "question": "The quality numbers and the LLM diagnosis of one SIP capture in one call, with timings"},
-    {"name": "analyze_batch_pcaps", "short": "LLM diagnosis of every SIP capture in a directory", "title": "Diagnose every SIP capture in a directory with an LLM", "llm": True,
+    {"name": "analyze_batch_pcaps", "short": "LLM diagnosis of a directory of SIP captures", "title": "Diagnose every SIP capture in a directory with an LLM", "llm": True,
      "question": "Many SIP captures in one directory, each diagnosed by an LLM, plus aggregate counts"},
-    {"name": "list_llm_providers", "short": "LLM providers, models, which API keys are set", "title": "List LLM providers and configuration", "llm": False,
+    {"name": "list_llm_providers", "short": "LLM providers, models, keys set", "title": "List LLM providers and configuration", "llm": False,
      "question": "Which LLM providers and models the LLM tools can use, and whether each API key is set"},
 ]
 
@@ -105,6 +115,8 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "Report negotiation_verdict (IKE outcome per SA) and overlay_verdict (NHRP registrations).",
          "If the verdict is not_present or no_esp, check where the capture was taken: only the "
          "underlay (WAN) link proves encryption; a tunnel interface shows decrypted traffic.",
+         "To pass or fail on it, call audit_cleartext_pcap(file_path={file_path}); add \"l2-control\" to allow "
+         "to accept Cisco loopback keepalives and CDP. Report ike_diagnoses codes for failed SAs.",
      ]},
     {"name": "investigate_failover", "title": "Read a routing failover from a capture",
      "args": ["file_path"],
@@ -112,7 +124,8 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "Call analyze_routing_pcap(file_path={file_path}).",
          "Read verdict per protocol, then failover_timeline in order (t is seconds from the first frame).",
          "Line ping_outages up with the timeline: convergence time is from the first down or "
-         "hello_gap event to the outage's recovery.",
+         "hello_gap event to the outage's recovery. When the event time is known (a runbook stopped "
+         "a link), call analyze_convergence_pcap with event_time for the deltas and the driver.",
          "Explain any mismatch issue (for example OSPF_HELLO_INTERVAL_MISMATCH, EIGRP_K_VALUE_MISMATCH, "
          "BGP_TCP_REFUSED) with the values the issue carries.",
      ]},
@@ -158,8 +171,7 @@ def tool_options(name: str) -> Dict[str, Any]:
 def build_instructions() -> str:
     """The MCP server instructions: short (under 2 KB, which some clients cap), naming every tool."""
     lines = [
-        "S.O.N.I.C. reads pcap/pcapng files on the server's machine and answers from the packets. "
-        "Pass absolute paths.",
+        "S.O.N.I.C. reads pcap/pcapng files on the server's machine. Pass absolute paths.",
         "",
         "Tools (no LLM unless marked):",
     ]
@@ -167,18 +179,19 @@ def build_instructions() -> str:
         lines.append(f"- {row['name']}{' [LLM]' if row['llm'] else ''}: {row['short']}")
     lines += [
         "",
-        "Order: analyze_network_pcap; then analyze_vpn_pcap (pass peers, the WAN IPs) or "
-        "analyze_routing_pcap; quick_quality_check if SIP is present; analyze_pcap only for a written "
-        "SIP diagnosis. Quote verdicts, issue codes and frame numbers.",
+        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing or data_plane; "
+        "audit_cleartext_pcap to gate a crypto link; correlate_pcaps for 2+ capture points; "
+        "analyze_convergence_pcap or merge_pcap_timelines for a failover; SIP: quick_quality_check, "
+        "then analyze_pcap. Quote codes and frames.",
         "",
         "[LLM] tools take seconds to minutes; provider defaults to the server's SONIC_LLM_PROVIDER, "
-        "else ollama (list_llm_providers shows it). A cloud provider sends SIP data, auth headers "
-        "included, off this machine: ask first. The rest are deterministic.",
+        "else ollama (see list_llm_providers). A cloud provider sends SIP data, auth headers "
+        "included, off this machine: ask first.",
         "",
         "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
-        "*_omitted counts the rest; narrow big captures with display_filter or max_packets.",
+        "*_omitted counts the rest; narrow: display_filter, max_packets.",
         "",
-        "Limits: only what crossed the capture point (capture the WAN link to prove encryption); IKEv2 "
+        "Limits: only what crossed the capture point (capture the WAN to prove encryption); IKEv2 "
         "auth failure is a labelled heuristic; NULL ESP looks encrypted.",
         "",
         "More: resources sonic://guide/<topic> (overview, " + ", ".join(t for t, _ in TOPICS) + "); "
@@ -326,6 +339,9 @@ def render_skill_md() -> str:
         "analyze_network_pcap": "`--file F --network-only`",
         "analyze_vpn_pcap": "`--file F --network-only --detectors ipsec,gre_nhrp --peers A,B`",
         "analyze_routing_pcap": "`--file F --network-only --detectors routing,reachability`",
+        "analyze_data_plane_pcap": "`--file F --network-only --detectors path_mtu,esp_overhead,tcp,tls,qos`",
+        "correlate_pcaps": "MCP only",
+        "merge_pcap_timelines": "MCP only",
         "quick_quality_check": "`--file F --quality-only`",
         "analyze_pcap": "`--file F --provider P --model combined`",
         "analyze_pcap_partial_streaming": "`--file F --stream --partial`",
@@ -340,10 +356,12 @@ def render_skill_md() -> str:
         "",
         "1. Start with `analyze_network_pcap`: read `protocols_present`, `overall_status`, `verdicts`, `issues`.",
         "2. Narrow down: `analyze_vpn_pcap` (with `peers`) for encryption, `analyze_routing_pcap` for "
-        "adjacencies and failover.",
-        "3. If SIP is present, `quick_quality_check`. Use `analyze_pcap` only for a written SIP diagnosis, "
+        "adjacencies and failover, `analyze_data_plane_pcap` for MTU, ESP, TCP, TLS and QoS.",
+        "3. With captures from two or more points, `correlate_pcaps`; for a failover run, "
+        "`merge_pcap_timelines` with thresholds.",
+        "4. If SIP is present, `quick_quality_check`. Use `analyze_pcap` only for a written SIP diagnosis, "
         "and ask before using a cloud LLM provider.",
-        "4. Report verdict sentences, issue codes and Wireshark frame numbers; say what the capture point "
+        "5. Report verdict sentences, issue codes and Wireshark frame numbers; say what the capture point "
         "could not show.",
         "",
         "## Read more only when you need it",
@@ -398,12 +416,17 @@ def render_network_detectors() -> str:
         "| Detector | MCP tools that run it | CLI |",
         "|---|---|---|",
     ]
-    for name in orch.DETECTOR_NAMES:
-        tools = ["analyze_network_pcap"]
+    dedicated = {"cleartext_audit": "audit_cleartext_pcap", "convergence": "analyze_convergence_pcap"}
+    for name in orch.DETECTOR_CLASSES:
+        tools = [] if name in orch.OPTIONAL_DETECTORS else ["analyze_network_pcap"]
         if name in orch.VPN_DETECTORS:
             tools.append("analyze_vpn_pcap")
         if name in orch.ROUTING_DETECTORS:
             tools.append("analyze_routing_pcap")
+        if name in orch.DATA_PLANE_DETECTORS:
+            tools.append("analyze_data_plane_pcap")
+        if name in dedicated:
+            tools += [dedicated[name], "analyze_network_pcap (only when named in detectors)"]
         lines.append(f"| `{name}` | {', '.join(f'`{t}`' for t in tools)} | `--network-only --detectors {name}` |")
     lines += [
         "",
@@ -531,6 +554,15 @@ def render_interpreting() -> str:
         "- IKEv2 IKE_AUTH is encrypted: `auth_likely_failed` is a labelled heuristic (a small response and "
         "no ESP), not a decoded AUTHENTICATION_FAILED.",
         "- ESP with NULL encryption cannot be told apart from encrypted ESP without the keys.",
+        "- A PSK mismatch is never visible as a hash: it shows as `auth_failed` (a small encrypted IKE_AUTH "
+        "response, no ESP) or `auth_no_reply` (IKE_AUTH retransmitted, no reply) in `ike_diagnoses`.",
+        "- DPD is recognised by size (an empty encrypted INFORMATIONAL); a stale ESP SPI is inferred from timing.",
+        "- `audit_cleartext_pcap` fails on a Cisco transport link's loopback keepalives and CDP unless "
+        "`l2-control` is allowed; an empty capture fails.",
+        "- On a protected DMVPN, NHRP Phase 3 steps are inside ESP: pass `hubs` to check the encrypted "
+        "spoke-to-spoke shortcuts instead.",
+        "- `analyze_convergence_pcap` deltas use the capture clock; an event time from another host is "
+        "off by that host's clock skew. Without `event_time`, it starts at the first failure sign.",
         "- OSPFv3 and IS-IS are not decoded; EIGRP speakers are grouped per link by unicast exchange or a "
         "shared /24.",
         "- Without `peers`, the encryption verdict judges only pairs that spoke IKE/ESP plus GRE endpoints. "

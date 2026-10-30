@@ -399,15 +399,15 @@ class TcpHealthDetector:
                                          rst["n"]))
         conns.sort(key=lambda c: (VERDICT_ORDER.index(c["verdict"]), c["first_t"] or 0))
         counts = {v: sum(1 for c in conns if c["verdict"] == v) for v in VERDICT_ORDER}
-        specs = {
-            "no_answer": ("error", "TCP_NO_ANSWER", "SYN without SYN-ACK"),
-            "refused": ("warning", "TCP_REFUSED", "SYN answered by RST"),
-            "receiver_buffer_exhausted": ("warning", "TCP_ZERO_WINDOW", "receive buffer exhausted (zero window)"),
-            "loss_on_path": ("warning", "TCP_LOSS", "loss on the path"),
-            "receive_window_limited": ("info", "TCP_WINDOW_FULL", "limited by the receive window"),
-            "reset": ("info", "TCP_RESET", "reset mid-connection"),
-        }
-        for verdict, (severity, code, title) in specs.items():
+        specs = [
+            ("no_answer", "error", "TCP_NO_ANSWER", "SYN without SYN-ACK"),
+            ("refused", "warning", "TCP_REFUSED", "SYN answered by RST"),
+            ("receiver_buffer_exhausted", "warning", "TCP_ZERO_WINDOW", "receive buffer exhausted (zero window)"),
+            ("loss_on_path", "warning", "TCP_LOSS", "loss on the path"),
+            ("receive_window_limited", "info", "TCP_WINDOW_FULL", "limited by the receive window"),
+            ("reset", "info", "TCP_RESET", "reset mid-connection"),
+        ]
+        for verdict, severity, code, title in specs:
             hit = [c for c in conns if c["verdict"] == verdict]
             if not hit:
                 continue

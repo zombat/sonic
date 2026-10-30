@@ -32,8 +32,9 @@ What the audit cannot show, reported with every result:
 - it covers only frames that crossed this capture point, and only frames the
   capture kept (a capture filter or a full ring buffer hides the rest);
 - ESP with NULL encryption, or a weak cipher, looks like any other ESP;
-- a non-first IP fragment carries no port, so a fragment of an allowed UDP
-  protocol is reported as "udp" (fail-closed) unless tshark reassembled it.
+- a non-first IP fragment carries no port: it is allowed when the first
+  fragment of the same datagram (same addresses and IP identification) was,
+  and reported as "udp" (fail-closed) when that first fragment was not captured.
 
 Author: Raymond A Rizzo | Zombat
 """
@@ -79,8 +80,8 @@ CANNOT_SHOW = [
     "a snap length or a full buffer can hide frames, and traffic on other links is not seen.",
     "ESP payload is opaque: ESP with NULL encryption or a weak cipher passes, because the cipher is negotiated "
     "inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
-    "A non-first IP fragment carries no port; tshark reassembles fragments, the scapy fallback does not, so a "
-    "fragment of an allowed UDP protocol can be reported as plain udp (fail-closed).",
+    "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP "
+    "identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
 ]
 
 
@@ -121,7 +122,15 @@ def _tokens_for(rec: Dict[str, Any]) -> Tuple[Set[str], str, str]:
                 tokens.add(f"{l4}:{port}")
                 if port in PORT_NAMES:
                     tokens.add(PORT_NAMES[port])
-    if "ike" in rec or rec.get("nat_keepalive") or "esp" in rec:
+    dp = rec.get("dp") or {}
+    if "udp" in rec and dp.get("mf") and not dp.get("off"):
+        # The first fragment of a large IKE or ESP-in-UDP datagram: too short to parse, known by its ports.
+        ports = {rec["udp"]["sport"], rec["udp"]["dport"]}
+        if 500 in ports:
+            tokens.add("ike")
+        if 4500 in ports:
+            tokens |= {"ike", "nat-t"}
+    if "ike" in rec or rec.get("nat_keepalive") or "esp" in rec or tokens & {"ike", "nat-t"}:
         return tokens, label, "crypto"
     if "gre" in rec:
         name = label
@@ -211,6 +220,7 @@ class CleartextAuditDetector:
         self.allowed = 0
         self.allowed_by: Dict[str, int] = {}
         self.violations: Dict[tuple, Dict[str, Any]] = {}
+        self.allowed_datagrams: Dict[tuple, str] = {}  # (src, dst, ip id) of allowed first fragments
 
     def feed(self, rec: Dict[str, Any]):
         self.frames += 1
@@ -222,10 +232,19 @@ class CleartextAuditDetector:
             src, dst = rec["arp"]["spa"], rec["arp"]["tpa"]
         else:
             src = dst = None
+        dp = rec.get("dp") or {}
+        datagram = (src, dst, dp.get("id")) if ip and dp.get("id") is not None else None
+        if datagram and dp.get("off") and datagram in self.allowed_datagrams:
+            rule_text = self.allowed_datagrams[datagram]  # a later fragment of an allowed datagram
+            self.allowed += 1
+            self.allowed_by[rule_text] = self.allowed_by.get(rule_text, 0) + 1
+            return
         for rule in self.rules:
             if rule.matches(tokens, [a for a in (src, dst) if a]):
                 self.allowed += 1
                 self.allowed_by[rule.text] = self.allowed_by.get(rule.text, 0) + 1
+                if datagram and dp.get("mf") and not dp.get("off") and len(self.allowed_datagrams) < 65536:
+                    self.allowed_datagrams[datagram] = rule.text
                 return
         key = (name, src, dst)
         entry = self.violations.get(key)
