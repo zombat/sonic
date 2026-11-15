@@ -116,6 +116,14 @@ def _family(rec: Dict[str, Any], families: set):
     ip = rec.get("ip")
     if ip and ip.get("v") == 6:
         families.add("ipv6")
+    head = (rec.get("dp") or {}).get("pl") or b""
+    if head and "tcp" in rec:
+        if head.startswith(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"):
+            families.add("http2")  # cleartext HTTP/2 (gRPC without TLS): analyze_grpc_capture reads it
+        elif head.startswith(b"SSH-"):
+            families.add("ssh")
+        elif len(head) > 5 and head[0] == 22 and head[1] == 3 and head[5] == 1:
+            families.add("tls")
 
 
 def to_jsonable(value: Any) -> Any:

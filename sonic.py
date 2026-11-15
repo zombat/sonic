@@ -48,6 +48,9 @@ Examples:
   %(prog)s --file wan.pcap --network-only                                          # IPsec/GRE/NHRP/BGP/OSPF/EIGRP/ICMP detectors (no AI)
   %(prog)s --file wan.pcap --network-only --detectors ipsec,gre_nhrp --json        # VPN detectors only, JSON on stdout
   %(prog)s --file wan.pcap --network-only --save_file wan-report.json              # write the report as JSON
+  %(prog)s --file gnmi.pcap --grpc                                                 # gRPC/gNMI/gNOI troubleshooting (no AI)
+  %(prog)s --file srl.pcapng --grpc --tls-secrets-log keys.log --json              # decrypt TLS gRPC with a key log
+  %(prog)s --fetch-grpc-protos                                                     # .proto files for Wireshark's protobuf view
   %(prog)s --create-skill                                                          # write the agent skill to .claude/skills/sonic
 
 Providers:
@@ -140,7 +143,47 @@ API keys:
     parser.add_argument(
         "--json",
         action="store_true",
-        help="With --network-only, print the full report as JSON on stdout instead of the summary"
+        help="With --network-only or --grpc, print the full report as JSON on stdout instead of the summary"
+    )
+
+    # gRPC troubleshooting (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--grpc",
+        action="store_true",
+        help="Troubleshoot gRPC (gNMI, gNOI, any service) with Wireshark's HTTP/2, HPACK, gRPC and TLS dissectors: "
+             "each RPC's status and message, RST_STREAM, GOAWAY, flow-control stalls, TLS certificate and alerts, "
+             "credentials in cleartext metadata (keys only, never values). Writes --save_file (default: "
+             "<capture>.grpc.md; a path ending in .json writes JSON)."
+    )
+
+    parser.add_argument(
+        "--tls-secrets-log",
+        metavar="PATH",
+        help="With --grpc, the TLS secrets log a client wrote with SSLKEYLOGFILE set, to decrypt TLS-wrapped "
+             "gRPC; handed to tshark by path, never copied into the report"
+    )
+
+    parser.add_argument(
+        "--proto-path",
+        metavar="DIR",
+        action="append",
+        help="With --grpc, a directory of .proto files for Wireshark's protobuf dissector (repeatable; default "
+             "$SONIC_PROTO_PATH, else the --fetch-grpc-protos directory when it exists)"
+    )
+
+    parser.add_argument(
+        "--grpc-ports",
+        help="With --grpc, comma-separated extra TCP ports to decode as HTTP/2"
+    )
+
+    parser.add_argument(
+        "--fetch-grpc-protos",
+        nargs="?",
+        const="",
+        metavar="DIR",
+        help="Download the gNMI and gNOI .proto files (Apache-2.0) and the protobuf well-known types "
+             "(BSD-3-Clause) at pinned commits, checked by SHA-256, into DIR (default ~/.cache/sonic/grpc-protos), "
+             "then exit. Needs network access; nothing else ever downloads."
     )
 
     # Multi-provider LLM support
@@ -230,10 +273,19 @@ def main():
         from utils.agent_guide import create_skill_command
         sys.exit(create_skill_command(args.create_skill))
 
+    if args.fetch_grpc_protos is not None:
+        from utils.grpc_protos import fetch_command
+        sys.exit(fetch_command(args.fetch_grpc_protos or None))
+
     if not args.file:
-        parser.error("the following arguments are required: --file (unless --create-skill)")
+        parser.error("the following arguments are required: --file (unless --create-skill or --fetch-grpc-protos)")
     if args.model_name and args.model == "all":
         parser.error("--model-name cannot be used with --model all, which tests its own models")
+
+    # Handle gRPC mode (its default report path is next to the capture)
+    if args.grpc:
+        run_grpc_analysis(args)
+        return
 
     # Handle network-only mode (its default report path is next to the capture)
     if args.network_only:
@@ -437,6 +489,46 @@ def run_network_only_analysis(args):
         print_network_summary(report)
         if save_path:
             print(f"\n💾 Network report saved to: {save_path}")
+
+
+def run_grpc_analysis(args):
+    """
+    Run the gRPC troubleshooting analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.grpc_inspect import analyze_grpc_capture
+    from utils.grpc_reporting import print_grpc_summary, save_grpc_report
+
+    ports = _split_csv(args.grpc_ports)
+    report = analyze_grpc_capture(
+        args.file,
+        keylog_file=args.tls_secrets_log,
+        proto_paths=args.proto_path,
+        ports=ports,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ gRPC analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.grpc.md"
+    try:
+        save_grpc_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_grpc_summary(report)
+        if save_path:
+            print(f"\n💾 gRPC report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):
