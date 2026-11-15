@@ -190,7 +190,8 @@ def protocol_label(rec: Dict[str, Any]) -> str:
         return "other"
     proto = ip.get("proto")
     if "tcp" in rec:
-        return f"tcp/{service_port(rec['tcp']['sport'], rec['tcp']['dport'])}"
+        svc = rec["tcp"].get("svc")  # the listening side's port, when the connection showed it
+        return f"tcp/{svc if svc is not None else service_port(rec['tcp']['sport'], rec['tcp']['dport'])}"
     if "udp" in rec:
         return f"udp/{service_port(rec['udp']['sport'], rec['udp']['dport'])}"
     if proto in IP_PROTOCOL_NAMES:
