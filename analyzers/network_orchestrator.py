@@ -44,7 +44,7 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from analyzers.cleartext_audit import CleartextAuditDetector
+from analyzers.cleartext_audit import CleartextAuditDetector, add_grpc_findings
 from analyzers.convergence import ConvergenceDetector
 from analyzers.dmvpn_phase3 import DmvpnPhase3Detector
 from analyzers.gre_nhrp import GreNhrpDetector
@@ -346,6 +346,10 @@ def analyze_network_capture(
     sections: Dict[str, Dict[str, Any]] = {}
     for detector in active:
         sections[detector.name] = detector.report(ctx)
+    if "cleartext_audit" in sections:
+        # Cleartext HTTP/2: name gRPC and find credentials in its HPACK-coded metadata (needs tshark).
+        add_grpc_findings(sections["cleartext_audit"], file_path, display_filter=display_filter,
+                          max_packets=max_packets)
 
     run = [name for name, sec in sections.items() if sec.get("status") != "not_present"]
     report["detectors_run"] = run
@@ -458,8 +462,10 @@ def audit_cleartext_capture(file_path: str, allow: Optional[List[str]] = None, d
     The zero-cleartext assertion: every frame against the allowlist, pass or fail.
 
     Returns {"status": "success", "passed": bool, "result": "pass"|"fail", "verdict",
-    "allowlist", "frames_audited", "frames_outside_allowlist", "by_protocol",
-    "violations", "first_violation_frame", "cannot_show", "capture"} or an error.
+    "allowlist", "frames_audited", "frames_outside_allowlist", "cleartext_frames",
+    "protection", "by_protocol", "violations", "tcp_sessions", "first_violation_frame",
+    "credentials" and "grpc" (when cleartext HTTP/2 was seen), "cannot_show", "capture"}
+    or an error.
     """
     report = analyze_network_capture(file_path, detectors=["cleartext_audit"], display_filter=display_filter,
                                      max_packets=max_packets, include_sip=False, max_items=max_items,
@@ -468,9 +474,13 @@ def audit_cleartext_capture(file_path: str, allow: Optional[List[str]] = None, d
         return report
     audit = report["cleartext_audit"]
     out = {"status": "success", "passed": audit["passed"], "result": audit["result"], "verdict": audit["verdict"]}
-    for key in ("allowlist", "frames_audited", "frames_allowed", "frames_outside_allowlist", "first_violation_frame",
-                "by_protocol", "violations", "violations_omitted", "allowed_by_rule", "cannot_show", "issues"):
+    for key in ("allowlist", "frames_audited", "frames_allowed", "frames_outside_allowlist", "cleartext_frames",
+                "protection", "first_violation_frame", "by_protocol", "violations", "violations_omitted",
+                "tcp_sessions", "tcp_sessions_omitted", "allowed_by_rule", "cannot_show", "issues"):
         out[key] = audit[key]
+    for key in ("credentials", "grpc"):
+        if key in audit:
+            out[key] = audit[key]
     out["file"] = report["file"]
     out["capture"] = report["capture"]
     out["protocols_present"] = report["protocols_present"]
