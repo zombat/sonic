@@ -370,7 +370,13 @@ class TlsDetector:
             body = bytes(buf[stream.pos + 5:stream.pos + 5 + length])
             stream.pos += 5 + length
             if ctype == 20:
-                stream.encrypted = True
+                # In TLS 1.2 and older ChangeCipherSpec starts encryption. TLS 1.3 sends a dummy one for
+                # middlebox compatibility (RFC 8446 D.4), even before the real ServerHello when the server
+                # answered with a HelloRetryRequest, so it counts only once a pre-1.3 ServerHello is known.
+                session = self.sessions.get((src, dst)) or self.sessions.get((dst, src))
+                chosen = (session or {}).get("server_hello") or {}
+                if chosen.get("version") and chosen["version"] != "TLS1.3":
+                    stream.encrypted = True
             elif ctype == 23:
                 stream.done = True
             elif ctype == 21:
