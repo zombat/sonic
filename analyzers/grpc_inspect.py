@@ -67,7 +67,8 @@ from analyzers.network_common import (
 )
 from utils.grpc_protos import DEFAULT_PROTO_DIR
 from extractors.http2 import (
-    GRPC_PORTS, MIN_SCRUB_LENGTH, discover, iter_http2_packets, plan_decode_as, tshark_available, tshark_version,
+    GRPC_PORTS, MIN_SCRUB_LENGTH, decrypted_certificates, discover, iter_http2_packets, plan_decode_as,
+    tshark_available, tshark_version,
 )
 
 REPORT_SCHEMA = "sonic.grpc_report/1"
@@ -970,8 +971,10 @@ def _tls_sessions(file_path: str, conns: Dict[int, Any], display_filter: Optiona
     return sessions
 
 
-def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_given: bool) -> Dict[str, Any]:
+def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_given: bool,
+              decrypted_der: Optional[bytes] = None, capture_time: Optional[float] = None) -> Dict[str, Any]:
     """What a TLS-wrapped gRPC connection shows without (or with) keys."""
+    from analyzers.tls_inspect import parse_certificate, session_hints
     view: Dict[str, Any] = {"sni": disc.sni, "alpn_offered": disc.alpn, "decrypted": decrypted}
     hints: List[Dict[str, str]] = []
     if session:
@@ -979,7 +982,18 @@ def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_g
         view.update({"version": chose.get("version"), "cipher_suite": chose.get("cipher_suite"),
                      "alpn_chosen": chose.get("alpn"), "certificate": session.get("certificate"),
                      "alerts": session.get("alerts", []), "hello_retry_request": session.get("hello_retry_request")})
-        hints.extend(session.get("hints", []))
+        certificate = view["certificate"] or {}
+        if decrypted_der and not certificate.get("visible"):
+            # TLS 1.3 encrypts the certificate; the key log made it readable.
+            body = (len(decrypted_der) + 3).to_bytes(3, "big") + len(decrypted_der).to_bytes(3, "big") + decrypted_der
+            certificate = parse_certificate(body, capture_time or 0.0)
+            certificate["decrypted_with_key_log"] = True
+            view["certificate"] = certificate
+            server = disc.server or disc.b
+            hints.extend(session_hints({"client_hello": {"sni": disc.sni}, "server": server}, view["version"],
+                                       certificate))
+        else:
+            hints.extend(session.get("hints", []))
         if not chose and session.get("client_offered") and not session.get("alerts"):
             hints.append({"code": "TLS_NO_SERVER_HELLO", "severity": "warning", "text":
                           "ClientHello with no ServerHello: if this is a plaintext (insecure) gRPC port the client "
@@ -1070,9 +1084,12 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
     ctx = Context(start, end, max_items=max_items)
 
     tls_sessions = {}
+    certificates: Dict[int, bytes] = {}
     if include_tls:
         try:
             tls_sessions = _tls_sessions(file_path, disc, display_filter, max_packets)
+            if keylog_file:
+                certificates = decrypted_certificates(file_path, decode_as, keylog_file, display_filter, max_packets)
         except Exception as exc:  # the TLS view is an addition; its failure must not hide the RPCs
             status["tls_error"] = f"{type(exc).__name__}: {exc}"
 
@@ -1097,7 +1114,8 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
         if dconn and dconn.is_tls():
             session = tls_sessions.get((_endpoint(dconn.client), _endpoint(dconn.server)))
             tls_info = _tls_view(dconn, session, decrypted=conn.tls_seen and bool(conn.rpcs),
-                                 keylog_given=bool(keylog_file))
+                                 keylog_given=bool(keylog_file), decrypted_der=certificates.get(conn.index),
+                                 capture_time=dconn.first_t)
         report_conn = analysis.connection_report(conn, ctx, tls_info)
         flow = report_conn["flow"]
         label = f"{flow} ({report_conn['service']})"

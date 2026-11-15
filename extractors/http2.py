@@ -512,6 +512,39 @@ def _protobuf_from_pdml(proto: ET.Element) -> Dict[str, Any]:
             "fields": fields[:64]}
 
 
+def decrypted_certificates(file_path: str, decode_as: List[str], keylog_file: str,
+                           display_filter: Optional[str] = None,
+                           max_packets: Optional[int] = None) -> Dict[int, bytes]:
+    """
+    With a key log: the leaf certificate (DER) each decrypted TLS 1.3 session's server sent, by tcp.stream.
+
+    TLS 1.3 encrypts the Certificate message; once tshark decrypts it, its certificate field is
+    readable like a TLS 1.2 one.
+    """
+    flt = "tls.handshake.certificate"
+    if display_filter:
+        flt = f"({display_filter}) && {flt}"
+    command = ["tshark", "-n", "-r", file_path, "-o", "tcp.reassemble_out_of_order:TRUE", *decode_as,
+               "-o", f"tls.keylog_file:{keylog_file}", "-Y", flt, "-T", "fields", "-E", "separator=\t",
+               "-E", "occurrence=f", "-e", "tcp.stream", "-e", "tls.handshake.certificate"]
+    if max_packets:
+        command += ["-c", str(int(max_packets))]
+    out: Dict[int, bytes] = {}
+    proc = subprocess.run(command, capture_output=True, text=True)
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        index = _int(parts[0].split(",")[0])
+        if index is None or index in out:
+            continue
+        try:
+            out[index] = bytes.fromhex(parts[1].split(",")[0].replace(":", ""))
+        except ValueError:
+            continue
+    return out
+
+
 def iter_http2_packets(file_path: str, decode_as: List[str], keylog_file: Optional[str] = None,
                        proto_paths: Optional[List[str]] = None, display_filter: Optional[str] = None,
                        max_packets: Optional[int] = None) -> Http2Extraction:
