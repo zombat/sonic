@@ -159,8 +159,8 @@ API keys:
     parser.add_argument(
         "--tls-secrets-log",
         metavar="PATH",
-        help="With --grpc, the TLS secrets log a client wrote with SSLKEYLOGFILE set, to decrypt TLS-wrapped "
-             "gRPC; handed to tshark by path, never copied into the report"
+        help="With --grpc, the TLS key log a client wrote (SSLKEYLOGFILE format; gnmic --log-tls-secret), to "
+             "decrypt TLS-wrapped gRPC; handed to tshark by path, never copied into the report"
     )
 
     parser.add_argument(

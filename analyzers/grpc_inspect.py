@@ -1005,8 +1005,9 @@ def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_g
                           "the capture): the RPCs stay encrypted"})
         else:
             hints.append({"code": "GRPC_TLS_NOT_DECRYPTED", "severity": "info", "text":
-                          "the RPCs are encrypted; capture with SSLKEYLOGFILE set on the client (gnmic, grpcurl "
-                          "and most Go and Python clients honor it) and pass the file as keylog_file to decode them"})
+                          "the RPCs are encrypted; have the client write a TLS key log while capturing (gnmic "
+                          "--log-tls-secret, SSLKEYLOGFILE for Python and curl, tls.Config.KeyLogWriter in Go) "
+                          "and pass the file as keylog_file to decode them"})
     view["hints"] = hints
     return view
 

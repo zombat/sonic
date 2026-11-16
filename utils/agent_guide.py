@@ -499,9 +499,10 @@ def render_grpc() -> str:
         "",
         "## Decryption and .proto files",
         "",
-        "- `keylog_file` (CLI `--tls-secrets-log`): an SSLKEYLOGFILE written by the client while it ran (gnmic, "
-        "grpcurl, Go and Python clients honor the variable). It is handed to tshark by path and never read "
-        "into or copied to a report.",
+        "- `keylog_file` (CLI `--tls-secrets-log`): a TLS key log (SSLKEYLOGFILE format) the client wrote while "
+        "it ran: gnmic with `--log-tls-secret`, Python clients and curl with SSLKEYLOGFILE set, a Go program "
+        "through tls.Config.KeyLogWriter. It is handed to tshark by path and never read into or copied to a "
+        "report.",
         f"- `proto_paths` (CLI `--proto-path`), else `SONIC_PROTO_PATH`, else `{grpc_protos.DEFAULT_PROTO_DIR}` "
         "when it exists: .proto files for Wireshark's protobuf dissector, which then names each message "
         "type (`wireshark_protobuf` on an RPC). `sonic.py --fetch-grpc-protos [DIR]` downloads the gNMI and "

@@ -1028,8 +1028,9 @@ def analyze_grpc_pcap(
 
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
-        keylog_file: Optional TLS key log (SSLKEYLOGFILE format, written by the client) to
-            decrypt TLS; passed to tshark by path, never read into or copied to the result.
+        keylog_file: Optional TLS key log (SSLKEYLOGFILE format; gnmic writes one with
+            --log-tls-secret) to decrypt TLS; passed to tshark by path, never read into or
+            copied to the result.
         proto_paths: Optional directories of .proto files for Wireshark's protobuf dissector
             (default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from
             `sonic.py --fetch-grpc-protos`). Without them gNMI is still decoded.
