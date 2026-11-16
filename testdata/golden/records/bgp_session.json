@@ -1,0 +1,2024 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 0,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 1,
+      "t": 1767225600.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 2,
+        "len": 0,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 1001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 2,
+      "t": 1767225600.001,
+      "tcp": {
+        "dport": 40001,
+        "flags": 18,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 5001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 3,
+      "t": 1767225600.002,
+      "tcp": {
+        "dport": 179,
+        "flags": 16,
+        "len": 0,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": 65000,
+          "bgp_id": "1.1.1.1",
+          "caps": [
+            1,
+            65
+          ],
+          "hold": 30,
+          "len": 43,
+          "major": null,
+          "minor": null,
+          "myas": 65000,
+          "type": 1
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "fbf36f09edc7f821",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde8001e010101010e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 5001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 83
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 97,
+      "n": 4,
+      "t": 1767225600.01,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 43,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": 65000,
+          "bgp_id": "2.2.2.2",
+          "caps": [
+            1,
+            65
+          ],
+          "hold": 90,
+          "len": 43,
+          "major": null,
+          "minor": null,
+          "myas": 65000,
+          "type": 1
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "ecbce3c6e946daf1",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde8005a020202020e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 1044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 83
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 97,
+      "n": 5,
+      "t": 1767225600.012,
+      "tcp": {
+        "dport": 40001,
+        "flags": 24,
+        "len": 43,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 5044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 6,
+      "t": 1767225600.02,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 1063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 7,
+      "t": 1767225600.022,
+      "tcp": {
+        "dport": 40001,
+        "flags": 24,
+        "len": 19,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 52,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 2,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "1390c8c562ae3b90",
+        "pl": "ffffffffffffffffffffffffffffffff00340200000015400101004002004003040aff000140050400000064180a0101180a0102",
+        "tcp": {
+          "ack": 5063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1063,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 92
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 106,
+      "n": 8,
+      "t": 1767225600.1,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 52,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 48,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 1,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b2ccd18f4cc6d753",
+        "pl": "ffffffffffffffffffffffffffffffff00300200000015400101004002004003040aff000240050400000064180a0202",
+        "tcp": {
+          "ack": 1115,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5063,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 88
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 9,
+      "t": 1767225600.102,
+      "tcp": {
+        "dport": 40001,
+        "flags": 24,
+        "len": 48,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 23,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "d16cd4eb850c3643",
+        "pl": "ffffffffffffffffffffffffffffffff00170200000000",
+        "tcp": {
+          "ack": 5111,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1115,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 63
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 10,
+      "t": 1767225600.11,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 23,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 23,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "d16cd4eb850c3643",
+        "pl": "ffffffffffffffffffffffffffffffff00170200000000",
+        "tcp": {
+          "ack": 1138,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5111,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 63
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 11,
+      "t": 1767225600.112,
+      "tcp": {
+        "dport": 40001,
+        "flags": 24,
+        "len": 23,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 0,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 300,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 12,
+      "t": 1767225602.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 2,
+        "len": 0,
+        "sport": 40003,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 301,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 700,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.3",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 13,
+      "t": 1767225602.001,
+      "tcp": {
+        "dport": 40003,
+        "flags": 18,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 701,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 301,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 14,
+      "t": 1767225602.002,
+      "tcp": {
+        "dport": 179,
+        "flags": 16,
+        "len": 0,
+        "sport": 40003,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": 65099,
+          "bgp_id": "3.3.3.3",
+          "caps": [
+            1,
+            65
+          ],
+          "hold": 180,
+          "len": 43,
+          "major": null,
+          "minor": null,
+          "myas": 65099,
+          "type": 1
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "82780c0a3ae7d0b7",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fe4b00b4030303030e020c01040001000141040000fe4b",
+        "tcp": {
+          "ack": 701,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 301,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 83
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 97,
+      "n": 15,
+      "t": 1767225602.01,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 43,
+        "sport": 40003,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 23,
+          "major": 2,
+          "minor": 2,
+          "myas": null,
+          "type": 3
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b4e758b49e770544",
+        "pl": "ffffffffffffffffffffffffffffffff0017030202fe4b",
+        "tcp": {
+          "ack": 344,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 701,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 63
+      },
+      "ip": {
+        "dst": "10.255.0.3",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 16,
+      "t": 1767225602.011,
+      "tcp": {
+        "dport": 40003,
+        "flags": 24,
+        "len": 23,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 344,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 724,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.3",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 17,
+      "t": 1767225602.012,
+      "tcp": {
+        "dport": 40003,
+        "flags": 17,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 0,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 50,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.4",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 18,
+      "t": 1767225603.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 2,
+        "len": 0,
+        "sport": 40004,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 51,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 0,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.4",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 19,
+      "t": 1767225603.001,
+      "tcp": {
+        "dport": 40004,
+        "flags": 20,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 5134,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1138,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 20,
+      "t": 1767225610.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 1157,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5134,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 21,
+      "t": 1767225610.001,
+      "tcp": {
+        "dport": 40001,
+        "flags": 24,
+        "len": 19,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 5153,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1157,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 22,
+      "t": 1767225620.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 5153,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1176,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 23,
+      "t": 1767225630.0,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 21,
+          "major": 4,
+          "minor": 0,
+          "myas": null,
+          "type": 3
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "c272307219564596",
+        "pl": "ffffffffffffffffffffffffffffffff0015030400",
+        "tcp": {
+          "ack": 5153,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1195,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 61
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 75,
+      "n": 24,
+      "t": 1767225640.5,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 21,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 5153,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 1216,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 25,
+      "t": 1767225640.6,
+      "tcp": {
+        "dport": 179,
+        "flags": 17,
+        "len": 0,
+        "sport": 40001,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 1217,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 5153,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 26,
+      "t": 1767225640.7,
+      "tcp": {
+        "dport": 40001,
+        "flags": 20,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 0,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 27,
+      "t": 1767225645.7,
+      "tcp": {
+        "dport": 179,
+        "flags": 2,
+        "len": 0,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 9001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 28,
+      "t": 1767225645.701,
+      "tcp": {
+        "dport": 40002,
+        "flags": 18,
+        "len": 0,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 15001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 40
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 54,
+      "n": 29,
+      "t": 1767225645.702,
+      "tcp": {
+        "dport": 179,
+        "flags": 16,
+        "len": 0,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": 65000,
+          "bgp_id": "1.1.1.1",
+          "caps": [
+            1,
+            65
+          ],
+          "hold": 30,
+          "len": 43,
+          "major": null,
+          "minor": null,
+          "myas": 65000,
+          "type": 1
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "fbf36f09edc7f821",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde8001e010101010e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 15001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 83
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 97,
+      "n": 30,
+      "t": 1767225645.71,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 43,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": 65000,
+          "bgp_id": "2.2.2.2",
+          "caps": [
+            1,
+            65
+          ],
+          "hold": 90,
+          "len": 43,
+          "major": null,
+          "minor": null,
+          "myas": 65000,
+          "type": 1
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "ecbce3c6e946daf1",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde8005a020202020e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 9044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 83
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 97,
+      "n": 31,
+      "t": 1767225645.712,
+      "tcp": {
+        "dport": 40002,
+        "flags": 24,
+        "len": 43,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 15044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 32,
+      "t": 1767225645.72,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 9063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 33,
+      "t": 1767225645.722,
+      "tcp": {
+        "dport": 40002,
+        "flags": 24,
+        "len": 19,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 52,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 2,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "1390c8c562ae3b90",
+        "pl": "ffffffffffffffffffffffffffffffff00340200000015400101004002004003040aff000140050400000064180a0101180a0102",
+        "tcp": {
+          "ack": 15063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9063,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 92
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 106,
+      "n": 34,
+      "t": 1767225645.8,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 52,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 48,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 1,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b2ccd18f4cc6d753",
+        "pl": "ffffffffffffffffffffffffffffffff00300200000015400101004002004003040aff000240050400000064180a0202",
+        "tcp": {
+          "ack": 9115,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15063,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 88
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 35,
+      "t": 1767225645.802,
+      "tcp": {
+        "dport": 40002,
+        "flags": 24,
+        "len": 48,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 23,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "d16cd4eb850c3643",
+        "pl": "ffffffffffffffffffffffffffffffff00170200000000",
+        "tcp": {
+          "ack": 15111,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9115,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 63
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 36,
+      "t": 1767225645.81,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 23,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 23,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "d16cd4eb850c3643",
+        "pl": "ffffffffffffffffffffffffffffffff00170200000000",
+        "tcp": {
+          "ack": 9138,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15111,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 63
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 37,
+      "t": 1767225645.812,
+      "tcp": {
+        "dport": 40002,
+        "flags": 24,
+        "len": 23,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 15134,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9138,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 38,
+      "t": 1767225655.7,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 19,
+        "sport": 40002,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 19,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 4
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 0,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 9157,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 15134,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 59
+      },
+      "ip": {
+        "dst": "10.255.0.1",
+        "proto": 6,
+        "src": "10.255.0.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 73,
+      "n": 39,
+      "t": 1767225655.701,
+      "tcp": {
+        "dport": 40002,
+        "flags": 24,
+        "len": 19,
+        "sport": 179,
+        "svc": 179
+      }
+    },
+    {
+      "bgp": [
+        {
+          "as4": null,
+          "bgp_id": null,
+          "caps": null,
+          "hold": null,
+          "len": 27,
+          "major": null,
+          "minor": null,
+          "myas": null,
+          "type": 2
+        }
+      ],
+      "bgp_nlri": 0,
+      "bgp_withdrawn": 1,
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "9e84da1b379d93b2",
+        "pl": "ffffffffffffffffffffffffffffffff001b020004180a01020000",
+        "tcp": {
+          "ack": 15153,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 9157,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 67
+      },
+      "ip": {
+        "dst": "10.255.0.2",
+        "proto": 6,
+        "src": "10.255.0.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 81,
+      "n": 40,
+      "t": 1767225656.2,
+      "tcp": {
+        "dport": 179,
+        "flags": 24,
+        "len": 27,
+        "sport": 40002,
+        "svc": 179
+      }
+    }
+  ],
+  "warnings": []
+}

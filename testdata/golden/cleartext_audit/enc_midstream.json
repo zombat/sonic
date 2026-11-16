@@ -1,0 +1,129 @@
+{
+  "allowed_by_rule": {
+    "encrypted": 18
+  },
+  "allowlist": [
+    "encrypted"
+  ],
+  "by_protocol": [],
+  "cannot_show": [
+    "Only frames that crossed this capture point and that the capture kept are audited: a capture filter, a snap length or a full buffer can hide frames, and traffic on other links is not seen.",
+    "ESP payload is opaque: ESP with NULL encryption or a weak cipher passes, because the cipher is negotiated inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
+    "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
+    "SSH and TLS are judged by their handshake: the TLS suite in the ServerHello, the SSH cipher from both KEXINITs. Without the handshake (a session that began before the capture) a NULL cipher looks like a real one, so such a session passes only as encrypted, unverified (a warning). A TLS session is recognised that way only when a segment begins at a record boundary, an SSH session only on tcp/22 or tcp/830 and only when its payload looks like ciphertext; anything else is reported as cleartext (fail-closed).",
+    "Encryption is judged by the cipher's name: key sizes, certificate trust and the strength of the key exchange are not (analyze_network_pcap's tls detector reads certificates and checks a baseline)."
+  ],
+  "capture": {
+    "backend": "tshark",
+    "bytes": 2662,
+    "display_filter": null,
+    "duration_s": 1.56,
+    "end": "2026-01-01T00:00:01.660Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 18,
+    "start": "2026-01-01T00:00:00.100Z",
+    "warnings": []
+  },
+  "clean": false,
+  "cleartext_frames": 0,
+  "encryption": {
+    "cleartext": 0,
+    "encrypted": 0,
+    "not_started": 0,
+    "sessions": 2,
+    "unverified": 2,
+    "weak": 0
+  },
+  "file": "tests/fixtures/enc_midstream.pcap",
+  "first_violation_frame": null,
+  "frames_allowed": 18,
+  "frames_audited": 18,
+  "frames_outside_allowlist": 0,
+  "issues": [
+    {
+      "code": "ENCRYPTION_UNVERIFIED",
+      "frames": [
+        1
+      ],
+      "message": "1 tls (tcp/443 https) session(s) passed as encrypted, unverified: the session began before the capture: its records look encrypted, but without the ServerHello a NULL cipher cannot be told from a real one (first 10.80.0.10:53000 -> 10.80.0.6:443)",
+      "protocol": "tls (tcp/443 https)",
+      "severity": "warning"
+    },
+    {
+      "code": "ENCRYPTION_UNVERIFIED",
+      "frames": [
+        7
+      ],
+      "message": "1 ssh (tcp/22) session(s) passed as encrypted, unverified: no SSH banner or key exchange in the capture (the session began before it): recognised by its port and by payload that looks like ciphertext, so the cipher cannot be read (first 10.80.0.10:53100 -> 10.80.0.7:22)",
+      "protocol": "ssh (tcp/22)",
+      "severity": "warning"
+    },
+    {
+      "code": "ENCRYPTED_OUTSIDE_TUNNEL",
+      "frames": [
+        1,
+        7
+      ],
+      "message": "2 SSH or TLS session(s) passed as encrypted by their own transport, not inside IPsec (1 tls (tcp/443 https), 1 ssh (tcp/22)); allow crypto alone to require the tunnel",
+      "severity": "info"
+    }
+  ],
+  "passed": true,
+  "protection": {
+    "authenticated_only": 0,
+    "cleartext": 0,
+    "encrypted": 18,
+    "key_exchange": 0,
+    "layer2": 0
+  },
+  "protocols_present": [
+    "tcp"
+  ],
+  "result": "pass",
+  "status": "success",
+  "tcp_sessions": [
+    {
+      "allowed_as_encrypted": true,
+      "category": "encrypted",
+      "client": "10.80.0.10:53000",
+      "encryption": {
+        "handshake_captured": false,
+        "reason": "the session began before the capture: its records look encrypted, but without the ServerHello a NULL cipher cannot be told from a real one",
+        "state": "unverified"
+      },
+      "first_frame": 1,
+      "packets": 6,
+      "protection": {
+        "encrypted": 6
+      },
+      "protocol": "tls (tcp/443 https)",
+      "server": "10.80.0.6:443",
+      "server_known_by": "port",
+      "service": "tcp/443"
+    },
+    {
+      "allowed_as_encrypted": true,
+      "category": "encrypted",
+      "client": "10.80.0.10:53100",
+      "encryption": {
+        "handshake_captured": false,
+        "reason": "no SSH banner or key exchange in the capture (the session began before it): recognised by its port and by payload that looks like ciphertext, so the cipher cannot be read",
+        "state": "unverified"
+      },
+      "first_frame": 7,
+      "packets": 12,
+      "protection": {
+        "encrypted": 12
+      },
+      "protocol": "ssh (tcp/22)",
+      "server": "10.80.0.7:22",
+      "server_known_by": "port",
+      "service": "tcp/22"
+    }
+  ],
+  "tcp_sessions_omitted": 0,
+  "verdict": "PASS with warnings: all 18 frames match the allowlist (encrypted); no cleartext outside it (18 encrypted); but of the SSH and TLS sessions 2 encrypted, unverified (see ENCRYPTION_UNVERIFIED); 2 SSH or TLS session(s) protected by their own encryption, not by IPsec (allow crypto alone to require the tunnel)",
+  "violations": [],
+  "violations_omitted": 0
+}

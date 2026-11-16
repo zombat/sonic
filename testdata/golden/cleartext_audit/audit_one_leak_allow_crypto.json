@@ -1,0 +1,257 @@
+{
+  "allowed_by_rule": {
+    "crypto": 22
+  },
+  "allowlist": [
+    "crypto"
+  ],
+  "by_protocol": [
+    {
+      "bytes": 101,
+      "category": "tunnel_without_encryption",
+      "first_frame": 9,
+      "packets": 1,
+      "pairs": 1,
+      "protocol": "gre/ipv4 (bgp inside)"
+    },
+    {
+      "bytes": 50,
+      "category": "icmp",
+      "first_frame": 14,
+      "packets": 1,
+      "pairs": 1,
+      "protocol": "icmp"
+    },
+    {
+      "bytes": 42,
+      "category": "layer2",
+      "first_frame": 16,
+      "packets": 1,
+      "pairs": 1,
+      "protocol": "arp"
+    },
+    {
+      "bytes": 58,
+      "category": "layer2",
+      "first_frame": 19,
+      "packets": 1,
+      "pairs": 1,
+      "protocol": "loop"
+    },
+    {
+      "bytes": 34,
+      "category": "layer2",
+      "first_frame": 22,
+      "packets": 1,
+      "pairs": 1,
+      "protocol": "cdp"
+    }
+  ],
+  "cannot_show": [
+    "Only frames that crossed this capture point and that the capture kept are audited: a capture filter, a snap length or a full buffer can hide frames, and traffic on other links is not seen.",
+    "ESP payload is opaque: ESP with NULL encryption or a weak cipher passes, because the cipher is negotiated inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
+    "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
+    "SSH and TLS are judged by their handshake: the TLS suite in the ServerHello, the SSH cipher from both KEXINITs. Without the handshake (a session that began before the capture) a NULL cipher looks like a real one, so such a session passes only as encrypted, unverified (a warning). A TLS session is recognised that way only when a segment begins at a record boundary, an SSH session only on tcp/22 or tcp/830 and only when its payload looks like ciphertext; anything else is reported as cleartext (fail-closed).",
+    "Encryption is judged by the cipher's name: key sizes, certificate trust and the strength of the key exchange are not (analyze_network_pcap's tls detector reads certificates and checks a baseline)."
+  ],
+  "capture": {
+    "backend": "tshark",
+    "bytes": 3289,
+    "display_filter": null,
+    "duration_s": 5.502,
+    "end": "2026-01-01T00:00:05.502Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 27,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "clean": false,
+  "cleartext_frames": 2,
+  "encryption": {
+    "cleartext": 0,
+    "encrypted": 0,
+    "not_started": 0,
+    "sessions": 0,
+    "unverified": 0,
+    "weak": 0
+  },
+  "file": "tests/fixtures/audit_one_leak.pcap",
+  "first_violation_frame": 9,
+  "frames_allowed": 22,
+  "frames_audited": 27,
+  "frames_outside_allowlist": 5,
+  "issues": [
+    {
+      "category": "tunnel_without_encryption",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        9
+      ],
+      "message": "1 gre/ipv4 (bgp inside) frame(s) 198.51.100.2 -> 192.0.2.1 outside the allowlist (GRE outside ESP: the overlay (and whatever it carries) crosses this link unencrypted)",
+      "protocol": "gre/ipv4 (bgp inside)",
+      "severity": "error"
+    },
+    {
+      "category": "icmp",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        14
+      ],
+      "message": "1 icmp frame(s) 198.51.100.2 -> 203.0.113.1 outside the allowlist (ICMP in cleartext: a ping or traceroute of the transport addresses, or traffic bypassing the tunnel)",
+      "protocol": "icmp",
+      "severity": "error"
+    },
+    {
+      "category": "layer2",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        16
+      ],
+      "message": "1 arp frame(s) 198.51.100.2 -> 198.51.100.1 outside the allowlist (link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side))",
+      "protocol": "arp",
+      "severity": "warning"
+    },
+    {
+      "category": "layer2",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        19
+      ],
+      "message": "1 loop frame(s) (layer 2, no addresses) outside the allowlist (link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side))",
+      "protocol": "loop",
+      "severity": "warning"
+    },
+    {
+      "category": "layer2",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        22
+      ],
+      "message": "1 cdp frame(s) (layer 2, no addresses) outside the allowlist (link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side))",
+      "protocol": "cdp",
+      "severity": "warning"
+    }
+  ],
+  "passed": false,
+  "protection": {
+    "authenticated_only": 0,
+    "cleartext": 2,
+    "encrypted": 20,
+    "key_exchange": 2,
+    "layer2": 3
+  },
+  "protocols_present": [
+    "arp",
+    "bgp",
+    "esp",
+    "gre",
+    "icmp",
+    "ike",
+    "tcp",
+    "udp"
+  ],
+  "result": "fail",
+  "status": "success",
+  "tcp_sessions": [],
+  "tcp_sessions_omitted": 0,
+  "verdict": "FAIL: 5 of 27 frames outside the allowlist (1 gre/ipv4 (bgp inside), 1 icmp, 1 arp, 1 loop, 1 cdp); first at frame 9; 2 of them cleartext (all frames: 20 encrypted, 2 key exchange, 3 layer2, 2 cleartext)",
+  "violations": [
+    {
+      "bytes": 101,
+      "category": "tunnel_without_encryption",
+      "dst": "192.0.2.1",
+      "first_frame": 9,
+      "first_t": 2.25,
+      "frames": [
+        9
+      ],
+      "hint": "GRE outside ESP: the overlay (and whatever it carries) crosses this link unencrypted",
+      "last_frame": 9,
+      "last_t": 2.25,
+      "packets": 1,
+      "protection": {
+        "cleartext": 1
+      },
+      "protocol": "gre/ipv4 (bgp inside)",
+      "src": "198.51.100.2"
+    },
+    {
+      "bytes": 50,
+      "category": "icmp",
+      "dst": "203.0.113.1",
+      "first_frame": 14,
+      "first_t": 3.25,
+      "frames": [
+        14
+      ],
+      "hint": "ICMP in cleartext: a ping or traceroute of the transport addresses, or traffic bypassing the tunnel",
+      "last_frame": 14,
+      "last_t": 3.25,
+      "packets": 1,
+      "protection": {
+        "cleartext": 1
+      },
+      "protocol": "icmp",
+      "src": "198.51.100.2"
+    },
+    {
+      "bytes": 42,
+      "category": "layer2",
+      "dst": "198.51.100.1",
+      "first_frame": 16,
+      "first_t": 3.5,
+      "frames": [
+        16
+      ],
+      "hint": "link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side)",
+      "last_frame": 16,
+      "last_t": 3.5,
+      "packets": 1,
+      "protection": {
+        "layer2": 1
+      },
+      "protocol": "arp",
+      "src": "198.51.100.2"
+    },
+    {
+      "bytes": 58,
+      "category": "layer2",
+      "dst": null,
+      "first_frame": 19,
+      "first_t": 4.0,
+      "frames": [
+        19
+      ],
+      "hint": "link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side)",
+      "last_frame": 19,
+      "last_t": 4.0,
+      "packets": 1,
+      "protection": {
+        "layer2": 1
+      },
+      "protocol": "loop",
+      "src": null
+    },
+    {
+      "bytes": 34,
+      "category": "layer2",
+      "dst": null,
+      "first_frame": 22,
+      "first_t": 4.5,
+      "frames": [
+        22
+      ],
+      "hint": "link-local layer 2 control traffic (it does not leave the link, but CDP/LLDP disclose device details to the provider side)",
+      "last_frame": 22,
+      "last_t": 4.5,
+      "packets": 1,
+      "protection": {
+        "layer2": 1
+      },
+      "protocol": "cdp",
+      "src": null
+    }
+  ],
+  "violations_omitted": 0
+}

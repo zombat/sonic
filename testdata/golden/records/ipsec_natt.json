@@ -1,0 +1,821 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "ece8ebee622af2f6",
+        "pl": "555555555555555500000000000000002120220800000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00006bc0485e9d09018f493c75b367aca0dc53404c4e43c7e62446e0623230eb3af0c767d29b09426d8db3c7e909f54727be8305bcd84a95489aed3dfbe5bfa6dc5f29000024977d120ef680d5096d19ca00a720e1fec57895018803fa464f46a5f20ce4a0972900001c00004004fb2c94c23563ea4c7582a360be7c861030b0ebfc0000001c0000400587c05c5996006b299758ccf18f8699daa5124c90",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "5555555555555555",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "87c05c5996006b299758ccf18f8699daa5124c90"
+        ],
+        "natd_src": [
+          "fb2c94c23563ea4c7582a360be7c861030b0ebfc"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "0000000000000000",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 1,
+      "t": 1767225600.0,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "3d7bebc108e08b7f",
+        "pl": "555555555555555566666666666666662120222000000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00005253737d76adac86a9f4a5b4f6b2ed291f4c13888c4b952a061e0cf76c1d8fa1b147b863d95dfe5c85623808e5cc7e267e09a086865d8e4f8c3e629deb342e33290000241240a2147a181d93da0a216eace2249519dbd31769611d0cb8a7bf7c65e0e05d2900001c00004004783565fd7ebab138312a0638e2967262c98359780000001c000040058c3f7f0397bc00b8faf0c770747523ff17bbfa27",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 32,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "5555555555555555",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "8c3f7f0397bc00b8faf0c770747523ff17bbfa27"
+        ],
+        "natd_src": [
+          "783565fd7ebab138312a0638e2967262c9835978"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "6666666666666666",
+        "version": 2
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 2,
+      "t": 1767225600.01,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "645fd1b9de889a87",
+        "pl": "00000000555555555555555566666666666666662e20230800000001000001602300014417d084447bb0268bb389133f65ae25e716b2e75fb40f5b3b2e25b34e5b2bb10dd0c6c5993e9c9613c52b41373351dde8172a39d377d8d747a84888665a64e66be507d57ed02e5e2f4e2b8474f59688ecc72fecf3aa5f3900dbadbf2d171f54977aa0ea1189e32770bffbb46d09dab5675fa3d58705315f600e3450fa3d52b6f211634a60fb11de915b9738ca59420674310ce92e4fb3ec79745d5448dd537a97baf107cb0520ed5829a8b8c136ddcc40f81acee3d47989a6e7ceb0d9fa8176d7cfb884434447d53c603bd2028cc6f8e28fb0cf16dbcb786b4c97cd262125a40b1efa1f166b93afda64ec89a150aaef2fc625a15e04f9771ea601d17176490c911669c5f6f3368f6e1955f416694247e53cc0b8400aa07d65d16139696ce83e8d19d2bfd2511389aef8fd1dd6732e3270b197912b2667bf51281faae58ebbe438",
+        "tl": 384
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 35,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "5555555555555555",
+        "ke_group": null,
+        "length": 352,
+        "msgid": 1,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": true,
+        "notify": [],
+        "payloads": [
+          46
+        ],
+        "proposals": [],
+        "rspi": "6666666666666666",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 398,
+      "n": 3,
+      "t": 1767225600.03,
+      "udp": {
+        "dport": 4500,
+        "len": 356,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "c1f1fa66cad6131f",
+        "pl": "00000000555555555555555566666666666666662e2023200000000100000130240001145655e497375b727ae56ddb3f035d141d4ab69791cd03a470607655fac8ee5404125c215dc02b86220a2fc2cbde59914ff784680e4b86e7bec1f4995254b3c90e160eefc5e42831a4f0bdba088ccd08620b0223e3962b67b32e5658eee9247b27047dc152eced4197edb73c13c8b7c92d23519ca027fd5828359931fd907d7ec02a65a873432416a393f1cf78e03e52efdffe5b819b5cebf66dfaa2dd23be3ec0b611a4089e4a024b1ce2b0a30018973540446234052983e52362d739d2aac7bec47b02b5c3ea36bbedddb9eac50fb311f6f546e194026b56a6379fdd8680716c48e075cd1adeb196ec359144c7eac6df487ce596884543a556c0c7c35a0261a272f358ee2811d47cd035c9be73507771",
+        "tl": 336
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 35,
+        "flags": 32,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "5555555555555555",
+        "ke_group": null,
+        "length": 304,
+        "msgid": 1,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": true,
+        "notify": [],
+        "payloads": [
+          46
+        ],
+        "proposals": [],
+        "rspi": "6666666666666666",
+        "version": 2
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 350,
+      "n": 4,
+      "t": 1767225600.045,
+      "udp": {
+        "dport": 4500,
+        "len": 308,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "48e94ac3410a1843",
+        "pl": "ab00000100000001c50a7298021b8a2afe727f61474e124a5fec4ba65d35117e88452b9d6d656f6491f5a6f6ebfa225a568a881712b1b0d1280709d2a05c3d4c2396cdc5a0b6e93dec6dcccbf0fe2f35b9f26ebf96c52a2e",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 1,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 5,
+      "t": 1767225601.0,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "2eddf808475ee459",
+        "pl": "ab0000020000000173d923194c2a450411cda2be8c5adcc024ec2ab12addf02b282eb213d074c5465f1e4eb5c5e4b56e537a875548abe314366e810ac0f4bef07dfe22061e3547245640100ac5fb441e5dcbd768637e9d2f",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 1,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 6,
+      "t": 1767225601.004,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "ca0bf76f8c2e8314",
+        "pl": "ab000001000000020738d7278e936cfc4790c16f93baa5e342353f487adc26ffdb32c0dde2d62f453535fc43f789961e189ac75dc6b26e7053b6ee3ff02a0f78ae6adb22af34558097d77afc4916b322d8baa738bb44b7a0",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 2,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 7,
+      "t": 1767225601.5,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b775241b98562b14",
+        "pl": "ab00000200000002099f30197341f8e4e5ba1317b17a5fe10e2f8c06cd59f2bcd87b07be178b26f4c04474accdada37566248d8b2f30e1ab30a516be5211700e5751493b9fa12c9cea2174890fb28669db8203a4c7c5dc92",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 2,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 8,
+      "t": 1767225601.504,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "d4ff43506ca015e2",
+        "pl": "ab00000100000003d31340e464d2a2ed809e59146d0b28da57e30b420284b3624327cb40f80e9933253d46742c89c1e5ed45c54a00271e2ae648fedc073d4f6b81f65c0c8a8c75aed887a30a42ef198b000d946b97f9b23c",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 3,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 9,
+      "t": 1767225602.0,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "c2ad4ec64b62de4f",
+        "pl": "ab000002000000036d47016527171b1315394a663edca4032a547a407e598172e7c92bd26ea11d34fe8a6bddfa3484ff2e1b8199a9f1f8233e1ea5a7b3c4aff27bcbb4079a72bf7971818d88ffdd0cae2208ab747332cfc5",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 3,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 10,
+      "t": 1767225602.004,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "61bc7d28617cb031",
+        "pl": "ab0000010000000417ae0f685dc453b50378d60dc5d7b2534c9461b5e0b45acdd3f60e392d234ba7b3c2cb1a1d8ea90d14001e96462276fedb7ef9997847b3e0da23673eab008975baa31dd3850b11544a2b7e870d24ac04",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 4,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 11,
+      "t": 1767225602.5,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "0eab8cec5c80f62a",
+        "pl": "ab00000200000004059b8ea74357f139724cbb1050c8b8813f398756fb7d1830b0a96bc581f7f683b952e7ff0ed13bb200b540ba6a31acd48eeb1c5a443ee473f1f8d94e42b106503776d79f38fb619d65c90d89bc93586b",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 4,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 12,
+      "t": 1767225602.504,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "ed185b7da741c8da",
+        "pl": "ab00000100000006adb0812c8a73150756859df031bdca50a7ad025ae548f8ee4b3138421e571fb112df6ef5cec124ac8d17fd6f6bbe21d56e65691423bc5217edd1243641c9b5f3224a9c14a7c33f1a4deda719537dc0de",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 6,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 13,
+      "t": 1767225603.0,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "6b5ada252ab129f5",
+        "pl": "ab00000200000005458212c7dd13ef074d3530337392573def09ff38f9b419a3ca69e167bb8d64532f8aef9b163fae8bebe1231a95689728e29b2bd49a27792e9367279ba798611854532b23670b530d853419066894185a",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 5,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 14,
+      "t": 1767225603.004,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "c3ce9d9a34e45f08",
+        "pl": "ab00000100000007fb3cbcdcfdbe4c24c419755500c4557ec81cd0a3a47d7089764f10e496f6a3fc35472c1a82ee0925dbe3b6f01d495e503d7b1192879c711f4946bc8db94beffbb9857bb76a7be219bc960a07db1e0430",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 7,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 15,
+      "t": 1767225603.5,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "6f59a8f269a6d825",
+        "pl": "ab000002000000065d6bff9293e4337526f26c2ad8c055b1f084178193dc446e964aa4076dc29fb4c3ed74c09fa85abb662dc1b1e0a19bd5384ff9bcd84f9985d5025a8e1f7688d23e26eea9ef53c2124eebb7b425c73ac3",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 6,
+        "spi": 2868903938,
+        "udp": true
+      },
+      "ip": {
+        "dst": "203.0.113.50",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 16,
+      "t": 1767225603.504,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "c3ce9d9a34e45f08",
+        "pl": "ab00000100000007fb3cbcdcfdbe4c24c419755500c4557ec81cd0a3a47d7089764f10e496f6a3fc35472c1a82ee0925dbe3b6f01d495e503d7b1192879c711f4946bc8db94beffbb9857bb76a7be219bc960a07db1e0430",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 7,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 17,
+      "t": 1767225604.0,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "a65cfea3b6886a8f",
+        "pl": "ab00000100000008599e5b49d044bdb5ac1fc98ba3fc49ffa1b53c7e90e9be81c0d8b602e334aeb4c78626b1d8e5b064fe02bd58234d3397c8a9cc046cd9ecd3605c85ef2a144694697b199abfb539089814444bdd6dedf2",
+        "tl": 116
+      },
+      "esp": {
+        "seq": 8,
+        "spi": 2868903937,
+        "udp": true
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 18,
+      "t": 1767225604.5,
+      "udp": {
+        "dport": 4500,
+        "len": 88,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "a72eeed9830cbf91",
+        "pl": "ff",
+        "tl": 29
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 43,
+      "n": 19,
+      "nat_keepalive": true,
+      "t": 1767225605.0,
+      "udp": {
+        "dport": 4500,
+        "len": 1,
+        "sport": 4500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "a72eeed9830cbf91",
+        "pl": "ff",
+        "tl": 29
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.50",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 43,
+      "n": 20,
+      "nat_keepalive": true,
+      "t": 1767225625.0,
+      "udp": {
+        "dport": 4500,
+        "len": 1,
+        "sport": 4500
+      }
+    }
+  ],
+  "warnings": []
+}
