@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🔓 **TLS decryption proven on a real capture, secrets inside pcapng, and decryption coverage** (`analyzers/grpc_inspect.py`, `extractors/tls_secrets.py`)
+  - Proven on a real capture of gNMI over TLS 1.3 to Nokia SR Linux 26.7.2 with the key log its client wrote: all ten calls (Capabilities, Get, Set, Subscribe) by name with their status and timing, the TLS 1.3 certificate, and the `username`/`password` metadata of every call flagged (`CREDENTIAL_IN_METADATA`) with values masked
+  - A pcapng that carries its TLS secrets in a Decryption Secrets Block (`editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng`) is decrypted with no key log; the report says so (`capture.tls_secrets`, transport `tls (decrypted with the secrets in the pcapng)`, `TLS_SECRETS_IN_CAPTURE`)
+  - `tls_decryption`: every TLS session in the capture, whether the secrets decrypted it, which source held its secret, and when not, why (no secret for its ClientHello random, no ClientHello captured, only the handshake secrets), with a total in the verdict; `TLS_SESSION_NOT_DECRYPTED` names each session the secrets did not open. Shown in the CLI summary and the markdown report
+  - The key log is still handed to tshark by path; to say which sessions it covers only its labels and ClientHello randoms are read, and the secret column is dropped as each line is read
 - 🔏 **Encryption proven by the handshake** in the cleartext audit (`analyzers/cleartext_audit.py`)
   - TLS: the suite the ServerHello chose, read from the record bytes on any port (after a HelloRetryRequest, the real ServerHello). NULL ciphers, anonymous and export key exchange and the RFC 9150 integrity-only suites (`TLS_SHA256_SHA256`, `TLS_SHA384_SHA384`) count as cleartext; TLS 1.1 and older, RC4, DES, 3DES and MD5 pass with a `WEAK_ENCRYPTION` warning
   - SSH: each direction's cipher and MAC, derived from both KEXINITs as RFC 4253 7.1 does (the first algorithm on the client's list that the server also offers). `none` counts as cleartext; arcfour, CBC modes, 64-bit block ciphers and the MAC `none` pass with a `WEAK_ENCRYPTION` warning
@@ -77,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synthetic IKEv2 fixtures carry real NAT detection hashes
 
 ### Fixed
+- TLS-wrapped gRPC was not decrypted when a client's first segment arrived after its second (a large post-quantum ClientHello split in two, as SR Linux's gNMI clients send): TShark 3.6's out-of-order reassembly never fills a gap with a segment it marks as a retransmission, so no ClientHello was read and no secret matched. A connection left undecoded that way is read again without out-of-order reassembly (`capture.reread_without_out_of_order`)
+- A masked user name was scrubbed from the report wherever its value appeared, so a gNMI path `/interface[name=mgmt0]/admin-state` read `.../[REDACTED]-state` (which also gave the name away); user names are now scrubbed only where they stand alone, and passwords and tokens wherever they appear
+- A server's RST_STREAM NO_ERROR right after its own status (RFC 9113 8.1, how SR Linux ends a Subscribe ONCE) was a warning; it is info now, and every reset records whether the server had already ended the stream
+- A gNMI message whose fields had unexpected wire types stopped the whole gRPC analysis with a TypeError; it is now an entry in `decoded.decode_errors`
 - The TLS detector lost every TLS 1.3 handshake that began with a HelloRetryRequest: it took the middlebox-compatibility ChangeCipherSpec after it as the start of encryption and never read the ServerHello, reporting `TLS_NO_SERVER_HELLO` (all three RESTCONF sessions of a real Catalyst 8000V capture)
 - Flows were labelled by the client's ephemeral port when both ports were high (a gNMI session to tcp/50001 read as tcp/47814)
 - The cleartext audit reported SSH and TLS as cleartext

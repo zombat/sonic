@@ -168,7 +168,8 @@ API keys:
         "--tls-secrets-log",
         metavar="PATH",
         help="With --grpc, the TLS key log a client wrote (SSLKEYLOGFILE format; gnmic --log-tls-secret), to "
-             "decrypt TLS-wrapped gRPC; handed to tshark by path, never copied into the report"
+             "decrypt TLS-wrapped gRPC; handed to tshark by path, never copied into the report. Not needed for a "
+             "pcapng that carries the secrets (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng)"
     )
 
     parser.add_argument(

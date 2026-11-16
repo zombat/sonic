@@ -146,7 +146,8 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "HTTP2_FLOW_CONTROL_STALL, HTTP2_FRAME_TOO_LARGE) and TCP_RESET_DURING_RPC.",
          "For TLS connections read connections[].tls: alerts with their hint, the certificate, and "
          "TLS_CERT_NO_IP_SAN. Without a key log the RPCs are encrypted: ask for one captured with "
-         "SSLKEYLOGFILE on the client.",
+         "SSLKEYLOGFILE on the client (a pcapng with the secrets embedded needs none). tls_decryption names "
+         "each session the secrets did not decrypt, and why.",
          "Report every CLEARTEXT_CREDENTIAL by key and flow; never ask for or repeat a value. To gate on "
          "encryption, call audit_cleartext_pcap: its default passes TLS only when the handshake shows real "
          "encryption.",

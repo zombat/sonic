@@ -133,6 +133,10 @@ python3 sonic.py --file gnmi.pcap --grpc
 gnmic -a 192.0.2.10:57400 --tls-ca ca.pem -u admin --log-tls-secret capabilities   # while capturing
 python3 sonic.py --file srl.pcapng --grpc --tls-secrets-log 192.0.2.10:57400.tlssecret.log --json
 
+# Or carry the key log inside the capture (a pcapng Decryption Secrets Block): no separate file needed
+editcap --inject-secrets tls,192.0.2.10:57400.tlssecret.log srl.pcap srl-with-secrets.pcapng
+python3 sonic.py --file srl-with-secrets.pcapng --grpc
+
 # Optional: .proto files so Wireshark's protobuf dissector names every message (downloaded once, pinned)
 python3 sonic.py --fetch-grpc-protos
 ```
@@ -441,7 +445,7 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - **HTTP/2 trouble**: `RST_STREAM` and `GOAWAY` error codes and debug data (`too_many_pings` named), flow-control stalls with their duration, PING round trips, SETTINGS per side, frames over the peer's max frame size, header lists over its limit, more streams than the server allows, messages over the 4 MiB default receive limit, a preface nobody answered, a TCP reset with RPCs open.
 - **gNMI and gNOI**: Capabilities (version, encodings, models), Get and Set paths, Subscribe mode and subscriptions, notifications, `sync_response`, in-band errors in the deprecated `error` field, and the target's clock from gNOI `system.Time`, all without .proto files. With them (`--fetch-grpc-protos`), Wireshark names every message type.
 - **Credentials in metadata**: `username`, `password`, `authorization`, `x-api-key`, tokens and cookies, found in the HPACK-decoded headers (a byte search cannot find them: HPACK Huffman-codes values), one finding per key and flow. Values are never shown: they are masked at extraction and scrubbed from the report by value.
-- **TLS without keys**: SNI, ALPN, version, the certificate's subject, issuer, validity, DNS and IP SANs (TLS 1.2; TLS 1.3 encrypts it), alerts with who sent them and what they mean, and a hint when the client dialled an IP the certificate has no IP SAN for. With a key log the sessions are decrypted, the TLS 1.3 certificate is read, and every check above runs on them.
+- **TLS without keys**: SNI, ALPN, version, the certificate's subject, issuer, validity, DNS and IP SANs (TLS 1.2; TLS 1.3 encrypts it), alerts with who sent them and what they mean, and a hint when the client dialled an IP the certificate has no IP SAN for. With a key log, or the secrets a pcapng carries in a Decryption Secrets Block, the sessions are decrypted, the TLS 1.3 certificate is read, and every check above runs on them; `tls_decryption` says per TLS session whether the secrets decrypted it and, when not, why (no secret for its ClientHello random, no ClientHello captured), with a total. Proven on a real capture of gNMI over TLS 1.3 to Nokia SR Linux: all ten Capabilities, Get, Set and Subscribe calls by name with their status and timing, and the `username`/`password` metadata flagged with values masked.
 
 Details, codes and limits: [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOTING.md).
 
@@ -802,7 +806,7 @@ Claude: Fail the run if /captures/br1-wan.pcap carried anything but IPsec (Cisco
 #### `analyze_grpc_pcap`
 gRPC troubleshooting: `verdict`, `connections` (service port, transport, SETTINGS, pings, GOAWAY, RST_STREAM, flow-control stalls, TLS), `rpcs` (method, `grpc_status_name`, `grpc_message`, sizes, timing, decoded gNMI, `diagnosis`), `credentials` (key and flow, value `masked`) and `issues` with frames.
 
-**Parameters**: `file_path`, and optional `keylog_file` (SSLKEYLOGFILE key log; never copied into the result), `proto_paths`, `ports`, `display_filter`, `max_packets`, `max_items`
+**Parameters**: `file_path`, and optional `keylog_file` (SSLKEYLOGFILE key log; never copied into the result; not needed for a pcapng that carries its own TLS secrets), `proto_paths`, `ports`, `display_filter`, `max_packets`, `max_items`
 
 **Example**:
 ```
