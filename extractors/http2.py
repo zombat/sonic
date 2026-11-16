@@ -36,7 +36,9 @@ of them (for example inside a grpc-message) from its report; they are never writ
 into a record.
 
 A key log (SSLKEYLOGFILE format) is passed to tshark by path (-o tls.keylog_file:)
-and never read or copied here. Proto files for Wireshark's protobuf dissector are
+and never read or copied here; a pcapng's Decryption Secrets Block is read by tshark
+itself. extractors/tls_secrets.py reads which sessions the secrets cover (labels and
+client randoms only, never a secret). Proto files for Wireshark's protobuf dissector are
 passed as search paths (the protobuf_search_paths table).
 
 Author: Raymond A Rizzo | Zombat
@@ -85,6 +87,11 @@ CREDENTIAL_NAME = re.compile(
     r"|(password|passwd|secret|token|api-?key|credential|authorization)", re.IGNORECASE)
 
 MIN_SCRUB_LENGTH = 4  # secret values shorter than this are not scrubbed by value from report text
+
+# A credential name whose value identifies rather than authenticates (a user name such as "admin"): its
+# value is scrubbed only where it stands alone, so that a path element like "admin-state" stays readable
+# (and does not give the name away as "[REDACTED]-state").
+IDENTITY_NAME = re.compile(r"^(username|user|user-name|login)$", re.IGNORECASE)
 
 
 def header_kind(name: str) -> str:
@@ -395,11 +402,13 @@ class Http2Extraction:
     The HTTP/2 pass: packets (a generator) and what the pass learned.
 
     secret_values holds the masked credential values seen, in memory only, so the
-    analyzer can scrub an echo of one from its report. It is never serialized.
+    analyzer can scrub an echo of one from its report, and identity_values the user
+    names among them (scrubbed only where they stand alone). Neither is serialized.
     """
 
     def __init__(self):
         self.secret_values: Set[str] = set()
+        self.identity_values: Set[str] = set()
         self.status: Dict[str, Any] = {}
         self.packets: Iterator[Dict[str, Any]] = iter(())
 
@@ -427,7 +436,9 @@ def _header_block(stream_field: ET.Element, extraction: Http2Extraction) -> Dict
                 value = unquote(value)
             headers.append({"name": name, "value": value})
         else:
-            if kind == "credential" and len(value) >= MIN_SCRUB_LENGTH:
+            if kind == "credential" and len(value) >= MIN_SCRUB_LENGTH and IDENTITY_NAME.match(name):
+                extraction.identity_values.add(value)
+            elif kind == "credential" and len(value) >= MIN_SCRUB_LENGTH:
                 extraction.secret_values.add(value)
                 # The value may be quoted again in percent-encoded or base64-wrapped form.
                 if " " in value:
@@ -519,44 +530,75 @@ def _protobuf_from_pdml(proto: ET.Element) -> Dict[str, Any]:
             "fields": fields[:64]}
 
 
-def decrypted_certificates(file_path: str, decode_as: List[str], keylog_file: str,
-                           display_filter: Optional[str] = None,
-                           max_packets: Optional[int] = None) -> Dict[int, bytes]:
-    """
-    With a key log: the leaf certificate (DER) each decrypted TLS 1.3 session's server sent, by tcp.stream.
+# Handshake messages that are encrypted on the wire: seeing one means tshark decrypted the session
+# (EncryptedExtensions exists only in TLS 1.3; Finished is encrypted in every version).
+DECRYPTED_HANDSHAKE_TYPES = {8, 20}
 
-    TLS 1.3 encrypts the Certificate message; once tshark decrypts it, its certificate field is
-    readable like a TLS 1.2 one.
+
+def tls_decryption(file_path: str, decode_as: List[str], keylog_file: Optional[str] = None,
+                   display_filter: Optional[str] = None, max_packets: Optional[int] = None,
+                   out_of_order: bool = True) -> Dict[int, Dict[str, Any]]:
     """
-    flt = "tls.handshake.certificate"
+    What TLS decryption reached, per tcp.stream, with the secrets tshark has (the key log, and any
+    Decryption Secrets Block in a pcapng, which tshark reads by itself):
+    {"client_random": hex of the ClientHello random or None, "client_hello_frame", "handshake": bool
+    (an encrypted handshake message was decrypted), "application_data": [protocols tshark found inside],
+    "certificate": the leaf certificate's DER (readable in TLS 1.2, and in TLS 1.3 once decrypted) or None}.
+    """
+    flt = "tls.handshake.type || tls.app_data_proto"
     if display_filter:
-        flt = f"({display_filter}) && {flt}"
-    command = ["tshark", "-n", "-r", file_path, "-o", "tcp.reassemble_out_of_order:TRUE", *decode_as,
-               "-o", f"tls.keylog_file:{keylog_file}", "-Y", flt, "-T", "fields", "-E", "separator=\t",
-               "-E", "occurrence=f", "-e", "tcp.stream", "-e", "tls.handshake.certificate"]
+        flt = f"({display_filter}) && ({flt})"
+    command = ["tshark", "-n", "-r", file_path, *decode_as]
+    if out_of_order:
+        command += ["-o", "tcp.reassemble_out_of_order:TRUE"]
+    if keylog_file:
+        command += ["-o", f"tls.keylog_file:{keylog_file}"]
+    command += ["-Y", flt, "-T", "fields", "-E", "separator=\t", "-E", "occurrence=a", "-E", "aggregator=|"]
+    for field in ("frame.number", "tcp.stream", "tls.handshake.type", "tls.handshake.random",
+                  "tls.handshake.certificate", "tls.app_data_proto"):
+        command += ["-e", field]
     if max_packets:
         command += ["-c", str(int(max_packets))]
-    out: Dict[int, bytes] = {}
+    out: Dict[int, Dict[str, Any]] = {}
     proc = subprocess.run(command, capture_output=True, text=True)
     for line in proc.stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) < 2:
+        parts = line.split("\t") + [""] * 6
+        frame, index = _int(parts[0]), _int(parts[1].split("|")[0])
+        if index is None:
             continue
-        index = _int(parts[0].split(",")[0])
-        if index is None or index in out:
-            continue
-        try:
-            out[index] = bytes.fromhex(parts[1].split(",")[0].replace(":", ""))
-        except ValueError:
-            continue
+        entry = out.setdefault(index, {"client_random": None, "client_hello_frame": None, "handshake": False,
+                                       "application_data": [], "certificate": None})
+        types = [_int(v) for v in parts[2].split("|") if v]
+        randoms = [v for v in parts[3].split("|") if v]
+        hello_types = [t for t in types if t in (1, 2)]  # only the hellos carry a random
+        for htype, random in zip(hello_types, randoms):
+            if htype == 1 and entry["client_random"] is None:
+                entry["client_random"] = random.replace(":", "").lower()
+                entry["client_hello_frame"] = frame
+        if DECRYPTED_HANDSHAKE_TYPES & set(types):
+            entry["handshake"] = True
+        if parts[4] and entry["certificate"] is None:
+            try:
+                entry["certificate"] = bytes.fromhex(parts[4].split("|")[0].replace(":", ""))
+            except ValueError:
+                pass
+        for proto in parts[5].split("|"):
+            for name in proto.split(","):
+                if name and name not in entry["application_data"]:
+                    entry["application_data"].append(name)
     return out
 
 
 def iter_http2_packets(file_path: str, decode_as: List[str], keylog_file: Optional[str] = None,
                        proto_paths: Optional[List[str]] = None, display_filter: Optional[str] = None,
-                       max_packets: Optional[int] = None) -> Http2Extraction:
+                       max_packets: Optional[int] = None, out_of_order: bool = True) -> Http2Extraction:
     """
     Pass 2: stream the HTTP/2 frames of the capture.
+
+    out_of_order=True has tshark queue out-of-order segments until the missing ones arrive
+    (tcp.reassemble_out_of_order). TShark 3.6 never fills a gap with a segment it marks as a
+    retransmission, so a direction whose first segment arrived late stays undecoded; the analyzer
+    reads such connections again with out_of_order=False.
 
     Each packet: {"n", "t", "tcp_stream", "src", "sport", "dst", "dport", "tls": bool,
     "frames": [frame, ...], "protobuf": [{"message_type", "path", "direction", "fields"}]}.
@@ -569,7 +611,9 @@ def iter_http2_packets(file_path: str, decode_as: List[str], keylog_file: Option
     flt = "http2"
     if display_filter:
         flt = f"({display_filter}) && http2"
-    command = ["tshark", "-n", "-r", file_path, "-o", "tcp.reassemble_out_of_order:TRUE", *decode_as]
+    command = ["tshark", "-n", "-r", file_path, *decode_as]
+    if out_of_order:
+        command += ["-o", "tcp.reassemble_out_of_order:TRUE"]
     if keylog_file:
         command += ["-o", f"tls.keylog_file:{keylog_file}"]
     command += protobuf_options(proto_paths)

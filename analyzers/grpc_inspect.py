@@ -51,13 +51,24 @@ TLS without keys
     and older; TLS 1.3 encrypts it), alerts with who sent them and what they mean (a client
     alert unknown_ca or bad_certificate: the client refused the server's certificate), and a
     hint when the client connected by IP and the certificate has no IP SAN. With a key log
-    (SSLKEYLOGFILE format, keylog_file) the TLS sessions are decrypted and every RPC check
-    above runs on them; the key log is passed to tshark by path and never read or copied.
+    (SSLKEYLOGFILE format, keylog_file), or the TLS secrets a pcapng carries in a Decryption
+    Secrets Block (no key log needed), the TLS sessions are decrypted and every RPC check
+    above runs on them; the key log is passed to tshark by path and never copied, and only
+    its labels and ClientHello randoms are read (extractors/tls_secrets.py).
+
+TLS decryption coverage
+    Per TLS session: whether the secrets decrypted it, which source held its secret, and
+    when it was not decrypted, why (no line for its ClientHello random, no ClientHello in
+    the capture, only the handshake secrets); a total, and TLS_SESSION_NOT_DECRYPTED for
+    each session the secrets did not open. A connection TShark 3.6 leaves undecoded with
+    out-of-order reassembly (a gap that a retransmission fills, such as a large post-quantum
+    ClientHello split across segments) is read again without it.
 
 Author: Raymond A Rizzo | Zombat
 """
 
 import os
+import struct
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -67,9 +78,10 @@ from analyzers.network_common import (
 )
 from utils.grpc_protos import DEFAULT_PROTO_DIR
 from extractors.http2 import (
-    GRPC_PORTS, MIN_SCRUB_LENGTH, decrypted_certificates, discover, iter_http2_packets, plan_decode_as,
-    tshark_available, tshark_version,
+    GRPC_PORTS, MIN_SCRUB_LENGTH, discover, iter_http2_packets, plan_decode_as, tls_decryption, tshark_available,
+    tshark_version,
 )
+from extractors.tls_secrets import key_log_labels, missing_labels, pcapng_secrets
 
 REPORT_SCHEMA = "sonic.grpc_report/1"
 PROTO_PATH_VARIABLE = "SONIC_PROTO_PATH"
@@ -151,8 +163,10 @@ LIMITS = [
     "Wireshark needs the start of each HTTP/2 connection: HPACK headers are compressed against a table both "
     "sides build from the first request on, so a capture that begins mid-connection may show headers as "
     "undecodable and RPCs without a method.",
-    "Without a key log, TLS-wrapped gRPC shows only the handshake: no method, status or metadata. In TLS 1.3 "
-    "the certificate is encrypted too.",
+    "Without a key log (or TLS secrets embedded in a pcapng), TLS-wrapped gRPC shows only the handshake: no "
+    "method, status or metadata. In TLS 1.3 the certificate is encrypted too.",
+    "A session's secret is matched by its ClientHello random: a session whose ClientHello is not in the capture "
+    "cannot be decrypted, whatever the key log holds.",
     "Plaintext HTTP/2 is found by its preface on any port and assumed on the well-known gRPC ports; HTTP/2 that "
     "upgraded from HTTP/1.1 (Upgrade: h2c) on another port is not decoded.",
     "Flow control is followed only when the connection's start was captured (the initial windows are in it).",
@@ -370,12 +384,13 @@ class _Conn:
 class GrpcAnalysis:
     """Feeds the HTTP/2 packets into per-connection state and builds the report."""
 
-    def __init__(self, conns_disc: Dict[int, Any]):
+    def __init__(self, conns_disc: Dict[int, Any], secrets_source: str = "the key log"):
         self.disc = conns_disc
         self.conns: Dict[int, _Conn] = {}
         self.packets = 0
         self.start: Optional[float] = None
         self.end: Optional[float] = None
+        self.secrets_source = secrets_source  # what decrypted TLS: "the key log", "the secrets in the pcapng", ...
 
     # -- feeding -----------------------------------------------------------------
 
@@ -861,7 +876,7 @@ class GrpcAnalysis:
         is_grpc = any((r.header("content-type") or "").startswith("application/grpc") for r in conn.rpcs.values())
         services = sorted({m.strip("/").split("/", 1)[0] for m in methods if "/" in m.strip("/")})
         if conn.tls_seen:
-            transport = "tls (decrypted with the key log)"
+            transport = f"tls (decrypted with {self.secrets_source})"
         elif disc and disc.is_tls():
             transport = "tls"
         else:
@@ -935,14 +950,29 @@ class GrpcAnalysis:
         return out
 
 
-def _scrub(value: Any, secrets: List[str]) -> Any:
+def _scrub_rules(secret_values, identity_values) -> List[Tuple[str, Optional["re.Pattern"]]]:
+    """
+    (value, pattern) pairs, longest first: a secret (a password, a token) is replaced wherever it appears;
+    an identity (a user name) only where it stands alone, not inside a word such as "admin-state".
+    """
+    rules: List[Tuple[str, Optional[re.Pattern]]] = []
+    for value in secret_values:
+        if len(value) >= MIN_SCRUB_LENGTH:
+            rules.append((value, None))
+    for value in set(identity_values) - set(secret_values):
+        if len(value) >= MIN_SCRUB_LENGTH:
+            rules.append((value, re.compile(r"(?<![\w-])" + re.escape(value) + r"(?![\w-])")))
+    return sorted(rules, key=lambda rule: len(rule[0]), reverse=True)
+
+
+def _scrub(value: Any, secrets: List[Tuple[str, Optional["re.Pattern"]]]) -> Any:
     """Replace any echo of a masked credential value inside report text."""
     if not secrets:
         return value
     if isinstance(value, str):
-        for secret in secrets:
+        for secret, standalone in secrets:
             if secret in value:
-                value = value.replace(secret, "[REDACTED]")
+                value = standalone.sub("[REDACTED]", value) if standalone else value.replace(secret, "[REDACTED]")
         return value
     if isinstance(value, dict):
         return {k: _scrub(v, secrets) for k, v in value.items()}
@@ -976,7 +1006,8 @@ def _tls_sessions(file_path: str, conns: Dict[int, Any], display_filter: Optiona
 
 
 def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_given: bool,
-              decrypted_der: Optional[bytes] = None, capture_time: Optional[float] = None) -> Dict[str, Any]:
+              decrypted_der: Optional[bytes] = None, capture_time: Optional[float] = None,
+              coverage: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """What a TLS-wrapped gRPC connection shows without (or with) keys."""
     from analyzers.tls_inspect import parse_certificate, session_hints
     view: Dict[str, Any] = {"sni": disc.sni, "alpn_offered": disc.alpn, "decrypted": decrypted}
@@ -1004,9 +1035,10 @@ def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_g
                           "should not use TLS there; otherwise the server's TLS is not enabled or not answering"})
     if not decrypted:
         if keylog_given:
+            why = (coverage or {}).get("reason") or ("the TLS secrets hold no keys for this session (or the session "
+                                                     "began before the capture)")
             hints.append({"code": "GRPC_TLS_NOT_DECRYPTED", "severity": "info", "text":
-                          "a key log was given but holds no keys for this session (or the session began before "
-                          "the capture): the RPCs stay encrypted"})
+                          f"{why}: the RPCs stay encrypted"})
         else:
             hints.append({"code": "GRPC_TLS_NOT_DECRYPTED", "severity": "info", "text":
                           "the RPCs are encrypted; have the client write a TLS key log while capturing (gnmic "
@@ -1014,6 +1046,120 @@ def _tls_view(disc, session: Optional[Dict[str, Any]], decrypted: bool, keylog_g
                           "and pass the file as keylog_file to decode them"})
     view["hints"] = hints
     return view
+
+
+def _secrets_view(file_path: str, keylog_file: Optional[str]) -> Dict[str, Any]:
+    """
+    Which TLS sessions the secrets cover: the key log's and the pcapng's Decryption Secrets Blocks'
+    labels by client random (extractors/tls_secrets.py keeps no secret), and how to name the source.
+    """
+    by_random: Dict[str, Dict[str, set]] = {}
+    key_log: Dict[str, set] = {}
+    if keylog_file:
+        try:
+            key_log = key_log_labels(keylog_file)
+        except OSError:
+            key_log = {}
+    try:
+        embedded = pcapng_secrets(file_path) or {"blocks": 0, "labels": {}}
+    except (OSError, ValueError, struct.error):
+        embedded = {"blocks": 0, "labels": {}}
+    for source, table in (("key log", key_log), ("pcapng", embedded["labels"])):
+        for random, labels in table.items():
+            entry = by_random.setdefault(random, {"labels": set(), "sources": set()})
+            entry["labels"] |= labels
+            entry["sources"].add(source)
+    names = (["the key log"] if keylog_file else []) + (["the secrets in the pcapng"] if embedded["blocks"] else [])
+    return {"key_log_file": bool(keylog_file), "pcapng_blocks": embedded["blocks"], "by_random": by_random,
+            "source": " and ".join(names) or None,
+            "sessions_in_key_log": len(key_log), "sessions_in_pcapng": len(embedded["labels"])}
+
+
+def _stream_filter(indexes, display_filter: Optional[str]) -> str:
+    flt = "tcp.stream in {" + " ".join(str(i) for i in sorted(indexes)) + "}"
+    return f"({display_filter}) && {flt}" if display_filter else flt
+
+
+def _undecoded(analysis: "GrpcAnalysis", disc, wanted, secrets_given: bool) -> List[int]:
+    """Connections that should show HTTP/2 from both sides and did not (see iter_http2_packets' out_of_order)."""
+    out = []
+    for index in wanted:
+        if disc[index].is_tls() and not secrets_given:
+            continue  # nothing to decrypt with: no HTTP/2 is expected
+        conn = analysis.conns.get(index)
+        if conn is None or not conn.packets.get("client") or not conn.packets.get("server"):
+            out.append(index)
+    return sorted(out)
+
+
+def _merge_tls_state(first: Optional[Dict[str, Any]], second: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Two tshark views of one TLS session (with and without out-of-order reassembly), whatever either reached."""
+    if not first or not second:
+        return first or second
+    return {"client_random": first["client_random"] or second["client_random"],
+            "client_hello_frame": first["client_hello_frame"] or second["client_hello_frame"],
+            "handshake": first["handshake"] or second["handshake"],
+            "application_data": sorted(set(first["application_data"]) | set(second["application_data"])),
+            "certificate": first["certificate"] or second["certificate"]}
+
+
+def _decryption_coverage(disc, tls_state: Dict[int, Dict[str, Any]], secrets: Dict[str, Any],
+                         analysis: "GrpcAnalysis", tls_sessions: Dict[Tuple[str, str], Dict[str, Any]],
+                         max_items: int) -> Dict[str, Any]:
+    """Per TLS session in the capture: whether the secrets decrypted it, and why not; and the totals."""
+    rows = []
+    for index, dconn in sorted(disc.items(), key=lambda kv: kv[1].first_frame):
+        if not dconn.is_tls():
+            continue
+        client, server = dconn.client or dconn.a, dconn.server or dconn.b
+        state = tls_state.get(index) or {}
+        conn = analysis.conns.get(index)
+        http2 = bool(conn and conn.tls_seen and sum(conn.packets.values()))
+        inside = list(state.get("application_data") or []) or (["http2"] if http2 else [])
+        decrypted = bool(state.get("handshake") or inside)
+        random = state.get("client_random")
+        found = secrets["by_random"].get(random) if random else None
+        chosen = (tls_sessions.get((_endpoint(client), _endpoint(server))) or {}).get("server_chose") or {}
+        missing = missing_labels(found["labels"], chosen.get("version")) if found else []
+        if not secrets["source"]:
+            reason = "no key log given, and the capture carries no TLS secrets"
+        elif decrypted and missing and not inside:
+            reason = (f"only the handshake was decrypted: the TLS secrets lack {', '.join(missing)} for this "
+                      "session, so its application data stays encrypted")
+        elif decrypted:
+            reason = None
+        elif random is None and dconn.tls_client_hello is None:
+            reason = ("no ClientHello in the capture (the session began before it), so no secret can be matched to "
+                      "it")
+        elif random is None:
+            reason = "its ClientHello could not be reassembled from the capture, so no secret can be matched to it"
+        elif not found:
+            reason = (f"{secrets['source']} hold{'s' if ' and ' not in secrets['source'] else ''} no secret for "
+                      "this session (no line with its ClientHello random): the key log is from another session or "
+                      "another client")
+        else:
+            reason = ("the secrets name this session's ClientHello random"
+                      + (f" but lack {', '.join(missing)}" if missing else "") + ", and tshark did not decrypt it")
+        rows.append({"flow": f"{_endpoint(client)} -> {_endpoint(server)}", "service": f"tcp/{dconn.service_port()}",
+                     "tcp_stream": index,
+                     "client_hello_frame": state.get("client_hello_frame") or dconn.tls_client_hello,
+                     "version": chosen.get("version"), "decrypted": decrypted,
+                     "handshake_decrypted": bool(state.get("handshake")), "application_data": inside,
+                     "secret_in": sorted(found["sources"]) if found else [],
+                     "labels": sorted(found["labels"]) if found else [], "reason": reason})
+    done = sum(1 for r in rows if r["decrypted"])
+    if not rows:
+        verdict = "No TLS session in this capture."
+    elif not secrets["source"]:
+        verdict = (f"0 of {len(rows)} TLS session(s) decrypted: no key log given, and the capture carries no TLS "
+                   "secrets.")
+    else:
+        verdict = f"{done} of {len(rows)} TLS session(s) decrypted with {secrets['source']}."
+        if done < len(rows):
+            verdict = verdict[:-1] + f"; not decrypted: {', '.join(r['flow'] for r in rows if not r['decrypted'])}."
+    listed, omitted = cap(rows, max_items)
+    return {"verdict": verdict, "decrypted": done, "total": len(rows), "secrets_source": secrets["source"],
+            "sessions": listed, "sessions_omitted": omitted}
 
 
 def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
@@ -1025,8 +1171,9 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
 
     Args:
         file_path: pcap or pcapng path
-        keylog_file: optional TLS key log (SSLKEYLOGFILE format) to decrypt TLS; passed to tshark,
-                     never read or copied
+        keylog_file: optional TLS key log (SSLKEYLOGFILE format) to decrypt TLS; passed to tshark by
+                     path, never copied (its labels and client randoms are read to say which sessions
+                     it covers; its secrets are not). A pcapng's Decryption Secrets Block is used too.
         proto_paths: optional directories of .proto files for Wireshark's protobuf dissector
                      (default: SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos when it exists)
         ports: extra TCP ports to decode as HTTP/2 (beyond the preface, ALPN and well-known ports)
@@ -1070,10 +1217,12 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
                         extra_ports=extra_ports)
     except RuntimeError as exc:
         return _error(str(exc))
+    secrets = _secrets_view(file_path, keylog_file)
+    secrets_given = bool(secrets["source"])
     decode_as, reasons = plan_decode_as(disc, extra_ports)
     extraction = iter_http2_packets(file_path, decode_as, keylog_file=keylog_file, proto_paths=proto_dirs,
                                     display_filter=display_filter, max_packets=max_packets)
-    analysis = GrpcAnalysis(disc)
+    analysis = GrpcAnalysis(disc, secrets_source=secrets["source"] or "the key log")
     wanted = {index for index, conn in disc.items() if conn.carries_http2(extra_ports)}
     try:
         for packet in extraction.packets:
@@ -1083,7 +1232,37 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
                 analysis.feed(packet)
     except RuntimeError as exc:
         return _error(str(exc))
-    secrets = sorted((s for s in extraction.secret_values if len(s) >= MIN_SCRUB_LENGTH), key=len, reverse=True)
+    secret_values = set(extraction.secret_values)
+    identity_values = set(extraction.identity_values)
+    reread = []
+    stuck = _undecoded(analysis, disc, wanted, secrets_given)
+    if stuck:
+        # TShark 3.6's out-of-order reassembly never fills a gap with a segment it marks as a retransmission
+        # (a ClientHello whose first segment arrived late, for one): read those connections again without it.
+        again = iter_http2_packets(file_path, decode_as, keylog_file=keylog_file, proto_paths=proto_dirs,
+                                   display_filter=_stream_filter(stuck, display_filter), max_packets=max_packets,
+                                   out_of_order=False)
+        second = GrpcAnalysis(disc, secrets_source=analysis.secrets_source)
+        try:
+            for packet in again.packets:
+                if packet["tcp_stream"] in stuck:
+                    second.feed(packet)
+        except RuntimeError as exc:
+            status["reread_error"] = str(exc)
+        secret_values |= again.secret_values
+        identity_values |= again.identity_values
+        for index in stuck:
+            new, old = second.conns.get(index), analysis.conns.get(index)
+            before, after = (sum(old.packets.values()) if old else 0), (sum(new.packets.values()) if new else 0)
+            if after > before:
+                analysis.conns[index] = new
+                analysis.packets += after - before
+                reread.append({"tcp_stream": index, "http2_packets_before": before, "http2_packets_after": after})
+        for edge in (second.start, second.end):
+            if edge is not None:
+                analysis.start = edge if analysis.start is None else min(analysis.start, edge)
+                analysis.end = edge if analysis.end is None else max(analysis.end, edge)
+    secrets_list = _scrub_rules(secret_values, identity_values)
 
     start = analysis.start
     for conn in disc.values():
@@ -1094,14 +1273,26 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
     ctx = Context(start, end, max_items=max_items)
 
     tls_sessions = {}
-    certificates: Dict[int, bytes] = {}
-    if include_tls:
+    tls_state: Dict[int, Dict[str, Any]] = {}
+    if include_tls and any(c.is_tls() for c in disc.values()):
         try:
             tls_sessions = _tls_sessions(file_path, disc, display_filter, max_packets)
-            if keylog_file:
-                certificates = decrypted_certificates(file_path, decode_as, keylog_file, display_filter, max_packets)
+            if secrets_given:
+                tls_state = tls_decryption(file_path, decode_as, keylog_file, display_filter, max_packets)
+                reached = {i for i, st in tls_state.items() if st and (st["handshake"] or st["application_data"])}
+                retry = [i for i, c in disc.items() if c.is_tls() and i not in reached]
+                if retry:
+                    second_state = tls_decryption(file_path, decode_as, keylog_file,
+                                                  _stream_filter(retry, display_filter), max_packets,
+                                                  out_of_order=False)
+                    for index in retry:
+                        tls_state[index] = _merge_tls_state(tls_state.get(index), second_state.get(index))
         except Exception as exc:  # the TLS view is an addition; its failure must not hide the RPCs
             status["tls_error"] = f"{type(exc).__name__}: {exc}"
+    certificates = {i: st["certificate"] for i, st in tls_state.items() if st and st.get("certificate")}
+    coverage = _decryption_coverage(disc, tls_state, secrets, analysis, tls_sessions, max_items) if include_tls \
+        else None
+    coverage_by_stream = {row["tcp_stream"]: row for row in (coverage or {}).get("sessions", [])}
 
     # Connections to report: every one that carried HTTP/2, plus TLS ones that may carry gRPC,
     # plus a preface or gRPC port with no HTTP/2 answer.
@@ -1121,8 +1312,8 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
         if dconn and dconn.is_tls():
             session = tls_sessions.get((_endpoint(dconn.client), _endpoint(dconn.server)))
             tls_info = _tls_view(dconn, session, decrypted=conn.tls_seen and bool(conn.rpcs),
-                                 keylog_given=bool(keylog_file), decrypted_der=certificates.get(conn.index),
-                                 capture_time=dconn.first_t)
+                                 keylog_given=secrets_given, decrypted_der=certificates.get(conn.index),
+                                 capture_time=dconn.first_t, coverage=coverage_by_stream.get(conn.index))
         report_conn = analysis.connection_report(conn, ctx, tls_info)
         flow = report_conn["flow"]
         label = f"{flow} ({report_conn['service']})"
@@ -1181,7 +1372,8 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
             else:
                 issues.append(make_issue("info", "CREDENTIAL_IN_METADATA",
                                          f"{label}: gRPC metadata key '{key}' in {entry['requests']} request(s), "
-                                         "protected by TLS on the wire (seen because the key log decrypted it; "
+                                         f"protected by TLS on the wire (seen because {analysis.secrets_source} "
+                                         "decrypted it; "
                                          "value masked)", entry["frames"], key=key, flow=flow))
         for rst in conn.rst_streams:
             severity = "warning" if rst["error_code"] in (0, 8) else "error"
@@ -1315,9 +1507,15 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
         if tls:
             decrypted = sum(1 for c in tls if c.get("tls", {}).get("decrypted"))
             ports = ", ".join(sorted({c["service"] for c in tls}))
+            if decrypted:
+                tail = f" with {analysis.secrets_source}"
+            elif secrets_given:
+                tail = (f": {analysis.secrets_source} decrypted none of them, so whether they carry gRPC cannot be "
+                        "seen (see tls_decryption)")
+            else:
+                tail = ": without a key log only the handshake is visible, so whether they carry gRPC cannot be seen"
             parts.append(f"{len(tls)} TLS connection(s) on a gRPC port or offering ALPN h2 ({ports}), {decrypted} "
-                         "decrypted" + ("" if decrypted else ": without a key log only the handshake is visible, so "
-                                        "whether they carry gRPC cannot be seen"))
+                         f"decrypted{tail}")
         verdict = "; ".join(parts) or f"{len(connections)} connection(s)"
         if total:
             status_text = ", ".join(f"{n} {k}" for k, n in sorted(status_counts.items(), key=lambda kv: -kv[1]))
@@ -1327,6 +1525,21 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
             if clear_keys:
                 verdict += f". Credentials in cleartext metadata: {', '.join(clear_keys)} (values masked)"
         verdict += "."
+    if coverage and secrets_given:
+        for row in coverage["sessions"]:
+            if not row["decrypted"]:
+                issues.append(make_issue("warning", "TLS_SESSION_NOT_DECRYPTED",
+                                         f"{row['flow']} ({row['service']}): not decrypted: {row['reason']}",
+                                         [row["client_hello_frame"]] if row["client_hello_frame"] else []))
+    if secrets["pcapng_blocks"]:
+        issues.append(make_issue("info", "TLS_SECRETS_IN_CAPTURE",
+                                 f"the capture carries TLS secrets in {secrets['pcapng_blocks']} Decryption Secrets "
+                                 f"Block(s) ({secrets['sessions_in_pcapng']} session(s)), used to decrypt it with no "
+                                 "separate key log: anyone with this file can read the sessions they cover"))
+    for row in reread:
+        dconn = disc.get(row["tcp_stream"])
+        if dconn is not None:
+            row["flow"] = f"{_endpoint(dconn.client or dconn.a)} -> {_endpoint(dconn.server or dconn.b)}"
     listed_rpcs, rpcs_omitted = cap(rpcs, max_items * 4)
     listed_conns, conns_omitted = cap(connections, max_items)
     events.sort(key=lambda e: (e["t"] if e["t"] is not None else 0, e.get("frame") or 0))
@@ -1343,10 +1556,18 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
             "decode_as": extraction.status.get("decode_as", []),
             "decode_as_reasons": {f"tcp/{p}": r for p, r in sorted(reasons.items())},
             "keylog_file_given": bool(keylog_file),
+            "tls_secrets": {"source": secrets["source"], "key_log_file": secrets["key_log_file"],
+                            "pcapng_decryption_secrets_blocks": secrets["pcapng_blocks"],
+                            "sessions_in_key_log": secrets["sessions_in_key_log"],
+                            "sessions_in_pcapng": secrets["sessions_in_pcapng"]},
+            "reread_without_out_of_order": reread,
             "proto_paths": proto_dirs,
             "display_filter": display_filter,
             "max_packets": max_packets,
-            "warnings": [w for w in (status.get("tls_error"), extraction.status.get("parse_error")) if w]
+            "warnings": [w for w in (status.get("tls_error"), status.get("reread_error"),
+                                     extraction.status.get("parse_error")) if w]
+            + [f"tcp.stream {r['tcp_stream']} ({r.get('flow')}) read again without out-of-order reassembly: TShark "
+               "3.6 left it undecoded with it (a gap its retransmission did not fill)" for r in reread]
             + _protobuf_warnings(extraction.status.get("stderr", "")),
         },
         "summary": {"connections": len(connections), "rpcs": total, "rpc_status": status_counts,
@@ -1356,12 +1577,13 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
         "rpcs": listed_rpcs,
         "rpcs_omitted": rpcs_omitted,
         "credentials": credentials,
+        "tls_decryption": coverage,
         "issues": sort_issues(issues),
         "timeline": events[:max_items * 8],
         "timeline_omitted": max(len(events) - max_items * 8, 0),
         "limits": LIMITS,
     }
-    return _scrub(report, secrets)
+    return _scrub(report, secrets_list)
 
 
 def _protobuf_warnings(stderr: str) -> List[str]:
