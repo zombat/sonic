@@ -1069,6 +1069,75 @@ def analyze_grpc_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
+@mcp.tool(**tool_options("analyze_restconf_pcap"))
+@redact_result
+def analyze_restconf_pcap(
+    file_path: str,
+    keylog_file: Optional[str] = None,
+    ports: Optional[List[int]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Troubleshoot RESTCONF (RFC 8040) and REST over HTTP/1.1 and HTTP/2 from a capture.
+    Deterministic, no LLM, a few tshark passes: seconds for a typical capture. Needs tshark
+    (Wireshark's HTTP, HTTP/2, HPACK and TLS dissectors do the decoding).
+
+    Reads HTTP on the well-known HTTP(S) ports (80, 443, 8080, 8443, ...), on a TLS session
+    offering ALPN h2 or http/1.1, and on a cleartext HTTP/2 preface on any port. TLS is
+    decrypted with a key log (keylog_file) or the secrets a pcapng carries in a Decryption
+    Secrets Block (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng), with no key log
+    needed; without one, a TLS session shows only its handshake.
+
+    Per request (paired to its response): method, path, HTTP status and phrase, the time
+    from request to response, request and response Content-Type, response body size, a
+    Location on a 201 Created, whether it is RESTCONF, and for a RESTCONF error the
+    ietf-restconf:errors fields (error-type, error-tag, error-app-tag, error-path,
+    error-message) parsed from the body (JSON or XML). Credentials present are flagged, never
+    shown: an Authorization scheme (Basic, Bearer) is kept and its credential masked; Cookie,
+    Set-Cookie and token headers are flagged by name. Over cleartext each is a
+    CLEARTEXT_CREDENTIAL; over TLS a CREDENTIAL_IN_REQUEST (seen only because the secrets
+    decrypted it). Message bodies are never decoded except RESTCONF error documents.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (connections, requests, restconf_requests, status_counts, restconf_errors,
+    cleartext_credentials), connections (flow, service, transport, http_versions, restconf,
+    requests, sni, alpn_offered, decrypted), requests (method, path, status, phrase,
+    request_content_type, response_content_type, request_body_bytes, response_body_bytes,
+    timing_ms, location, restconf, restconf_errors, credentials, frames), credentials
+    (flow, header, scheme, kind, cleartext, requests, value "masked"), tls_decryption
+    (verdict, decrypted, total, secrets_source, sessions), issues (stable codes such as
+    RESTCONF_ERROR, HTTP_CLIENT_ERROR, HTTP_SERVER_ERROR, HTTP_NO_RESPONSE,
+    CLEARTEXT_CREDENTIAL, CREDENTIAL_IN_REQUEST, TLS_SESSION_NOT_DECRYPTED,
+    TLS_SECRETS_IN_CAPTURE, with frames), capture (tshark, decode_as, keylog_file_given,
+    tls_secrets) and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: TLS-wrapped RESTCONF without a key log shows only the handshake; a capture that
+    starts mid-connection may leave an HTTP/2 request without its method or path; only
+    RESTCONF error documents are parsed from a body, never configuration.
+
+    For example, analyze_restconf_pcap(file_path="/captures/restconf.pcap") or
+    analyze_restconf_pcap(file_path="/captures/restconf-tls.pcapng", keylog_file="/tmp/keys.log").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        keylog_file: Optional TLS key log (SSLKEYLOGFILE format) to decrypt TLS; passed to
+            tshark by path, never copied to the result. Not needed for a pcapng that carries
+            its own TLS secrets.
+        ports: Optional extra TCP ports to decode as HTTP(S).
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (connections; requests at four times this; default 25).
+    """
+    try:
+        from analyzers.http_inspect import analyze_http_capture
+        return analyze_http_capture(file_path, keylog_file=keylog_file, ports=ports,
+                                    display_filter=display_filter, max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
 # ---------------------------------------------------------------------------
 # Guide resources and workflow prompts (progressive disclosure for MCP clients)
 # ---------------------------------------------------------------------------

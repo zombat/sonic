@@ -63,6 +63,8 @@ TOOL_GUIDE: List[Dict[str, Any]] = [
      "question": "Do packets get through: path MTU and fragmentation, ESP overhead, TCP retransmissions or zero window, TLS policy, DSCP and RTP quality"},
     {"name": "analyze_grpc_pcap", "short": "gRPC/gNMI/gNOI: RPC status, creds", "title": "Troubleshoot gRPC, gNMI and gNOI from a capture", "llm": False,
      "question": "Why a gRPC, gNMI or gNOI client fails: each RPC's grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, credentials sent in cleartext metadata"},
+    {"name": "analyze_restconf_pcap", "short": "RESTCONF/REST: status, errors, creds", "title": "Troubleshoot RESTCONF and REST from a capture", "llm": False,
+     "question": "Why a RESTCONF or REST client fails: each request's method, path, status, timing and Content-Type, the ietf-restconf:errors of a failure, a Location on a 201, and credentials present (Authorization, cookies, tokens, masked). Decrypts TLS (HTTP/1.1 and HTTP/2) with a key log"},
     {"name": "audit_cleartext_pcap", "short": "pass/fail: only allowlisted traffic on a link", "title": "Assert a transport link carried no cleartext", "llm": False,
      "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, SSH or TLS without real encryption, ...) cross the link?"},
     {"name": "correlate_pcaps", "short": "2+ capture points: NAT, lost replies, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
@@ -202,14 +204,13 @@ def build_instructions() -> str:
         lines.append(f"- {row['name']}{' [LLM]' if row['llm'] else ''}: {row['short']}")
     lines += [
         "",
-        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing, data_plane, grpc; "
-        "audit_cleartext_pcap to gate a link; correlate_pcaps for 2+ points; "
-        "analyze_convergence_pcap or merge_pcap_timelines for a failover; SIP: quick_quality_check, "
-        "then analyze_pcap. Quote codes and frames.",
+        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing, data_plane, grpc, restconf; "
+        "audit_cleartext_pcap to gate; correlate_pcaps for 2+ points; "
+        "convergence or merge_pcap_timelines for a failover; SIP: quick_quality_check, then analyze_pcap. "
+        "Quote codes and frames.",
         "",
-        "[LLM] tools take seconds to minutes; provider defaults to the server's SONIC_LLM_PROVIDER, "
-        "else ollama. A cloud provider sends SIP data, auth headers "
-        "included, off this machine: ask first.",
+        "[LLM] tools: provider is SONIC_LLM_PROVIDER, else ollama; a cloud provider sends SIP data (auth "
+        "headers included) off this machine, ask first.",
         "",
         "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
         "*_omitted counts the rest; narrow: display_filter, max_packets.",
@@ -364,6 +365,7 @@ def render_skill_md() -> str:
         "analyze_routing_pcap": "`--file F --network-only --detectors routing,reachability`",
         "analyze_data_plane_pcap": "`--file F --network-only --detectors path_mtu,esp_overhead,tcp,tls,qos`",
         "analyze_grpc_pcap": "`--file F --grpc [--tls-secrets-log K]`",
+        "analyze_restconf_pcap": "`--file F --restconf [--tls-secrets-log K]`",
         "correlate_pcaps": "MCP only",
         "merge_pcap_timelines": "MCP only",
         "quick_quality_check": "`--file F --quality-only`",
