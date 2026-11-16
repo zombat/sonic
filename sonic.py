@@ -202,6 +202,24 @@ API keys:
         help="With --restconf, comma-separated extra TCP ports to decode as HTTP(S)"
     )
 
+    # SNMP troubleshooting (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--snmp",
+        action="store_true",
+        help="Name every SNMP message's version (v1, v2c, v3 and its security level), flag v1/v2c communities as "
+             "cleartext credentials (masked), and with --snmp-users decrypt SNMPv3 authPriv, saying for each "
+             "message whether it decrypted and why not. Writes --save_file (default: <capture>.snmp.md; .json "
+             "writes JSON)."
+    )
+
+    parser.add_argument(
+        "--snmp-users",
+        metavar="PATH",
+        help="With --snmp, a USM users file (user, optional engine_id, auth and auth_pass, priv and priv_pass; "
+             "block or CSV format) to decrypt SNMPv3; read by path, handed to tshark through a private temporary "
+             "table, never echoed"
+    )
+
     parser.add_argument(
         "--fetch-grpc-protos",
         nargs="?",
@@ -316,6 +334,11 @@ def main():
     # Handle RESTCONF/REST mode (its default report path is next to the capture)
     if args.restconf:
         run_restconf_analysis(args)
+        return
+
+    # Handle SNMP mode (its default report path is next to the capture)
+    if args.snmp:
+        run_snmp_analysis(args)
         return
 
     # Handle network-only mode (its default report path is next to the capture)
@@ -607,6 +630,43 @@ def run_restconf_analysis(args):
         print_http_summary(report)
         if save_path:
             print(f"\n💾 RESTCONF/REST report saved to: {save_path}")
+
+
+def run_snmp_analysis(args):
+    """
+    Run the SNMP analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.snmp_inspect import analyze_snmp_capture
+    from utils.snmp_reporting import print_snmp_summary, save_snmp_report
+
+    report = analyze_snmp_capture(
+        args.file,
+        users_file=args.snmp_users,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ SNMP analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.snmp.md"
+    try:
+        save_snmp_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_snmp_summary(report)
+        if save_path:
+            print(f"\n💾 SNMP report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):

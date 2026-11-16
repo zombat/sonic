@@ -1138,6 +1138,69 @@ def analyze_restconf_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
+@mcp.tool(**tool_options("analyze_snmp_pcap"))
+@redact_result
+def analyze_snmp_pcap(
+    file_path: str,
+    users_file: Optional[str] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Name every SNMP message's version and decrypt SNMPv3 with a USM users file.
+    Deterministic, no LLM, one tshark pass: seconds for a typical capture. Needs tshark.
+
+    Every message is named v1, v2c or v3, and a v3 message by its security level
+    (noAuthNoPriv, authNoPriv, authPriv); engine discovery is named as such. A v1 or v2c
+    community string is a cleartext credential (SNMP_CLEARTEXT_COMMUNITY, value masked).
+    With users_file, each authenticated v3 message says whether it authenticated and each
+    authPriv message whether it decrypted, and when not, why: unknown_user, unknown_engine
+    (the user is given for another engine id), auth_failed (wrong auth passphrase),
+    decrypt_failed (wrong privacy passphrase, or AES-192/256 over an SHA1 or MD5 user, whose
+    key tshark 3.6.2 extends the Reeder (Cisco) way while net-snmp and other Blumenthal-draft
+    agents extend it otherwise). An SNMPv3 Report is named by the usmStats counter the agent
+    returned (usmStatsUnknownUserNames, usmStatsWrongDigests, usmStatsDecryptionErrors, ...).
+    A decrypted PDU's contents are never returned, only its type and that it decrypted.
+
+    The users file is a path on the server (never paste passphrases into the call): block
+    format, one user per record separated by a blank line, lines user, engine_id (optional),
+    auth (MD5, SHA, SHA-224, SHA-256, SHA-384, SHA-512), auth_pass, priv (DES, AES, AES-192,
+    AES-256), priv_pass; or CSV user,auth,auth_pass,priv,priv_pass[,engine_id]. It is handed to
+    tshark through a private temporary snmp_users table, never on a command line, and no
+    passphrase is ever returned.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (messages, versions, v3_security_levels, v3_outcomes, authpriv_decrypted,
+    authpriv_not_decrypted, cleartext_communities), v3_users (per user: messages, outcomes),
+    messages (frame, version, security_level, src, dst, pdu, user, engine_id, role, outcome,
+    reason, report, credential), credentials (protocol, flow, kind, value "masked"), issues
+    (SNMP_CLEARTEXT_COMMUNITY, SNMP_AUTH_FAILED, SNMP_DECRYPT_FAILED, SNMP_UNKNOWN_USER,
+    SNMP_UNKNOWN_ENGINE, SNMP_NOT_DECRYPTED, SNMP_AGENT_REPORT, SNMP_USERS_TABLE_REFUSED,
+    SNMP_USER_NOT_SEEN, with frames), capture and limits. On failure
+    {"status": "error", "error": "..."}, for example an algorithm tshark 3.6.2 does not offer.
+
+    Limits: tshark 3.6.2 offers auth MD5, SHA1, SHA2-224/256/384/512 and priv DES, AES-128,
+    AES-192, AES-256; a v3 message is decrypted only with the right passphrases.
+
+    For example, analyze_snmp_pcap(file_path="/captures/snmp.pcap") or
+    analyze_snmp_pcap(file_path="/captures/snmpv3.pcap", users_file="/secure/snmp-users.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        users_file: Optional path to a USM users file (see above) to decrypt SNMPv3.
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (messages at four times this; default 25).
+    """
+    try:
+        from analyzers.snmp_inspect import analyze_snmp_capture
+        return analyze_snmp_capture(file_path, users_file=users_file, display_filter=display_filter,
+                                    max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
 # ---------------------------------------------------------------------------
 # Guide resources and workflow prompts (progressive disclosure for MCP clients)
 # ---------------------------------------------------------------------------
