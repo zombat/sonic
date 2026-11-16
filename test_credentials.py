@@ -147,6 +147,110 @@ class TestLoading(EnvFileCase):
             self.assertIn(credentials.REDACTED, text)
 
 
+def _dummy(*parts):
+    """Join a dummy token from parts, so no file holds a whole token shape a secret scanner reacts to."""
+    return "".join(parts)
+
+
+# (name, text holding a secret S.O.N.I.C. was never given, the secret part)
+SHAPED = [
+    ("openai key", "error: invalid key " + _dummy("sk-", "proj-", "AbCdEfGhIjKlMnOpQrStUvWx0123") + " rejected",
+     _dummy("AbCdEfGhIjKlMnOpQrStUvWx0123")),
+    ("plain sk- key", "OPENAI said " + _dummy("sk-", "0123456789abcdefABCDEF0123456789") + ".",
+     _dummy("0123456789abcdefABCDEF0123456789")),
+    ("stripe key", "key " + _dummy("sk_", "live_", "0123456789abcdefABCD"), _dummy("0123456789abcdefABCD")),
+    ("aws access key id", "aws_access_key_id " + _dummy("AKIA", "IOSFODNN7EXAMPLE"), _dummy("IOSFODNN7EXAMPLE")),
+    ("aws temporary key id", "creds " + _dummy("ASIA", "ZZZZ1234ZZZZ5678"), _dummy("ZZZZ1234ZZZZ5678")),
+    ("github classic token", "push with " + _dummy("ghp", "_", "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8"),
+     _dummy("a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8")),
+    ("github oauth token", _dummy("gho", "_", "Z" * 36), _dummy("Z" * 36)),
+    ("github fine-grained token", "pat " + _dummy("github_", "pat_", "11ABCDEFG0123456789_abcdefghijklmnop"),
+     _dummy("11ABCDEFG0123456789_abcdefghijklmnop")),
+    ("slack bot token", "hook " + _dummy("xox", "b-", "123456789012-abcdefABCDEF"), _dummy("123456789012-abcdefABCDEF")),
+    ("slack user token", _dummy("xox", "p-", "9876543210-zyxwvutsrq"), _dummy("9876543210-zyxwvutsrq")),
+    ("jwt", "token " + _dummy("eyJ", "hbGciOiJIUzI1NiJ9", ".", "eyJ", "zdWIiOiJ0ZXN0In0", ".", "c2lnbmF0dXJlX2R1bW15"),
+     _dummy("zdWIiOiJ0ZXN0In0")),
+    ("pem private key", "file:\n" + _dummy("-----BEGIN ", "RSA PRIVATE KEY-----\n", "MIIEdummyBODYdummyBODY\n",
+                                           "-----END ", "RSA PRIVATE KEY-----") + "\nend",
+     "MIIEdummyBODYdummyBODY"),
+    ("pem cut off", _dummy("-----BEGIN ", "OPENSSH PRIVATE KEY-----\n", "b3BlbnNzaC1rZXktdjEAAAA"),
+     "b3BlbnNzaC1rZXktdjEAAAA"),
+    ("authorization basic", "Authorization: Basic " + _dummy("YWxpY2U6", "aHVudGVyMg=="), _dummy("YWxpY2U6", "aHVudGVyMg==")),
+    ("authorization bearer", "proxy-authorization: Bearer abc.def-ghi", "abc.def-ghi"),
+    ("authorization in json", '{"authorization": "Bearer short1"}', "short1"),
+    ("standalone basic", "header Basic " + _dummy("Ym9iOn", "NlY3JldA=="), _dummy("Ym9iOn", "NlY3JldA==")),
+    ("standalone bearer", "sent Bearer " + _dummy("tok", "en0123456789abcdef"), _dummy("tok", "en0123456789abcdef")),
+    ("password assignment", "login password=hunter2 failed", "hunter2"),
+    ("secret assignment", "radius secret='s3cr3t value'", "s3cr3t value"),
+    ("key assignment", "GET /api?key=dummyvalue42&x=1", "dummyvalue42"),
+    ("dotted key assignment", "tacplus.key=dummykey99", "dummykey99"),
+    ("token assignment", 'client_token="abc123xyz"', "abc123xyz"),
+    ("password colon", "Password: correct-horse", "correct-horse"),
+    ("password json", '{"password": "battery-staple"}', "battery-staple"),
+    ("sdp srtp key", "a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:" + _dummy("WVNfX19zZW1j", "dGwgKCkgewkyMjA7") + "|2^20",
+     _dummy("WVNfX19zZW1j", "dGwgKCkgewkyMjA7")),
+    ("sdp mikey", "a=key-mgmt:mikey " + _dummy("AQAFgM0Xfl", "ABAAAAAAAAAsAyOOh"), _dummy("AQAFgM0Xfl", "ABAAAAAAAAAsAyOOh")),
+    ("sdp k line", "s=x\nk=clear:sdpdummykey\nm=audio 4000 RTP/AVP 0", "sdpdummykey"),
+]
+
+ORDINARY = [
+    "OID 1.3.6.1.6.3.15.1.1.2.0 usmStatsUnknownUserNames, sysName.0 = 1.3.6.1.2.1.1.5.0",
+    "MAC 00:1a:2b:3c:4d:5e and 00-1A-2B-3C-4D-5E, EUI-64 fe80::21a:2bff:fe3c:4d5e",
+    "sha256 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08 md5 9e107d9d372bb6826bd81d3542a419d6",
+    "SPI 0x0B0B0B0B, ICV ok, NAT-T udp/4500, nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\" realm=\"example.com\"",
+    "Authorization Basic on 10.0.0.1:52000 -> 10.0.0.2:80 in 3 request(s)",
+    "Basic authentication sends the password in cleartext; use Bearer tokens over TLS instead",
+    "key: 3 SAs, keys=4, monkeys ok, tacplus key present (masked), password: [REDACTED], secret=[REDACTED]",
+    "SIP/2.0 401 Unauthorized, Call-ID a84b4c76e66710@pc33.atlanta.com, branch=z9hG4bK776asdhds",
+    "TLS 1.3 client_random 52362c10a2665e323a2adb4b9da0c10d4a8823719272f8b4c97af24f92784812",
+    "frame 42: risk-free disk-0123456789abcdefghij task_id=7 password=None",
+    "shown inline: yes, inline:true, k=prompt, a=crypto:1 AES_CM_128_HMAC_SHA1_80 (key masked)",
+]
+
+
+class TestSecretShapes(unittest.TestCase):
+    """Secrets S.O.N.I.C. was never given are masked by shape, on every output path alike."""
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ, clean_env(), clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        credentials.configure(None)
+
+    def test_each_shape_is_masked(self):
+        for name, text, secret in SHAPED:
+            with self.subTest(name):
+                out = credentials.redact_text(text)
+                self.assertNotIn(secret, out)
+                self.assertIn(credentials.REDACTED, out)
+
+    def test_ordinary_report_text_is_not_masked(self):
+        for text in ORDINARY:
+            with self.subTest(text[:30]):
+                self.assertEqual(credentials.redact_text(text), text)
+
+    def test_the_scheme_stays_visible(self):
+        self.assertEqual(credentials.redact_text("Authorization: Basic " + _dummy("YWxpY2U6", "aHVudGVyMg==")),
+                         "Authorization: Basic [REDACTED]")
+
+    def test_saved_reports_streams_and_logs_agree(self):
+        text = "\n".join(t for _, t, _ in SHAPED)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "report.md")
+            credentials.write_redacted(path, text)
+            with open(path, encoding="utf-8") as handle:
+                saved = handle.read()
+        sink = io.StringIO()
+        credentials.RedactingStream(sink).write(text)
+        record = logging.LogRecord("t", logging.ERROR, __file__, 1, "%s", (text,), None)
+        credentials.RedactingLogFilter().filter(record)
+        self.assertEqual(saved, sink.getvalue())
+        self.assertEqual(saved, record.getMessage())
+        self.assertEqual(saved, credentials.redact({"r": text})["r"])
+        for name, _, secret in SHAPED:
+            self.assertNotIn(secret, saved, name)
+
+
 class TestLlmConfig(EnvFileCase):
     def test_anthropic_models(self):
         from llm_config import LLMConfig

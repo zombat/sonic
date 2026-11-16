@@ -172,7 +172,7 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "Report quality_analysis.grade and overall_score, mos_analysis.average_mos and worst_mos, and the "
          "degradation_factors.",
          "Only if the user wants a written diagnosis, call analyze_pcap. Ask before choosing a cloud "
-         "provider: the SIP data, including authentication headers, leaves this machine.",
+         "provider: the SIP data (addresses, users, authentication headers with credentials masked) leaves this machine.",
      ]},
 ]
 
@@ -222,7 +222,7 @@ def build_instructions() -> str:
         "never paste a key.",
         "",
         "[LLM] tools: provider SONIC_LLM_PROVIDER, else ollama; a cloud one sends SIP data (auth headers "
-        "too) off this machine: ask first.",
+        "masked) off this machine: ask first.",
         "",
         "Tools return JSON; check status (errors are data). Lists stop at max_items (default 25), *_omitted "
         "counts the rest; narrow: display_filter, max_packets.",
@@ -550,8 +550,8 @@ def render_sip_rtp() -> str:
         "sends the extracted SIP/SDP data to an LLM for a written diagnosis of each call.",
         "",
         "Run the quality path first. It answers \"how bad\"; the LLM answers \"why\" in prose and is slower, "
-        "costs tokens, and with a cloud provider sends SIP data (including authentication headers) off the "
-        "machine.",
+        "costs tokens, and with a cloud provider sends SIP data (including authentication headers, credentials "
+        "masked) off the machine.",
         "",
         "## Quality result (`quality_analysis`)",
         "",

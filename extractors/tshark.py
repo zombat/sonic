@@ -5,13 +5,66 @@ S.O.N.I.C. Packet Extraction Module
 This module handles packet capture data extraction using tshark and scapy.
 It provides robust extraction with fallback mechanisms and format conversion.
 
+SIP credentials are masked here, at the source, before the summary reaches the LLM,
+a report or an MCP result. An Authorization or Proxy-Authorization header keeps what
+troubleshooting needs (the scheme, username, realm, nonce, uri, algorithm, qop, nc,
+cnonce, opaque) and loses its credential: a Digest `response=` (and `auts=`) value, a
+Basic or Bearer credential, or everything after the scheme for any other scheme. A
+digest response is a hash, but one an offline dictionary attack can test passwords
+against, so it is never sent to a cloud LLM. WWW-Authenticate and Proxy-Authenticate
+challenges carry no credential and are kept as they are. SDP media keys in the raw
+text (an a=crypto inline: SRTP master key, an a=key-mgmt payload such as MIKEY, a k=
+key) are masked the same way, keeping the crypto suite and the key-mgmt protocol id.
+
 Author: Raymond A Rizzo | Zombat
 """
 
+import re
 import subprocess
 import sys
 import shutil
 from typing import Optional
+
+SIP_CREDENTIAL_MASK = "[MASKED]"
+# Digest parameters that carry or derive from the password (RFC 3261 22.4, RFC 2617, RFC 3310 auts).
+_DIGEST_SECRET_PARAMS = re.compile(r'(?i)(\b(?:response|auts)\s*=\s*)(\\?"(?:[^"\\]|\\(?!"))*\\?"|[^\s,]+)')
+_SCHEME = re.compile(r"^(\s*)([A-Za-z][A-Za-z0-9._\-]*)(\s+|$)(.*)$", re.DOTALL)
+# An Authorization or Proxy-Authorization header in raw SIP text, folded continuation lines included.
+_SIP_AUTH_LINE = re.compile(r"(?im)^((?:proxy-)?authorization[ \t]*:)([^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)")
+
+
+def mask_sip_credentials(value: str) -> str:
+    """
+    One Authorization or Proxy-Authorization header value with its credential masked.
+
+    Digest keeps every parameter but response= and auts=; Basic and Bearer keep the scheme
+    name only; any other scheme keeps its name and masks the rest (fail closed).
+    """
+    if not value:
+        return value
+    match = _SCHEME.match(value)
+    if not match:
+        return SIP_CREDENTIAL_MASK
+    lead, scheme, space, rest = match.groups()
+    if scheme.lower() == "digest":
+        return lead + scheme + space + _DIGEST_SECRET_PARAMS.sub(
+            lambda m: m.group(1) + ('"' + SIP_CREDENTIAL_MASK + '"' if '"' in m.group(2) else SIP_CREDENTIAL_MASK),
+            rest)
+    if not rest:
+        return value
+    return f"{lead}{scheme}{space or ' '}{SIP_CREDENTIAL_MASK}"
+
+
+def mask_sip_text(text: str) -> str:
+    """Raw SIP messages (or raw tshark output) with every Authorization credential and SDP key masked."""
+    if not text:
+        return text
+    from utils.credentials import mask_sdp_keys
+    text = _SIP_AUTH_LINE.sub(lambda m: m.group(1) + mask_sip_credentials(m.group(2)), text)
+    text = mask_sdp_keys(text, SIP_CREDENTIAL_MASK)
+    # A response= anywhere else (a tshark JSON string, an unrecognised layout) is masked too.
+    return _DIGEST_SECRET_PARAMS.sub(
+        lambda m: m.group(0) if SIP_CREDENTIAL_MASK in m.group(2) else m.group(1) + SIP_CREDENTIAL_MASK, text)
 
 try:
     from scapy.all import rdpcap, UDP, Raw
@@ -131,7 +184,7 @@ def extract_sip_data_with_tshark(file_path: str) -> Optional[str]:
                 return summary
             except json.JSONDecodeError:
                 print(f"⚠️  Failed to parse extracted data as JSON")
-                return process.stdout
+                return mask_sip_text(process.stdout)
         else:
             print(f"⚠️  No SIP or RTP data found in {file_path}")
             return None
@@ -220,7 +273,7 @@ def read_pcap_with_scapy(file_path: str) -> Optional[str]:
                                                        'OPTIONS', 'NOTIFY', 'SUBSCRIBE', 'PRACK', 
                                                        'UPDATE', 'REFER', 'INFO', 'SIP/2.0'))
                         ):
-                            sip_messages.append(raw_data)
+                            sip_messages.append(mask_sip_text(raw_data))
                             sip_packet_count += 1
                             
                             # Extract port information for debugging
@@ -336,8 +389,9 @@ def _create_analysis_summary(raw_data: list) -> str:
                 "expires": layers.get("sip.Expires", [""])[0] if layers.get("sip.Expires") else "",
                 
                 # Authentication Headers (RFC 3261, RFC 2617)
-                "authorization": layers.get("sip.Authorization", [""])[0] if layers.get("sip.Authorization") else "",
-                "proxy_authorization": layers.get("sip.Proxy-Authorization", [""])[0] if layers.get("sip.Proxy-Authorization") else "",
+                # Credentials masked here, before the summary reaches the LLM or a report
+                "authorization": mask_sip_credentials(layers.get("sip.Authorization", [""])[0]) if layers.get("sip.Authorization") else "",
+                "proxy_authorization": mask_sip_credentials(layers.get("sip.Proxy-Authorization", [""])[0]) if layers.get("sip.Proxy-Authorization") else "",
                 "www_authenticate": layers.get("sip.WWW-Authenticate", [""])[0] if layers.get("sip.WWW-Authenticate") else "",
                 "proxy_authenticate": layers.get("sip.Proxy-Authenticate", [""])[0] if layers.get("sip.Proxy-Authenticate") else "",
                 

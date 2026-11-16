@@ -153,12 +153,12 @@ print("✓ Auth diagnostics scope validated: registration failures, 401/407 trac
 PYEOF
 echo ""
 
-# Test 7: Dedicated auth diagnostics unit tests
+# Test 7: Dedicated auth diagnostics unit tests, and SIP credentials kept out of the LLM prompt and reports
 echo "✅ TEST 7: Dedicated Auth Diagnostics Test Module"
 if python3 -c "import pytest" >/dev/null 2>&1; then
-    python3 -m pytest -q test_auth_diagnostics.py
+    python3 -m pytest -q test_auth_diagnostics.py test_sip_credentials.py
 else
-    python3 -m unittest -q test_auth_diagnostics.py
+    python3 -m unittest -q test_auth_diagnostics.py test_sip_credentials.py
 fi
 echo ""
 
