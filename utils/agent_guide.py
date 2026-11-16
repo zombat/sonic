@@ -116,6 +116,11 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "user wants a written SIP diagnosis and accepts an LLM call.",
          "If http2 is present, or tls on a gRPC port (9339, 57400, 6030, 50051), call analyze_grpc_pcap for "
          "each RPC's status, HTTP/2 trouble and credentials in cleartext metadata.",
+         "If HTTPS or RESTCONF is present, call analyze_restconf_pcap; if snmp, tacacs or radius is present, "
+         "analyze_snmp_pcap or analyze_aaa_pcap. Each decrypts when the user has the keys: pass the key file's "
+         "path (keylog_file, users_file, keys_file), never its contents. If esp is present and the user has SA keys "
+         "from a Linux or strongSwan endpoint, call analyze_esp_pcap with sa_file (Cisco IOS does not expose ESP "
+         "keys).",
          "Answer with the verdict sentences, issue codes and Wireshark frame numbers, and say what the "
          "capture point could not show.",
      ]},

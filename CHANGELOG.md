@@ -88,6 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
+- 🔓 README gains a Decryption section (what each decrypting tool needs, how secrets are kept off command lines and out of outputs, what TShark 3.6.2 can and cannot do, and what is out of scope: SSH, and WinRM sealed with NTLM); the `diagnose_capture` workflow names the decrypting tools and says to pass key files by path; `run_phase2_tests.sh` runs the four decryption test modules
+- MCP instructions: tool summaries shortened so the instructions stay under 2 KB with the new tools, and a line that decryption keys are passed as file paths, never pasted
 - 🔐 **The cleartext audit's default allowlist is now `encrypted`, not `crypto`**: besides IPsec it passes SSH and TLS sessions, but only when their handshake shows real encryption. To get the old behaviour (IPsec only, the tunnel question) pass `allow=["crypto"]` (MCP `audit_cleartext_pcap`, `audit_cleartext_capture`) or `--allow crypto` (CLI, new); SSH and TLS then fail as `ENCRYPTED_OUTSIDE_ALLOWLIST` as before. A harness that pins an earlier S.O.N.I.C. release (such as the CVD harness) is unaffected
 - The `ssh`, `netconf`, `tls` and `encrypted` tokens no longer accept a session that negotiated no encryption (see below); a port token (`tcp:443`) still does, and its frames still count as cleartext
 - The TLS detector's `TLS_WEAK_CIPHER_CHOSEN` says when the chosen suite does not encrypt at all, and the RFC 9150 integrity-only suites count as weak there too
