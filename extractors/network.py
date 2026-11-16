@@ -924,7 +924,9 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
             payload = None
             if IP in pkt:
                 ip = pkt[IP]
-                raw = bytes(ip)
+                # Use the captured wire bytes instead of bytes(ip): loaded Scapy contrib layers
+                # (e.g. scapy.contrib.tacacs on TCP/49) re-serialize and mutate payloads on bytes().
+                raw = ip.original if isinstance(getattr(ip, "original", None), bytes) else bytes(ip)
                 ihl = ip.ihl * 4 if ip.ihl else 20
                 total = ip.len if ip.len else len(raw)
                 payload = raw[ihl:total]
@@ -935,7 +937,7 @@ def iter_records_scapy(file_path: str, max_packets: Optional[int] = None) -> Ite
                     continue
             elif IPv6 in pkt:
                 ip6 = pkt[IPv6]
-                raw = bytes(ip6)
+                raw = ip6.original if isinstance(getattr(ip6, "original", None), bytes) else bytes(ip6)
                 payload = raw[40:40 + ip6.plen] if ip6.plen else raw[40:]
                 rec["ip"] = {"v": 6, "src": ip6.src, "dst": ip6.dst, "proto": int(ip6.nh), "ttl": int(ip6.hlim)}
             else:

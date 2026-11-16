@@ -350,6 +350,17 @@ class TestNetworkOrchestrator(unittest.TestCase):
                     self.assertAlmostEqual(a.pop("t"), b.pop("t"), places=5)
                     self.assertEqual(a, b)
 
+    def test_scapy_backend_unaffected_by_tacacs_contrib_import(self):
+        if not HAVE_TSHARK:
+            self.skipTest("tshark is not installed")
+        from scapy.contrib import tacacs as _tacacs  # noqa: F401
+        tshark = list(network_extractor.iter_records_tshark(fixture("aaa_tacacs.pcap")))
+        scapy_recs = list(network_extractor.iter_records_scapy(fixture("aaa_tacacs.pcap")))
+        self.assertEqual(len(tshark), len(scapy_recs))
+        for a, b in zip(tshark, scapy_recs):
+            self.assertAlmostEqual(a.pop("t"), b.pop("t"), places=5)
+            self.assertEqual(a, b)
+
     def test_backends_produce_identical_reports(self):
         if not HAVE_TSHARK:
             self.skipTest("tshark is not installed")

@@ -16,6 +16,7 @@ Run with:  python3 -m pytest -q test_sip_credentials.py
 """
 
 import base64
+import dataclasses
 import json
 import os
 import shutil
@@ -172,6 +173,24 @@ class TestExtraction(SipCaptureCase):
         self.assertNotIn(DIGEST_RESPONSE[:16], json.dumps(auth))
 
 
+def _mock_lm_capture(seen):
+    """Capture mocked dspy.LM.__call__ payloads across DSPy 2.x/3.4 and DSPy 3.5+ Request objects."""
+    def capture(self_lm, prompt=None, *, messages=None, **kwargs):
+        serialized_prompt = dataclasses.asdict(prompt) if dataclasses.is_dataclass(prompt) else prompt
+        seen.append({"prompt": serialized_prompt, "messages": messages})
+        if dataclasses.is_dataclass(prompt) and hasattr(prompt, "model"):
+            from dspy._vendor.lm15 import types as lm_types
+            return lm_types.Response(
+                id="mock-resp",
+                model=prompt.model,
+                message=lm_types.Message(role="assistant", parts=(lm_types.TextPart(text='{"analysis": "{}"}'),)),
+                finish_reason="stop",
+                usage=lm_types.Usage(input_tokens=1, output_tokens=1, total_tokens=2),
+            )
+        return ['{"analysis": "{}"}']
+    return capture
+
+
 @unittest.skipUnless(HAVE_TSHARK, "tshark is not installed")
 class TestLlmPayloadAndReport(SipCaptureCase):
     def test_the_llm_prompt_holds_no_credential(self):
@@ -180,12 +199,8 @@ class TestLlmPayloadAndReport(SipCaptureCase):
         from llm_config import RedactingLM
         seen = []
 
-        def capture(self_lm, prompt=None, *, messages=None, **kwargs):
-            seen.append({"prompt": prompt, "messages": messages})
-            return ['{"analysis": "{}"}']
-
         lm = RedactingLM(model="anthropic/claude-haiku-5-5", api_key="placeholder-not-a-key")
-        with mock.patch.object(dspy.LM, "__call__", capture):
+        with mock.patch.object(dspy.LM, "__call__", _mock_lm_capture(seen)):
             sip_diagnostic_test(lm, extract_sip_data(self.pcap), self.pcap)
         payload = json.dumps(seen)
         self.assertTrue(seen, "the LLM client was never called")
@@ -198,12 +213,8 @@ class TestLlmPayloadAndReport(SipCaptureCase):
         from llm_config import RedactingLM
         seen = []
 
-        def capture(self_lm, prompt=None, *, messages=None, **kwargs):
-            seen.append({"prompt": prompt, "messages": messages})
-            return ['{"analysis": "{}"}']
-
         lm = RedactingLM(model="anthropic/claude-haiku-5-5", api_key="placeholder-not-a-key")
-        with mock.patch.object(dspy.LM, "__call__", capture):
+        with mock.patch.object(dspy.LM, "__call__", _mock_lm_capture(seen)):
             sip_diagnostic_test(lm, read_pcap_with_scapy(self.pcap), self.pcap)
         payload = json.dumps(seen)
         self.assertIn("AES_CM_128_HMAC_SHA1_80", payload)  # the SDP really was in the prompt

@@ -280,6 +280,48 @@ class TestLlmConfig(EnvFileCase):
         self.assertClean(json.dumps(seen))
         self.assertIn(credentials.REDACTED, json.dumps(seen))
 
+    def test_redacts_dspy_request_dataclass_and_omits_unset_messages(self):
+        import dataclasses
+        import dspy
+        from llm_config import get_llm
+
+        @dataclasses.dataclass(frozen=True)
+        class FakePart:
+            text: str
+
+        @dataclasses.dataclass(frozen=True)
+        class FakeMsg:
+            role: str
+            parts: tuple
+
+        @dataclasses.dataclass(frozen=True)
+        class FakeRequest:
+            model: str
+            messages: tuple
+            system: str = ""
+
+        lm = get_llm("detailed", "anthropic")
+        req = FakeRequest(
+            model="anthropic/claude-sonnet-5-5",
+            system=f"system key {DUMMY_ANTHROPIC}",
+            messages=(FakeMsg(role="user", parts=(FakePart(text=f"body key {DUMMY_OPENAI}"),)),),
+        )
+        seen = {}
+
+        def capture(self_lm, prompt=None, **kwargs):
+            seen["prompt"] = prompt
+            seen["kwargs"] = kwargs
+            return ["ok"]
+
+        with mock.patch.object(dspy.LM, "__call__", capture):
+            lm(req)
+
+        self.assertNotIn("messages", seen["kwargs"])
+        self.assertIsInstance(seen["prompt"], FakeRequest)
+        dumped = json.dumps(dataclasses.asdict(seen["prompt"]))
+        self.assertClean(dumped)
+        self.assertIn(credentials.REDACTED, dumped)
+
 
 class TestMcpTools(EnvFileCase):
     def test_list_llm_providers_reports_status_only(self):

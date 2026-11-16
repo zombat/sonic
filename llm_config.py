@@ -16,6 +16,7 @@ Profiles: "fast" (quick, cheap), "detailed" (the provider's default model) and
 no deeper one).
 """
 
+import dataclasses
 import os
 from typing import Optional, Callable, Iterator, Dict, Any
 import dspy
@@ -92,26 +93,51 @@ class RedactingLM(dspy.LM):
     """
 
     def __call__(self, prompt=None, *, messages=None, **kwargs):
-        return super().__call__(_redact_prompt(prompt), messages=_redact_messages(messages), **kwargs)
+        if messages is not None:
+            kwargs["messages"] = _redact_messages(messages)
+        return super().__call__(_redact_prompt(prompt), **kwargs)
 
     async def acall(self, prompt=None, *, messages=None, **kwargs):
-        return await super().acall(_redact_prompt(prompt), messages=_redact_messages(messages), **kwargs)
+        if messages is not None:
+            kwargs["messages"] = _redact_messages(messages)
+        return await super().acall(_redact_prompt(prompt), **kwargs)
 
     def forward(self, prompt=None, messages=None, **kwargs):
-        return super().forward(_redact_prompt(prompt), _redact_messages(messages), **kwargs)
+        if messages is not None:
+            kwargs["messages"] = _redact_messages(messages)
+        return super().forward(_redact_prompt(prompt), **kwargs)
 
     async def aforward(self, prompt=None, messages=None, **kwargs):
-        return await super().aforward(_redact_prompt(prompt), _redact_messages(messages), **kwargs)
+        if messages is not None:
+            kwargs["messages"] = _redact_messages(messages)
+        return await super().aforward(_redact_prompt(prompt), **kwargs)
+
+
+def _redact_prompt_value(value):
+    """Recursively redact strings while preserving dataclass types such as DSPy 3.5 Request."""
+    if isinstance(value, str):
+        return redact_text(value)
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        updates = {f.name: _redact_prompt_value(getattr(value, f.name))
+                   for f in dataclasses.fields(value) if f.init}
+        return dataclasses.replace(value, **updates)
+    if isinstance(value, list):
+        return [_redact_prompt_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_prompt_value(item) for item in value)
+    if isinstance(value, dict):
+        return {redact_text(k) if isinstance(k, str) else k: _redact_prompt_value(v) for k, v in value.items()}
+    return value
 
 
 def _redact_prompt(prompt):
-    return redact_text(prompt) if isinstance(prompt, str) else prompt
+    return _redact_prompt_value(prompt)
 
 
 def _redact_messages(messages):
     if not isinstance(messages, list):
         return messages
-    return [redact(m) if isinstance(m, dict) else m for m in messages]
+    return [redact(m) if isinstance(m, dict) else _redact_prompt_value(m) for m in messages]
 
 
 def get_llm(profile: str = "fast", provider: str = None, model_name: str = None, api_key: str = None) -> dspy.LM:
