@@ -5,7 +5,7 @@ pydantic>=2.0.0
 tqdm>=4.64.0
 
 # Optional but recommended for enhanced analysis
-ollama>=0.1.0
+ollama>=0.6.3
 
 # MCP Server Integration
 fastmcp>=0.2.0
