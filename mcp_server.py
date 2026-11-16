@@ -1201,6 +1201,67 @@ def analyze_snmp_pcap(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
+@mcp.tool(**tool_options("analyze_aaa_pcap"))
+@redact_result
+def analyze_aaa_pcap(
+    file_path: str,
+    keys_file: Optional[str] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Read the TACACS+ and RADIUS exchanges in a capture, de-obfuscated with the shared key.
+    Deterministic, no LLM, two tshark passes: seconds for a typical capture. Needs tshark.
+
+    RADIUS: one row per transaction (Access-Request with Accept, Reject or Challenge;
+    Accounting Start, Stop, Interim): who asked (User-Name, NAS, Calling-Station), the result,
+    whether the shared secret validated the Response Authenticator, and the
+    Message-Authenticator of each side checked as RFC 3579 defines (valid, invalid, absent;
+    tshark 3.6 does not check it itself). TACACS+: one row per session id with the
+    authentication result (PASS, FAIL, GETPASS, ...), authorization and accounting status, the
+    user, action, service and privilege level, and whether the session was sent with the
+    unencrypted flag (its body in cleartext). With keys_file the TACACS+ bodies are
+    de-obfuscated and the RADIUS User-Password decrypted; any recovered password is masked
+    (credential "masked") and never returned, and the shared key is never returned.
+
+    The key file is a path on the server (never paste a key into the call): lines
+    tacacs_key: <key> and/or radius_secret: <key>, or one bare line used for both. It reaches
+    tshark through a private temporary preferences file, never a command line.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (radius_transactions, tacacs_sessions, accepts, rejects, cleartext_tacacs_sessions,
+    credentials_recovered), radius (client, server, id, kind, request_code, response_code,
+    result, username, nas, calling_station, acct_status, authenticator_valid,
+    message_authenticator {request, response}, credential, frames), tacacs (session_id,
+    client, server, user, action, service, priv_lvl, types, authentication, authorization,
+    accounting, cleartext, credential, frames), credentials (protocol, flow, username, kind,
+    value "masked"), issues (AAA_ACCESS_REJECT, AAA_NO_RESPONSE, AAA_AUTH_FAIL,
+    AAA_AUTHORIZATION_FAIL, AAA_CLEARTEXT_TACACS, AAA_CREDENTIAL_RECOVERED,
+    RADIUS_BAD_AUTHENTICATOR, RADIUS_BAD_MESSAGE_AUTHENTICATOR, RADIUS_NO_MESSAGE_AUTHENTICATOR,
+    with frames), capture and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: tshark takes one tacplus.key and one radius.shared_secret, so servers with
+    different keys decrypt only where the key fits; EAP and MS-CHAP are noted, not decrypted.
+
+    For example, analyze_aaa_pcap(file_path="/captures/aaa.pcap") or
+    analyze_aaa_pcap(file_path="/captures/aaa.pcap", keys_file="/secure/aaa-keys.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        keys_file: Optional path to the shared-key file (see above).
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (default 25).
+    """
+    try:
+        from analyzers.aaa_inspect import analyze_aaa_capture
+        return analyze_aaa_capture(file_path, keys_file=keys_file, display_filter=display_filter,
+                                   max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
 # ---------------------------------------------------------------------------
 # Guide resources and workflow prompts (progressive disclosure for MCP clients)
 # ---------------------------------------------------------------------------

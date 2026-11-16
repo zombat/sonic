@@ -220,6 +220,23 @@ API keys:
              "table, never echoed"
     )
 
+    # TACACS+ and RADIUS (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--aaa",
+        action="store_true",
+        help="Read TACACS+ and RADIUS: who asked, accept or reject, authorization and accounting, TACACS+ sent "
+             "unobfuscated, RADIUS authenticators and Message-Authenticator checked; with --aaa-secrets the TACACS+ "
+             "bodies and RADIUS User-Password are de-obfuscated (recovered values masked). Writes --save_file "
+             "(default: <capture>.aaa.md; .json writes JSON)."
+    )
+
+    parser.add_argument(
+        "--aaa-secrets",
+        metavar="PATH",
+        help="With --aaa, a key file holding tacacs_key: and/or radius_secret: (a single bare line is used for "
+             "both); read by path, handed to tshark through a private temporary preferences file, never echoed"
+    )
+
     parser.add_argument(
         "--fetch-grpc-protos",
         nargs="?",
@@ -339,6 +356,11 @@ def main():
     # Handle SNMP mode (its default report path is next to the capture)
     if args.snmp:
         run_snmp_analysis(args)
+        return
+
+    # Handle TACACS+/RADIUS mode (its default report path is next to the capture)
+    if args.aaa:
+        run_aaa_analysis(args)
         return
 
     # Handle network-only mode (its default report path is next to the capture)
@@ -667,6 +689,43 @@ def run_snmp_analysis(args):
         print_snmp_summary(report)
         if save_path:
             print(f"\n💾 SNMP report saved to: {save_path}")
+
+
+def run_aaa_analysis(args):
+    """
+    Run the TACACS+/RADIUS analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.aaa_inspect import analyze_aaa_capture
+    from utils.aaa_reporting import print_aaa_summary, save_aaa_report
+
+    report = analyze_aaa_capture(
+        args.file,
+        keys_file=args.aaa_secrets,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ AAA analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.aaa.md"
+    try:
+        save_aaa_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_aaa_summary(report)
+        if save_path:
+            print(f"\n💾 AAA report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):
