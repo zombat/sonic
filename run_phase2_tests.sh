@@ -198,6 +198,16 @@ else
 fi
 echo ""
 
+# Test 12: decryption with the operator's keys (RESTCONF/REST over TLS, SNMPv3, TACACS+/RADIUS, IPsec ESP)
+# SNMPv3 also reads a real net-snmp capture: python3 tests/fixtures/generate_snmp_fixtures.py --v3 (Docker)
+echo "✅ TEST 12: Decryption Test Modules"
+if python3 -c "import pytest" >/dev/null 2>&1; then
+    python3 -m pytest -q test_restconf.py test_snmp.py test_aaa.py test_esp.py
+else
+    python3 -m unittest -q test_restconf.py test_snmp.py test_aaa.py test_esp.py
+fi
+echo ""
+
 echo "🎉 Phase 2 Testing Complete!"
 echo ""
 echo "📋 Next Steps:"

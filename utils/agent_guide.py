@@ -53,31 +53,39 @@ SKILL_DESCRIPTION = (
 
 # One row per MCP tool, in the order an agent should consider them.
 TOOL_GUIDE: List[Dict[str, Any]] = [
-    {"name": "analyze_network_pcap", "short": "first call on any capture; every detector", "title": "Analyze any capture with the network detectors", "llm": False,
+    {"name": "analyze_network_pcap", "short": "first call; every detector", "title": "Analyze any capture with the network detectors", "llm": False,
      "question": "Unknown capture, or anything that is not only VoIP: which protocols are present and what is wrong"},
-    {"name": "analyze_vpn_pcap", "short": "encrypted? did IKE/IPsec and DMVPN come up", "title": "Prove VPN encryption and IPsec/DMVPN setup", "llm": False,
+    {"name": "analyze_vpn_pcap", "short": "IPsec/DMVPN up? encrypted?", "title": "Prove VPN encryption and IPsec/DMVPN setup", "llm": False,
      "question": "Is inter-site traffic encrypted? Did IKE/IPsec negotiate? Did DMVPN spokes register?"},
-    {"name": "analyze_routing_pcap", "short": "BGP/OSPF/EIGRP adjacencies, ping loss", "title": "Check routing adjacencies, reachability and failover", "llm": False,
+    {"name": "analyze_routing_pcap", "short": "BGP/OSPF/EIGRP, ping loss", "title": "Check routing adjacencies, reachability and failover", "llm": False,
      "question": "Did BGP/OSPF/EIGRP adjacencies form, and if not why; how long did a failover take; is ping lost?"},
-    {"name": "analyze_data_plane_pcap", "short": "MTU, ESP, TCP, TLS baseline, DSCP/RTP", "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS", "llm": False,
+    {"name": "analyze_data_plane_pcap", "short": "MTU, ESP, TCP, TLS, QoS", "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS", "llm": False,
      "question": "Do packets get through: path MTU and fragmentation, ESP overhead, TCP retransmissions or zero window, TLS policy, DSCP and RTP quality"},
-    {"name": "analyze_grpc_pcap", "short": "gRPC/gNMI/gNOI: RPC status, creds", "title": "Troubleshoot gRPC, gNMI and gNOI from a capture", "llm": False,
+    {"name": "analyze_grpc_pcap", "short": "gRPC/gNMI: RPC status, creds", "title": "Troubleshoot gRPC, gNMI and gNOI from a capture", "llm": False,
      "question": "Why a gRPC, gNMI or gNOI client fails: each RPC's grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, credentials sent in cleartext metadata"},
-    {"name": "audit_cleartext_pcap", "short": "pass/fail: only allowlisted traffic on a link", "title": "Assert a transport link carried no cleartext", "llm": False,
+    {"name": "analyze_restconf_pcap", "short": "RESTCONF/REST: status, errors", "title": "Troubleshoot RESTCONF and REST from a capture", "llm": False,
+     "question": "Why a RESTCONF or REST client fails: each request's method, path, status, timing and Content-Type, the ietf-restconf:errors of a failure, a Location on a 201, and credentials present (Authorization, cookies, tokens, masked). Decrypts TLS (HTTP/1.1 and HTTP/2) with a key log"},
+    {"name": "analyze_snmp_pcap", "short": "SNMP versions; v3 decrypt (users file)", "title": "Name SNMP versions and decrypt SNMPv3", "llm": False,
+     "question": "Which SNMP versions and v3 security levels are on the wire, which v1/v2c communities cross in cleartext (masked), and, with a USM users file, which SNMPv3 authPriv messages decrypt and why the others do not"},
+    {"name": "analyze_aaa_pcap", "short": "TACACS+/RADIUS (shared key)", "title": "Read TACACS+ and RADIUS with the shared key", "llm": False,
+     "question": "Who asked the AAA server and was it accepted or rejected; the authorization and accounting records; is TACACS+ sent unobfuscated; does the RADIUS shared secret verify the authenticators. De-obfuscates TACACS+ and RADIUS User-Password with the key, values masked"},
+    {"name": "analyze_esp_pcap", "short": "ESP decrypt (SA keys)", "title": "Decrypt IPsec ESP with SA keys and analyze the inner traffic", "llm": False,
+     "question": "With the SA keys of a Linux or strongSwan endpoint (an SA file or ip xfrm state output): which ESP packets decrypt per SA, why the others do not, and what the inner traffic shows to the network detectors. Cisco IOS does not expose ESP keys, so its tunnels cannot be decrypted this way"},
+    {"name": "audit_cleartext_pcap", "short": "pass/fail cleartext gate", "title": "Assert a transport link carried no cleartext", "llm": False,
      "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, SSH or TLS without real encryption, ...) cross the link?"},
-    {"name": "correlate_pcaps", "short": "2+ capture points: NAT, lost replies, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
+    {"name": "correlate_pcaps", "short": "2+ points: NAT, loss, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
      "question": "With captures from two or more points: NAT translations, where a reply was dropped, asymmetric paths, probes an ACL stopped"},
-    {"name": "analyze_convergence_pcap", "short": "failover timed from an event, DPD or hold timer", "title": "Time a failover and name what drove it", "llm": False,
+    {"name": "analyze_convergence_pcap", "short": "failover time and driver", "title": "Time a failover and name what drove it", "llm": False,
      "question": "How long after an event did detection, the BGP reaction and traffic resumption take, and was it DPD or the hold timer?"},
-    {"name": "merge_pcap_timelines", "short": "multi-point failover timeline vs thresholds", "title": "Merge capture timelines and time a failover", "llm": False,
+    {"name": "merge_pcap_timelines", "short": "multi-point failover timeline", "title": "Merge capture timelines and time a failover", "llm": False,
      "question": "A chaos or failover run captured at several points: one timeline, and failover time against the design threshold"},
-    {"name": "quick_quality_check", "short": "SIP call grade and MOS per RTP stream", "title": "Score SIP/RTP call quality without an LLM", "llm": False,
+    {"name": "quick_quality_check", "short": "SIP grade, MOS per RTP stream", "title": "Score SIP/RTP call quality without an LLM", "llm": False,
      "question": "How good were the calls: quality grade, MOS per RTP stream, jitter, loss, SIP auth posture"},
     {"name": "analyze_pcap", "short": "written diagnosis of SIP calls", "title": "Diagnose SIP calls with an LLM", "llm": True,
      "question": "A written diagnosis of SIP calls: why a call dropped, failed, or had one-way or choppy audio"},
     {"name": "analyze_pcap_partial_streaming", "short": "SIP quality, then LLM diagnosis", "title": "SIP quality first, then the LLM diagnosis", "llm": True,
      "question": "The quality numbers and the LLM diagnosis of one SIP capture in one call, with timings"},
-    {"name": "analyze_batch_pcaps", "short": "LLM diagnosis of a directory of SIP captures", "title": "Diagnose every SIP capture in a directory with an LLM", "llm": True,
+    {"name": "analyze_batch_pcaps", "short": "LLM diagnosis of a SIP directory", "title": "Diagnose every SIP capture in a directory with an LLM", "llm": True,
      "question": "Many SIP captures in one directory, each diagnosed by an LLM, plus aggregate counts"},
     {"name": "list_llm_providers", "short": "LLM providers, models, keys set", "title": "List LLM providers and configuration", "llm": False,
      "question": "Which LLM providers and models the LLM tools can use, and whether each API key is set"},
@@ -108,6 +116,11 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "user wants a written SIP diagnosis and accepts an LLM call.",
          "If http2 is present, or tls on a gRPC port (9339, 57400, 6030, 50051), call analyze_grpc_pcap for "
          "each RPC's status, HTTP/2 trouble and credentials in cleartext metadata.",
+         "If HTTPS or RESTCONF is present, call analyze_restconf_pcap; if snmp, tacacs or radius is present, "
+         "analyze_snmp_pcap or analyze_aaa_pcap. Each decrypts when the user has the keys: pass the key file's "
+         "path (keylog_file, users_file, keys_file), never its contents. If esp is present and the user has SA keys "
+         "from a Linux or strongSwan endpoint, call analyze_esp_pcap with sa_file (Cisco IOS does not expose ESP "
+         "keys).",
          "Answer with the verdict sentences, issue codes and Wireshark frame numbers, and say what the "
          "capture point could not show.",
      ]},
@@ -202,20 +215,20 @@ def build_instructions() -> str:
         lines.append(f"- {row['name']}{' [LLM]' if row['llm'] else ''}: {row['short']}")
     lines += [
         "",
-        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing, data_plane, grpc; "
-        "audit_cleartext_pcap to gate a link; correlate_pcaps for 2+ points; "
-        "analyze_convergence_pcap or merge_pcap_timelines for a failover; SIP: quick_quality_check, "
-        "then analyze_pcap. Quote codes and frames.",
+        "Order: analyze_network_pcap first, then the tool for the protocol found; audit_cleartext_pcap to gate a "
+        "link; SIP: quick_quality_check before analyze_pcap. Quote codes and frames.",
         "",
-        "[LLM] tools take seconds to minutes; provider defaults to the server's SONIC_LLM_PROVIDER, "
-        "else ollama. A cloud provider sends SIP data, auth headers "
-        "included, off this machine: ask first.",
+        "Decryption keys (keylog_file, users_file, keys_file, sa_file) are paths on the server, never returned; "
+        "never paste a key.",
         "",
-        "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
-        "*_omitted counts the rest; narrow: display_filter, max_packets.",
+        "[LLM] tools: provider SONIC_LLM_PROVIDER, else ollama; a cloud one sends SIP data (auth headers "
+        "too) off this machine: ask first.",
         "",
-        "Limits: only what crossed the capture point (capture the WAN to prove encryption); IKEv2 "
-        "auth failure is a labelled heuristic; NULL ESP looks encrypted.",
+        "Tools return JSON; check status (errors are data). Lists stop at max_items (default 25), *_omitted "
+        "counts the rest; narrow: display_filter, max_packets.",
+        "",
+        "Limits: only what crossed the capture point (capture the WAN to prove encryption); IKEv2 auth "
+        "failure is a heuristic; NULL ESP looks encrypted.",
         "",
         "More: resources sonic://guide/<topic> (overview, " + ", ".join(t for t, _ in TOPICS) + "); "
         "prompts " + ", ".join(w["name"] for w in WORKFLOWS) + ".",
@@ -364,6 +377,10 @@ def render_skill_md() -> str:
         "analyze_routing_pcap": "`--file F --network-only --detectors routing,reachability`",
         "analyze_data_plane_pcap": "`--file F --network-only --detectors path_mtu,esp_overhead,tcp,tls,qos`",
         "analyze_grpc_pcap": "`--file F --grpc [--tls-secrets-log K]`",
+        "analyze_restconf_pcap": "`--file F --restconf [--tls-secrets-log K]`",
+        "analyze_snmp_pcap": "`--file F --snmp [--snmp-users U]`",
+        "analyze_aaa_pcap": "`--file F --aaa [--aaa-secrets K]`",
+        "analyze_esp_pcap": "`--file F --esp-decrypt --esp-sa S`",
         "correlate_pcaps": "MCP only",
         "merge_pcap_timelines": "MCP only",
         "quick_quality_check": "`--file F --quality-only`",

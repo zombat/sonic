@@ -164,12 +164,24 @@ API keys:
              "<capture>.grpc.md; a path ending in .json writes JSON)."
     )
 
+    # RESTCONF and REST troubleshooting (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--restconf",
+        action="store_true",
+        help="Troubleshoot RESTCONF (RFC 8040) and REST over HTTP/1.1 and HTTP/2 with Wireshark's HTTP, HTTP/2 "
+             "and TLS dissectors: each request's method, path, status, timing and Content-Type, RESTCONF "
+             "ietf-restconf:errors, a Location on a 201, and credentials present (Authorization, cookies, token "
+             "headers) flagged with values masked. Decrypt TLS with --tls-secrets-log. Writes --save_file "
+             "(default: <capture>.restconf.md; a path ending in .json writes JSON)."
+    )
+
     parser.add_argument(
         "--tls-secrets-log",
         metavar="PATH",
-        help="With --grpc, the TLS key log a client wrote (SSLKEYLOGFILE format; gnmic --log-tls-secret), to "
-             "decrypt TLS-wrapped gRPC; handed to tshark by path, never copied into the report. Not needed for a "
-             "pcapng that carries the secrets (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng)"
+        help="With --grpc or --restconf, the TLS key log a client wrote (SSLKEYLOGFILE format; gnmic "
+             "--log-tls-secret), to decrypt TLS-wrapped traffic; handed to tshark by path, never copied into the "
+             "report. Not needed for a pcapng that carries the secrets (editcap --inject-secrets tls,KEYLOG "
+             "in.pcap out.pcapng)"
     )
 
     parser.add_argument(
@@ -183,6 +195,64 @@ API keys:
     parser.add_argument(
         "--grpc-ports",
         help="With --grpc, comma-separated extra TCP ports to decode as HTTP/2"
+    )
+
+    parser.add_argument(
+        "--http-ports",
+        help="With --restconf, comma-separated extra TCP ports to decode as HTTP(S)"
+    )
+
+    # SNMP troubleshooting (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--snmp",
+        action="store_true",
+        help="Name every SNMP message's version (v1, v2c, v3 and its security level), flag v1/v2c communities as "
+             "cleartext credentials (masked), and with --snmp-users decrypt SNMPv3 authPriv, saying for each "
+             "message whether it decrypted and why not. Writes --save_file (default: <capture>.snmp.md; .json "
+             "writes JSON)."
+    )
+
+    parser.add_argument(
+        "--snmp-users",
+        metavar="PATH",
+        help="With --snmp, a USM users file (user, optional engine_id, auth and auth_pass, priv and priv_pass; "
+             "block or CSV format) to decrypt SNMPv3; read by path, handed to tshark through a private temporary "
+             "table, never echoed"
+    )
+
+    # TACACS+ and RADIUS (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--aaa",
+        action="store_true",
+        help="Read TACACS+ and RADIUS: who asked, accept or reject, authorization and accounting, TACACS+ sent "
+             "unobfuscated, RADIUS authenticators and Message-Authenticator checked; with --aaa-secrets the TACACS+ "
+             "bodies and RADIUS User-Password are de-obfuscated (recovered values masked). Writes --save_file "
+             "(default: <capture>.aaa.md; .json writes JSON)."
+    )
+
+    parser.add_argument(
+        "--aaa-secrets",
+        metavar="PATH",
+        help="With --aaa, a key file holding tacacs_key: and/or radius_secret: (a single bare line is used for "
+             "both); read by path, handed to tshark through a private temporary preferences file, never echoed"
+    )
+
+    # IPsec ESP decryption from SA keys (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--esp-decrypt",
+        action="store_true",
+        help="Decrypt IPsec ESP with the SA keys in --esp-sa, say per SA which packets decrypted and why the others "
+             "did not, and run the network detectors over the inner traffic. Cisco IOS does not expose ESP keys, "
+             "so its tunnels cannot be decrypted this way. Writes --save_file (default: <capture>.esp.md; .json "
+             "writes JSON)."
+    )
+
+    parser.add_argument(
+        "--esp-sa",
+        metavar="PATH",
+        help="With --esp-decrypt, an SA file (src, dst, spi, encryption and its key, integrity and its key, one SA "
+             "per record) or the output of `ip -s xfrm state`; read by path, handed to tshark through a private "
+             "temporary esp_sa table, never echoed"
     )
 
     parser.add_argument(
@@ -294,6 +364,26 @@ def main():
     # Handle gRPC mode (its default report path is next to the capture)
     if args.grpc:
         run_grpc_analysis(args)
+        return
+
+    # Handle RESTCONF/REST mode (its default report path is next to the capture)
+    if args.restconf:
+        run_restconf_analysis(args)
+        return
+
+    # Handle SNMP mode (its default report path is next to the capture)
+    if args.snmp:
+        run_snmp_analysis(args)
+        return
+
+    # Handle TACACS+/RADIUS mode (its default report path is next to the capture)
+    if args.aaa:
+        run_aaa_analysis(args)
+        return
+
+    # Handle ESP decryption mode (its default report path is next to the capture)
+    if args.esp_decrypt:
+        run_esp_analysis(args)
         return
 
     # Handle network-only mode (its default report path is next to the capture)
@@ -546,6 +636,157 @@ def run_grpc_analysis(args):
         print_grpc_summary(report)
         if save_path:
             print(f"\n💾 gRPC report saved to: {save_path}")
+
+
+def run_restconf_analysis(args):
+    """
+    Run the RESTCONF/REST troubleshooting analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.http_inspect import analyze_http_capture
+    from utils.http_reporting import print_http_summary, save_http_report
+
+    ports = [int(p) for p in (_split_csv(args.http_ports) or []) if p.isdigit()]
+    report = analyze_http_capture(
+        args.file,
+        keylog_file=args.tls_secrets_log,
+        ports=ports or None,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ RESTCONF/REST analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.restconf.md"
+    try:
+        save_http_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_http_summary(report)
+        if save_path:
+            print(f"\n💾 RESTCONF/REST report saved to: {save_path}")
+
+
+def run_snmp_analysis(args):
+    """
+    Run the SNMP analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.snmp_inspect import analyze_snmp_capture
+    from utils.snmp_reporting import print_snmp_summary, save_snmp_report
+
+    report = analyze_snmp_capture(
+        args.file,
+        users_file=args.snmp_users,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ SNMP analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.snmp.md"
+    try:
+        save_snmp_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_snmp_summary(report)
+        if save_path:
+            print(f"\n💾 SNMP report saved to: {save_path}")
+
+
+def run_aaa_analysis(args):
+    """
+    Run the TACACS+/RADIUS analysis (no LLM, needs tshark) and write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.aaa_inspect import analyze_aaa_capture
+    from utils.aaa_reporting import print_aaa_summary, save_aaa_report
+
+    report = analyze_aaa_capture(
+        args.file,
+        keys_file=args.aaa_secrets,
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ AAA analysis failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.aaa.md"
+    try:
+        save_aaa_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_aaa_summary(report)
+        if save_path:
+            print(f"\n💾 AAA report saved to: {save_path}")
+
+
+def run_esp_analysis(args):
+    """
+    Decrypt ESP with the SA keys and analyze the inner traffic (no LLM, needs tshark); write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.esp_decrypt import analyze_esp_capture
+    from utils.esp_reporting import print_esp_summary, save_esp_report
+
+    report = analyze_esp_capture(
+        args.file,
+        sa_file=args.esp_sa,
+        detectors=_split_csv(args.detectors),
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ ESP decryption failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.esp.md"
+    try:
+        save_esp_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_esp_summary(report)
+        if save_path:
+            print(f"\n💾 ESP decryption report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):

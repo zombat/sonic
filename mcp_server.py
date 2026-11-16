@@ -8,7 +8,8 @@ assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
 Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap,
 analyze_data_plane_pcap, audit_cleartext_pcap, correlate_pcaps, analyze_convergence_pcap,
-merge_pcap_timelines, analyze_grpc_pcap.
+merge_pcap_timelines, analyze_grpc_pcap, analyze_restconf_pcap, analyze_snmp_pcap,
+analyze_aaa_pcap, analyze_esp_pcap.
 
 The server teaches its client how to use it: the initialize result carries
 instructions (which tool for which question, cost, limits), every tool has a
@@ -1065,6 +1066,265 @@ def analyze_grpc_pcap(
     try:
         return analyze_grpc_capture(file_path, keylog_file=keylog_file, proto_paths=proto_paths, ports=ports,
                                     display_filter=display_filter, max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_restconf_pcap"))
+@redact_result
+def analyze_restconf_pcap(
+    file_path: str,
+    keylog_file: Optional[str] = None,
+    ports: Optional[List[int]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Troubleshoot RESTCONF (RFC 8040) and REST over HTTP/1.1 and HTTP/2 from a capture.
+    Deterministic, no LLM, a few tshark passes: seconds for a typical capture. Needs tshark
+    (Wireshark's HTTP, HTTP/2, HPACK and TLS dissectors do the decoding).
+
+    Reads HTTP on the well-known HTTP(S) ports (80, 443, 8080, 8443, ...), on a TLS session
+    offering ALPN h2 or http/1.1, and on a cleartext HTTP/2 preface on any port. TLS is
+    decrypted with a key log (keylog_file) or the secrets a pcapng carries in a Decryption
+    Secrets Block (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng), with no key log
+    needed; without one, a TLS session shows only its handshake.
+
+    Per request (paired to its response): method, path, HTTP status and phrase, the time
+    from request to response, request and response Content-Type, response body size, a
+    Location on a 201 Created, whether it is RESTCONF, and for a RESTCONF error the
+    ietf-restconf:errors fields (error-type, error-tag, error-app-tag, error-path,
+    error-message) parsed from the body (JSON or XML). Credentials present are flagged, never
+    shown: an Authorization scheme (Basic, Bearer) is kept and its credential masked; Cookie,
+    Set-Cookie and token headers are flagged by name. Over cleartext each is a
+    CLEARTEXT_CREDENTIAL; over TLS a CREDENTIAL_IN_REQUEST (seen only because the secrets
+    decrypted it). Message bodies are never decoded except RESTCONF error documents.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (connections, requests, restconf_requests, status_counts, restconf_errors,
+    cleartext_credentials), connections (flow, service, transport, http_versions, restconf,
+    requests, sni, alpn_offered, decrypted), requests (method, path, status, phrase,
+    request_content_type, response_content_type, request_body_bytes, response_body_bytes,
+    timing_ms, location, restconf, restconf_errors, credentials, frames), credentials
+    (flow, header, scheme, kind, cleartext, requests, value "masked"), tls_decryption
+    (verdict, decrypted, total, secrets_source, sessions), issues (stable codes such as
+    RESTCONF_ERROR, HTTP_CLIENT_ERROR, HTTP_SERVER_ERROR, HTTP_NO_RESPONSE,
+    CLEARTEXT_CREDENTIAL, CREDENTIAL_IN_REQUEST, TLS_SESSION_NOT_DECRYPTED,
+    TLS_SECRETS_IN_CAPTURE, with frames), capture (tshark, decode_as, keylog_file_given,
+    tls_secrets) and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: TLS-wrapped RESTCONF without a key log shows only the handshake; a capture that
+    starts mid-connection may leave an HTTP/2 request without its method or path; only
+    RESTCONF error documents are parsed from a body, never configuration.
+
+    For example, analyze_restconf_pcap(file_path="/captures/restconf.pcap") or
+    analyze_restconf_pcap(file_path="/captures/restconf-tls.pcapng", keylog_file="/tmp/keys.log").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        keylog_file: Optional TLS key log (SSLKEYLOGFILE format) to decrypt TLS; passed to
+            tshark by path, never copied to the result. Not needed for a pcapng that carries
+            its own TLS secrets.
+        ports: Optional extra TCP ports to decode as HTTP(S).
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (connections; requests at four times this; default 25).
+    """
+    try:
+        from analyzers.http_inspect import analyze_http_capture
+        return analyze_http_capture(file_path, keylog_file=keylog_file, ports=ports,
+                                    display_filter=display_filter, max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_snmp_pcap"))
+@redact_result
+def analyze_snmp_pcap(
+    file_path: str,
+    users_file: Optional[str] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Name every SNMP message's version and decrypt SNMPv3 with a USM users file.
+    Deterministic, no LLM, one tshark pass: seconds for a typical capture. Needs tshark.
+
+    Every message is named v1, v2c or v3, and a v3 message by its security level
+    (noAuthNoPriv, authNoPriv, authPriv); engine discovery is named as such. A v1 or v2c
+    community string is a cleartext credential (SNMP_CLEARTEXT_COMMUNITY, value masked).
+    With users_file, each authenticated v3 message says whether it authenticated and each
+    authPriv message whether it decrypted, and when not, why: unknown_user, unknown_engine
+    (the user is given for another engine id), auth_failed (wrong auth passphrase),
+    decrypt_failed (wrong privacy passphrase, or AES-192/256 over an SHA1 or MD5 user, whose
+    key tshark 3.6.2 extends the Reeder (Cisco) way while net-snmp and other Blumenthal-draft
+    agents extend it otherwise). An SNMPv3 Report is named by the usmStats counter the agent
+    returned (usmStatsUnknownUserNames, usmStatsWrongDigests, usmStatsDecryptionErrors, ...).
+    A decrypted PDU's contents are never returned, only its type and that it decrypted.
+
+    The users file is a path on the server (never paste passphrases into the call): block
+    format, one user per record separated by a blank line, lines user, engine_id (optional),
+    auth (MD5, SHA, SHA-224, SHA-256, SHA-384, SHA-512), auth_pass, priv (DES, AES, AES-192,
+    AES-256), priv_pass; or CSV user,auth,auth_pass,priv,priv_pass[,engine_id]. It is handed to
+    tshark through a private temporary snmp_users table, never on a command line, and no
+    passphrase is ever returned.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (messages, versions, v3_security_levels, v3_outcomes, authpriv_decrypted,
+    authpriv_not_decrypted, cleartext_communities), v3_users (per user: messages, outcomes),
+    messages (frame, version, security_level, src, dst, pdu, user, engine_id, role, outcome,
+    reason, report, credential), credentials (protocol, flow, kind, value "masked"), issues
+    (SNMP_CLEARTEXT_COMMUNITY, SNMP_AUTH_FAILED, SNMP_DECRYPT_FAILED, SNMP_UNKNOWN_USER,
+    SNMP_UNKNOWN_ENGINE, SNMP_NOT_DECRYPTED, SNMP_AGENT_REPORT, SNMP_USERS_TABLE_REFUSED,
+    SNMP_USER_NOT_SEEN, with frames), capture and limits. On failure
+    {"status": "error", "error": "..."}, for example an algorithm tshark 3.6.2 does not offer.
+
+    Limits: tshark 3.6.2 offers auth MD5, SHA1, SHA2-224/256/384/512 and priv DES, AES-128,
+    AES-192, AES-256; a v3 message is decrypted only with the right passphrases.
+
+    For example, analyze_snmp_pcap(file_path="/captures/snmp.pcap") or
+    analyze_snmp_pcap(file_path="/captures/snmpv3.pcap", users_file="/secure/snmp-users.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        users_file: Optional path to a USM users file (see above) to decrypt SNMPv3.
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (messages at four times this; default 25).
+    """
+    try:
+        from analyzers.snmp_inspect import analyze_snmp_capture
+        return analyze_snmp_capture(file_path, users_file=users_file, display_filter=display_filter,
+                                    max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_aaa_pcap"))
+@redact_result
+def analyze_aaa_pcap(
+    file_path: str,
+    keys_file: Optional[str] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Read the TACACS+ and RADIUS exchanges in a capture, de-obfuscated with the shared key.
+    Deterministic, no LLM, two tshark passes: seconds for a typical capture. Needs tshark.
+
+    RADIUS: one row per transaction (Access-Request with Accept, Reject or Challenge;
+    Accounting Start, Stop, Interim): who asked (User-Name, NAS, Calling-Station), the result,
+    whether the shared secret validated the Response Authenticator, and the
+    Message-Authenticator of each side checked as RFC 3579 defines (valid, invalid, absent;
+    tshark 3.6 does not check it itself). TACACS+: one row per session id with the
+    authentication result (PASS, FAIL, GETPASS, ...), authorization and accounting status, the
+    user, action, service and privilege level, and whether the session was sent with the
+    unencrypted flag (its body in cleartext). With keys_file the TACACS+ bodies are
+    de-obfuscated and the RADIUS User-Password decrypted; any recovered password is masked
+    (credential "masked") and never returned, and the shared key is never returned.
+
+    The key file is a path on the server (never paste a key into the call): lines
+    tacacs_key: <key> and/or radius_secret: <key>, or one bare line used for both. It reaches
+    tshark through a private temporary preferences file, never a command line.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (radius_transactions, tacacs_sessions, accepts, rejects, cleartext_tacacs_sessions,
+    credentials_recovered), radius (client, server, id, kind, request_code, response_code,
+    result, username, nas, calling_station, acct_status, authenticator_valid,
+    message_authenticator {request, response}, credential, frames), tacacs (session_id,
+    client, server, user, action, service, priv_lvl, types, authentication, authorization,
+    accounting, cleartext, credential, frames), credentials (protocol, flow, username, kind,
+    value "masked"), issues (AAA_ACCESS_REJECT, AAA_NO_RESPONSE, AAA_AUTH_FAIL,
+    AAA_AUTHORIZATION_FAIL, AAA_CLEARTEXT_TACACS, AAA_CREDENTIAL_RECOVERED,
+    RADIUS_BAD_AUTHENTICATOR, RADIUS_BAD_MESSAGE_AUTHENTICATOR, RADIUS_NO_MESSAGE_AUTHENTICATOR,
+    with frames), capture and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: tshark takes one tacplus.key and one radius.shared_secret, so servers with
+    different keys decrypt only where the key fits; EAP and MS-CHAP are noted, not decrypted.
+
+    For example, analyze_aaa_pcap(file_path="/captures/aaa.pcap") or
+    analyze_aaa_pcap(file_path="/captures/aaa.pcap", keys_file="/secure/aaa-keys.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        keys_file: Optional path to the shared-key file (see above).
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (default 25).
+    """
+    try:
+        from analyzers.aaa_inspect import analyze_aaa_capture
+        return analyze_aaa_capture(file_path, keys_file=keys_file, display_filter=display_filter,
+                                   max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_esp_pcap"))
+@redact_result
+def analyze_esp_pcap(
+    file_path: str,
+    sa_file: str,
+    detectors: Optional[List[str]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Decrypt IPsec ESP with the Security Association keys and run the network detectors over
+    the inner traffic. Deterministic, no LLM, one tshark pass plus the detectors over the
+    decrypted packets: seconds for a typical capture. Needs tshark.
+
+    For each SA it reports the ESP packets seen and decrypted, tunnel or transport mode, and
+    tshark's integrity check (icv_good, icv_bad), and when packets did not decrypt, why: a bad
+    integrity check (wrong integrity key, or for AES-GCM the key and salt), a good integrity
+    check with no decryption (the integrity key is right, so the encryption key is wrong), or
+    no packet for that SA at all. A packet counts as decrypted only when its decrypted trailer
+    is real (RFC 4303 default padding, a real next header, and in tunnel mode an inner IP
+    packet of exactly the payload's length). The decrypted packets (tunnel mode as sent;
+    transport mode given back the outer addresses) are rebuilt into a temporary capture and
+    analysed by the same detectors as analyze_network_pcap; the summary is in inner_analysis.
+    ESP over UDP 4500 (NAT-T) is decrypted too. Cisco IOS and IOS XE do not expose ESP session
+    keys, so a Cisco IOS tunnel cannot be decrypted this way: use analyze_vpn_pcap for its
+    outside view.
+
+    The SA file is a path on the server (never paste a key into the call): records separated
+    by a blank line, lines src, dst, spi, encryption (aes-cbc, aes-gcm, aes-ctr, 3des-cbc,
+    des-cbc, null), encryption_key (0x hex; for AES-GCM the key followed by its 4-byte salt),
+    integrity (hmac-sha1-96, hmac-sha256-128, hmac-sha384-192, hmac-sha512-256, hmac-md5-96,
+    none) and integrity_key; or the output of `ip -s xfrm state`, read as it is. It reaches
+    tshark as its esp_sa table in a private temporary directory, never a command line, and no
+    key is ever returned.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (security_associations, esp_packets, esp_decrypted, sas_decrypting),
+    security_associations (src, dst, spi, encryption, integrity, packets, decrypted, tunnel,
+    transport, icv_good, icv_bad, reason), inner_analysis (protocols_present, overall_status,
+    verdicts per detector, issues), issues (ESP_SA_NOT_DECRYPTED, ESP_SA_PARTIAL,
+    ESP_SA_NO_PACKETS, ESP_SA_TABLE_REFUSED), capture (sa_count, esp_packets, esp_decrypted,
+    inner_packets_reconstructed) and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: only ESP matching an SA, with the right key and algorithm, decrypts; a sender
+    whose padding is not the RFC 4303 default is not recognised as decrypted.
+
+    For example, analyze_esp_pcap(file_path="/captures/tunnel.pcap",
+    sa_file="/secure/xfrm-state.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        sa_file: Path to the SA file or `ip -s xfrm state` output (see above).
+        detectors: Optional subset of network detectors to run over the inner traffic.
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (default 25).
+    """
+    try:
+        from analyzers.esp_decrypt import analyze_esp_capture
+        return analyze_esp_capture(file_path, sa_file=sa_file, detectors=detectors, display_filter=display_filter,
+                                   max_packets=max_packets, max_items=max_items)
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 

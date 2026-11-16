@@ -56,7 +56,8 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Data plane**: path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP and RTP quality
 - **Several captures at once**: follow packets through NAT and across links (translations, drops, asymmetric paths), and one merged event timeline with failover timing against thresholds
 - **gRPC, gNMI and gNOI troubleshooting**: every RPC with its grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, gNMI encodings and Subscribe modes, and credentials sent in cleartext metadata (by key, never the value), with Wireshark's own dissectors
-- See the Network and VPN Detectors and gRPC Troubleshooting sections below
+- **Decryption with your own keys**: RESTCONF and REST over TLS (HTTP/1.1 and HTTP/2) with a TLS key log, SNMPv3 with a USM users file (and every SNMP version named), TACACS+ and RADIUS with the shared key, IPsec ESP from SA keys with the existing detectors run over the inner traffic. Every key file is read by path and never echoed
+- See the Network and VPN Detectors, gRPC Troubleshooting and Decryption sections below
 
 ## 📋 Prerequisites
 
@@ -142,6 +143,23 @@ python3 sonic.py --fetch-grpc-protos
 ```
 
 The report goes to `--save_file`, or to `<capture>.grpc.md`. See [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOTING.md).
+
+### Decrypt with your own keys (No LLM, needs tshark)
+```bash
+# RESTCONF/REST: each request's method, path, status, timing, Content-Type and RESTCONF errors; TLS with a key log
+python3 sonic.py --file restconf.pcap --restconf --tls-secrets-log keys.log
+
+# SNMP: every version and v3 security level named, communities flagged; SNMPv3 decrypted with a USM users file
+python3 sonic.py --file snmp.pcap --snmp --snmp-users snmp-users.txt
+
+# TACACS+ and RADIUS: the AAA exchange, de-obfuscated with the shared key (recovered passwords masked)
+python3 sonic.py --file aaa.pcap --aaa --aaa-secrets aaa-keys.txt
+
+# IPsec ESP: decrypt with SA keys (an SA file or `ip -s xfrm state` output) and analyze the inner traffic
+python3 sonic.py --file tunnel.pcap --esp-decrypt --esp-sa xfrm-state.txt
+```
+
+Each writes `<capture>.restconf.md`, `.snmp.md`, `.aaa.md` or `.esp.md` (or `--save_file`; `--json` prints JSON). See the Decryption section below.
 
 ### Basic LLM Analysis (Local Ollama)
 ```bash
@@ -468,7 +486,26 @@ Details, codes and limits: [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOT
 
 `tests/fixtures/generate_grpc_fixtures.py` builds the gRPC fixtures (names start with `grpc_`): HTTP/2 trouble on gNMI (statuses, resets, a flow-control stall, limits exceeded, credentials), connection trouble (GOAWAY too_many_pings and graceful, a TCP reset, an unanswered preface, a mid-connection capture), TLS 1.2 with an `unknown_ca` alert and no IP SAN, TLS 1.3 with a HelloRetryRequest, and SSH, TLS, telnet and cleartext gRPC sessions for the audit. `test_grpc.py` also builds a TLS 1.3 gNMI session with its key log at test time with Python's `ssl` module, and checks two real captures (plaintext gNMI to Stratum; NETCONF, RESTCONF and SSH to a Catalyst 8000V) when `SONIC_GRPC_CAPTURES` points at them.
 
+`tests/fixtures/generate_restconf_fixtures.py`, `generate_aaa_fixtures.py` and `generate_esp_fixtures.py` build the decryption fixtures the same way (names start with `restconf_`, `aaa_` and `esp_`): cleartext RESTCONF over HTTP/1.1 and h2c, RADIUS and TACACS+ with throwaway keys, and an ESP tunnel with five SAs (AES-CBC with HMAC-SHA1 and HMAC-SHA256, AES-GCM, transport mode, NAT-T). RESTCONF over TLS 1.3 with its key log is built at test time with Python's `ssl` module, as the gRPC tests do. `generate_snmp_fixtures.py` builds the v1/v2c fixture, and with `--v3` captures real SNMPv3 from net-snmp 5.9.4 in a pinned, unprivileged container (every algorithm net-snmp offers, wrong passphrases, an unknown user) into `~/.cache/sonic/snmp-captures`, never committed; `test_snmp.py` skips those tests when the capture is absent.
+
 `tests/fixtures/generate_dataplane_fixtures.py` builds the data plane fixtures the same way (names start with `dp_`): Fragmentation Needed, a PMTUD black hole (ICMP and TCP) beside plain loss, complete, incomplete and overlapping fragments, ESP sizes for AES-GCM, AES-CBC/SHA1 and NAT-T with an ESP packet fragmented after encryption, seven TCP connection outcomes, four TLS handshakes (1.3, 1.2 split over two segments with an expired certificate, 1.0 with RC4, a fatal alert), RTP with and without EF plus GRE marking copied and lost, and two multi-capture sets (inside/outside of a NAT router; a LAN with WAN1 out and WAN2 back). `test_dataplane_detectors.py` runs every detector on both backends, the correlation and timeline tools, and the same code over real lab captures when they are present.
+
+## 🔓 Decryption with your own keys
+
+S.O.N.I.C. decrypts what a capture holds encrypted when the operator has the keys, through tshark, and then reads the result as it reads everything else. Deterministic, no LLM.
+
+| What | CLI / MCP | Keys (a file, by path) | Doc |
+|---|---|---|---|
+| RESTCONF and REST over TLS, HTTP/1.1 and HTTP/2 | `--restconf` / `analyze_restconf_pcap` | TLS key log (`--tls-secrets-log`, `keylog_file`), or secrets inside a pcapng | [RESTCONF](docs/RESTCONF_TROUBLESHOOTING.md) |
+| SNMP v1, v2c, v3 (and SNMPv3 authPriv decrypted) | `--snmp` / `analyze_snmp_pcap` | USM users file (`--snmp-users`, `users_file`) | [SNMP](docs/SNMP_DECRYPTION.md) |
+| TACACS+ and RADIUS | `--aaa` / `analyze_aaa_pcap` | shared key file (`--aaa-secrets`, `keys_file`) | [AAA](docs/AAA_TROUBLESHOOTING.md) |
+| IPsec ESP, then the inner traffic | `--esp-decrypt` / `analyze_esp_pcap` | SA file or `ip -s xfrm state` output (`--esp-sa`, `sa_file`) | [ESP](docs/ESP_DECRYPTION.md) |
+
+- **Secrets stay secret.** Every key file is read by path. tshark gets a key log by path, and every other key (USM passphrases, the TACACS+ key, the RADIUS secret, SA keys) through a private temporary `WIRESHARK_CONFIG_DIR` (directory `0700`, files `0600`, removed after the run), never on a command line, where `ps` would show it. No key, passphrase, recovered password or community value appears in a report, the CLI output or an MCP result: recovered credentials are reported as present and masked, and scrubbed by value. Over MCP the key files are paths on the server; a key is never pasted into a call.
+- **Never silent.** Each decrypting tool says per session, message or SA whether it decrypted and, when not, why: no secret for that TLS session, an unknown SNMP user or engine, a wrong auth or privacy passphrase, a key-extension mismatch, a bad ESP integrity check, a right integrity key with a wrong encryption key.
+- **What TShark 3.6.2 can and cannot do**, measured: SNMPv3 auth MD5, SHA1, SHA2-224/256/384/512 with priv DES, AES-128, AES-192 and AES-256, except AES-192/256 over an SHA1 or MD5 user from an agent that extends the key the Blumenthal-draft way (net-snmp): tshark extends it the Reeder (Cisco) way. tshark shows the RADIUS Message-Authenticator but does not verify it; S.O.N.I.C. verifies it. ESP decrypts (tested) with AES-CBC and HMAC-SHA1-96 or HMAC-SHA256-128, AES-GCM and NULL, in tunnel mode, transport mode and over UDP 4500; its table also takes 3DES, DES, AES-CTR and HMAC-MD5/SHA-384/SHA-512 (checked to be accepted, not exercised); no ChaCha20-Poly1305 for ESP.
+- **Cisco IOS ESP cannot be decrypted**: IOS and IOS XE do not expose ESP session keys. Their tunnels are analysed from the outside by `analyze_vpn_pcap`.
+- **Out of scope**: SSH (TShark 3.6 cannot decrypt SSH, and The Pleiades' Go SSH library does not export session keys), and WinRM sealed with NTLM (Wireshark can, given the account's password; niche, not built).
 
 ## 🏗️ Architecture
 
@@ -811,6 +848,31 @@ gRPC troubleshooting: `verdict`, `connections` (service port, transport, SETTING
 **Example**:
 ```
 Claude: Why does gnmic fail against the switch in /captures/gnmi.pcap? Use analyze_grpc_pcap
+```
+
+#### `analyze_restconf_pcap`
+RESTCONF and REST: `connections`, `requests` (method, path, status, `timing_ms`, Content-Types, `location`, `restconf_errors`), `credentials` (header and scheme, value `masked`), `tls_decryption` and `issues` with frames.
+
+**Parameters**: `file_path`, and optional `keylog_file` (a path; never copied into the result), `ports`, `display_filter`, `max_packets`, `max_items`
+
+#### `analyze_snmp_pcap`
+SNMP: every message's `version` and v3 `security_level`, cleartext communities (`masked`), and with `users_file` each v3 message's `outcome` (`decrypted`, `auth_failed`, `decrypt_failed`, `unknown_user`, `unknown_engine`) and `reason`, the agent's usmStats `report`, and `v3_users` totals.
+
+**Parameters**: `file_path`, and optional `users_file` (a path), `display_filter`, `max_packets`, `max_items`
+
+#### `analyze_aaa_pcap`
+TACACS+ and RADIUS: `radius` transactions (result, Response Authenticator and Message-Authenticator checks), `tacacs` sessions (authentication, authorization, accounting, `cleartext`), `credentials` recovered (`masked`) and `issues`.
+
+**Parameters**: `file_path`, and optional `keys_file` (a path), `display_filter`, `max_packets`, `max_items`
+
+#### `analyze_esp_pcap`
+ESP from SA keys: `security_associations` (packets, decrypted, tunnel, transport, ICV good and bad, `reason`) and `inner_analysis` (the network detectors over the decrypted traffic).
+
+**Parameters**: `file_path`, `sa_file` (a path: an SA file or `ip -s xfrm state` output), and optional `detectors`, `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Decrypt /captures/tunnel.pcap with /secure/xfrm.txt and tell me what crossed the tunnel. Use analyze_esp_pcap
 ```
 
 #### `analyze_convergence_pcap`
