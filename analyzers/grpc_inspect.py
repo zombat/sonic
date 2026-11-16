@@ -994,7 +994,7 @@ def _tls_sessions(file_path: str, conns: Dict[int, Any], display_filter: Optiona
     if not wanted:
         return {}
     from analyzers.network_orchestrator import analyze_network_capture
-    flt = "tcp.stream in {" + " ".join(str(i) for i in sorted(wanted)) + "}"
+    flt = "tcp.stream in {" + ", ".join(str(i) for i in sorted(wanted)) + "}"
     if display_filter:
         flt = f"({display_filter}) && {flt}"
     report = analyze_network_capture(file_path, detectors=["tls"], display_filter=flt, max_packets=max_packets,
@@ -1076,7 +1076,7 @@ def _secrets_view(file_path: str, keylog_file: Optional[str]) -> Dict[str, Any]:
 
 
 def _stream_filter(indexes, display_filter: Optional[str]) -> str:
-    flt = "tcp.stream in {" + " ".join(str(i) for i in sorted(indexes)) + "}"
+    flt = "tcp.stream in {" + ", ".join(str(i) for i in sorted(indexes)) + "}"
     return f"({display_filter}) && {flt}" if display_filter else flt
 
 

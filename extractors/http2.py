@@ -140,7 +140,8 @@ DISCOVERY_FIELDS = ["frame.number", "frame.time_epoch", "tcp.stream", "ip.src", 
 
 
 def discovery_filter(extra_ports: Optional[List[int]] = None) -> str:
-    ports = " ".join(str(p) for p in sorted(set(GRPC_PORTS) | set(extra_ports or [])))
+    # Wireshark 4.x needs commas between set members; 3.6 accepts them too.
+    ports = ", ".join(str(p) for p in sorted(set(GRPC_PORTS) | set(extra_ports or [])))
     return (f"tcp.flags.syn==1 || tcp.flags.reset==1 || tls.handshake.type==1 || tls.handshake.type==2 || "
             f"(tcp.len>=24 && tcp.payload[0:24]=={PREFACE_FILTER}) || (tcp.port in {{{ports}}} && tcp.len>0)")
 

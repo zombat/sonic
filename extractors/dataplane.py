@@ -38,8 +38,11 @@ packet's fragment fields read as unfragmented.
 Author: Raymond A Rizzo | Zombat
 """
 
+import functools
 import hashlib
+import re
 import struct
+import subprocess
 from typing import Any, Dict, Optional
 
 PAYLOAD_HEAD = 2048
@@ -98,6 +101,22 @@ def _set_payload(dp: Dict[str, Any], payload: bytes):
 # tshark backend
 # ---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=1)
+def _tshark_major() -> int:
+    """The major version of the tshark on PATH, or 0 when it cannot be read."""
+    try:
+        out = subprocess.run(["tshark", "--version"], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return 0
+    match = re.search(r"TShark \(Wireshark\) (\d+)", out or "")
+    return int(match.group(1)) if match else 0
+
+
+def _frag_offset_bytes(raw: int) -> int:
+    """ip.frag_offset as a byte offset. Wireshark 3.x prints bytes; 4.x prints the raw 13-bit field (8-byte units)."""
+    return raw * 8 if _tshark_major() >= 4 else raw
+
+
 def fill_from_tshark(rec: Dict[str, Any], row) -> None:
     """Add rec["dp"] from a tshark field row (row is extractors.network._Row)."""
     ip = rec.get("ip")
@@ -111,7 +130,7 @@ def fill_from_tshark(rec: Dict[str, Any], row) -> None:
     else:
         dp = {"hl": row.int("dp.ip.hl") or 20, "tl": row.int("dp.ip.len") or 0, "id": row.int("dp.ip.id"),
               "df": row.int("dp.ip.df") or 0, "mf": row.int("dp.ip.mf") or 0,
-              "off": row.int("ip.frag_offset") or 0,
+              "off": _frag_offset_bytes(row.int("ip.frag_offset") or 0),
               "dscp": row.int("dp.ip.dscp") or 0, "ecn": row.int("dp.ip.ecn") or 0}
     rec["dp"] = dp
     fragment = bool(dp["mf"]) or dp["off"] > 0
