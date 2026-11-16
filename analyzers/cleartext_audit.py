@@ -9,7 +9,9 @@ frame numbers, then the audit passes or fails. One leaked GRE, BGP, OSPF, ICMP
 or other cleartext packet fails it, so a runbook or an agent can gate on it.
 
 Allowlist tokens (case-insensitive; combine freely):
-    crypto          the default: esp, ike and nat-t below
+    encrypted       the default: crypto below plus ssh and tls, each only when its handshake shows real
+                    encryption (see "Encryption proven by the handshake")
+    crypto          IPsec only: esp, ike and nat-t below (the tunnel question: SSH and TLS then fail)
     esp             IP protocol 50, and ESP-in-UDP on 4500
     ike             ISAKMP/IKE on UDP 500 and 4500
     nat-t           ESP-in-UDP, IKE on 4500 and NAT-T keepalives
@@ -22,11 +24,12 @@ Allowlist tokens (case-insensitive; combine freely):
     l2-control      CDP, STP, LLDP, LACP, Cisco loopback keepalives (EtherType 0x9000)
     cdp / stp / lldp / lacp / loop
     dhcp / dns / ntp / snmp / syslog / tacacs / radius
-    ssh             an SSH session, recognised by its SSH-2.0 banner on any port (not by port 22)
-    netconf         an SSH session to port 830 (NETCONF over SSH)
-    tls             a TLS session, recognised by its record header on any port (not by port 443)
+    ssh             an SSH session, recognised by its SSH-2.0 banner on any port (not by port 22), whose
+                    key exchange did not choose the cipher none
+    netconf         an SSH session to port 830 (NETCONF over SSH), on the same terms
+    tls             a TLS session, recognised by its record header on any port (not by port 443), whose
+                    ServerHello did not choose a suite that leaves the records readable
     http2           cleartext HTTP/2 (h2c, gRPC without TLS), recognised by its connection preface
-    encrypted       the default crypto group plus ssh and tls: transport encryption of any kind
     tcp:N udp:N     a TCP or UDP port (either side)
     proto:N         an IP protocol number
     ethertype:0xN   an EtherType
@@ -47,6 +50,26 @@ once in "protection" (encrypted, key_exchange, cleartext, authenticated_only, la
 whatever the allowlist says, so "is anything cleartext" is answered even when the
 allowlist fails an encrypted session that is simply not on it.
 
+Encryption proven by the handshake: an SSH or TLS session passes the ssh, tls, netconf and
+encrypted tokens only when its handshake shows that the records really are encrypted.
+    TLS   the suite the ServerHello chose (analyzers/tls_inspect.py's suite table). NULL
+          ciphers, anonymous and export key exchange and the RFC 9150 integrity-only suites
+          (TLS_SHA256_SHA256, TLS_SHA384_SHA384) count as cleartext; TLS 1.1 and older, RC4,
+          DES, 3DES and MD5 pass as weak (a warning).
+    SSH   the cipher of each direction, derived from both KEXINITs as RFC 4253 7.1 does (the
+          first algorithm on the client's list that the server also offers). The cipher none
+          counts as cleartext; arcfour, CBC modes and 64-bit block ciphers pass as weak.
+A session that does not encrypt is named "<protocol> without encryption" (category
+unencrypted_session), its frames after the handshake count as cleartext, and no ssh or tls
+token matches it. A session whose handshake is not in the capture passes as "encrypted,
+unverified" (a warning, never a clean pass): a TLS session already past its handshake is
+recognised by its application data records, and an SSH session that began before the capture
+by its port (22 or 830) and by payload that looks like ciphertext. Each session's finding is
+in tcp_sessions[].encryption, the totals in "encryption", and "clean" is true only for a pass
+with no weak or unverified session. An SSH or TLS session that passes is still reported, as
+information (ENCRYPTED_OUTSIDE_TUNNEL), as protected by its own encryption rather than by
+IPsec; allow crypto alone to require the tunnel.
+
 What the audit cannot show, reported with every result:
 - it covers only frames that crossed this capture point, and only frames the
   capture kept (a capture filter or a full ring buffer hides the rest);
@@ -65,8 +88,11 @@ from analyzers.dataplane_common import seq_delta
 from analyzers.network_common import (
     SERVICE_NAMES, Context, MAX_FRAMES, add_frame, cap, make_event, make_issue, protocol_label, service_port,
 )
+from analyzers.tls_inspect import (
+    TLS13_SUITES, parse_server_hello, server_hello_suite, suite_encryption, suite_name, version_is_weak,
+)
 
-DEFAULT_ALLOW = ["crypto"]
+DEFAULT_ALLOW = ["encrypted"]
 
 GROUPS = {
     "crypto": {"esp", "ike", "nat-t"},
@@ -98,7 +124,10 @@ HINTS = {
     "cleartext": "application or management traffic outside the tunnel",
     "authenticated_only": "AH authenticates but does not encrypt",
     "encrypted": "an encrypted session (SSH or TLS) that is not on the allowlist: not cleartext, but not one of the "
-                 "protocols this link may carry (allow ssh, tls, netconf or encrypted to accept it)",
+                 "protocols this link may carry (allow ssh, tls, netconf or encrypted, the default, to accept it)",
+    "unencrypted_session": "an SSH or TLS session whose handshake chose no real encryption (TLS: a NULL, anonymous, "
+                           "export or integrity-only suite; SSH: the cipher none): what it carries crosses the link "
+                           "readable",
     "cleartext_management": "cleartext HTTP/2 (gRPC, gNMI or gNOI without TLS): every request, response and "
                             "metadata value, credentials included, is readable on the wire",
 }
@@ -107,6 +136,20 @@ PROTECTION = {"crypto": None, "authenticated_only": "authenticated_only", "layer
 PREFACE = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
 MAX_SESSIONS = 100000
 MAX_SSH_KEX_BYTES = 65536
+MAX_HELLO_BYTES = 8192  # bytes of a TLS direction read for its ServerHello
+
+# SSH ciphers (RFC 4253 6.3, RFC 4344, RFC 5647 and OpenSSH's): AEAD ones carry their own MAC.
+SSH_AEAD = {"chacha20-poly1305@openssh.com", "aes128-gcm@openssh.com", "aes256-gcm@openssh.com", "aes128-gcm",
+            "aes256-gcm", "aead_aes_128_gcm", "aead_aes_256_gcm"}
+SSH_STRONG = SSH_AEAD | {"aes128-ctr", "aes192-ctr", "aes256-ctr"}
+SSH_NAME_LISTS = ("kex", "host_key", "cipher_client_to_server", "cipher_server_to_client", "mac_client_to_server",
+                  "mac_server_to_client", "compression_client_to_server", "compression_server_to_client")
+# An SSH session that began before the capture: recognised only on these ports, and only by ciphertext.
+SSH_PORTS = {22, 830}
+MIN_PROBE_BYTES = 128
+MAX_PROBE_BYTES = 65536
+PRINTABLE = bytes(range(0x20, 0x7F)) + b"\t\r\n"
+STATE_RANK = {"encrypted": 0, "not_started": 0, "weak": 1, "unverified": 2, "cleartext": 3}
 
 CANNOT_SHOW = [
     "Only frames that crossed this capture point and that the capture kept are audited: a capture filter, "
@@ -115,6 +158,13 @@ CANNOT_SHOW = [
     "inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
     "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP "
     "identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
+    "SSH and TLS are judged by their handshake: the TLS suite in the ServerHello, the SSH cipher from both "
+    "KEXINITs. Without the handshake (a session that began before the capture) a NULL cipher looks like a real "
+    "one, so such a session passes only as encrypted, unverified (a warning). A TLS session is recognised that "
+    "way only when a segment begins at a record boundary, an SSH session only on tcp/22 or tcp/830 and only when "
+    "its payload looks like ciphertext; anything else is reported as cleartext (fail-closed).",
+    "Encryption is judged by the cipher's name: key sizes, certificate trust and the strength of the key "
+    "exchange are not (analyze_network_pcap's tls detector reads certificates and checks a baseline).",
 ]
 
 
@@ -123,12 +173,108 @@ def _is_tls_record(data: bytes) -> bool:
         int.from_bytes(data[3:5], "big") <= 18432
 
 
+def _tls_midstream(payload: bytes) -> bool:
+    """A segment of a TLS session already past its handshake: application data or alert records from byte 0."""
+    if len(payload) < 5 or payload[0] not in (21, 23) or payload[1] != 3 or not 1 <= payload[2] <= 3:
+        return False
+    version, pos = payload[1:3], 0
+    while pos + 5 <= len(payload):
+        length = int.from_bytes(payload[pos + 3:pos + 5], "big")
+        if payload[pos] not in (20, 21, 22, 23) or payload[pos + 1:pos + 3] != version or not 0 < length <= 18432:
+            return False
+        pos += 5 + length
+    return True
+
+
+def _parse_kexinit(payload: bytes) -> Optional[Dict[str, List[str]]]:
+    """The name-lists of one SSH_MSG_KEXINIT payload (RFC 4253 7.1), or None when it is malformed."""
+    if len(payload) < 17 or payload[0] != 20:
+        return None
+    out: Dict[str, List[str]] = {}
+    pos = 17  # message code and the 16-byte cookie
+    for field in SSH_NAME_LISTS:
+        if pos + 4 > len(payload):
+            return None
+        length = int.from_bytes(payload[pos:pos + 4], "big")
+        if pos + 4 + length > len(payload):
+            return None
+        out[field] = [n for n in payload[pos + 4:pos + 4 + length].decode("ascii", "replace").split(",") if n]
+        pos += 4 + length
+    return out
+
+
+def _ssh_choose(client: List[str], server: List[str]) -> Optional[str]:
+    """RFC 4253 7.1: the first algorithm on the client's name-list that is also on the server's."""
+    offered = set(server)
+    return next((name for name in client if name in offered), None)
+
+
+def _ssh_cipher(name: Optional[str]) -> Tuple[str, Optional[str]]:
+    """(encrypted | weak | unverified | cleartext, why) for one negotiated SSH cipher."""
+    if name is None:
+        return "unverified", "the two KEXINITs offer no cipher in common, so the key exchange cannot complete"
+    low = name.lower()
+    if low == "none":
+        return "cleartext", "the cipher none: SSH packets cross the link unencrypted"
+    if low.startswith("arcfour"):
+        return "weak", f"{name} is RC4, which RFC 8758 forbids"
+    if "-cbc" in low or low in ("des", "3des"):
+        return "weak", f"{name} is a CBC mode, open to plaintext recovery (CVE-2008-5161)"
+    if low in SSH_STRONG:
+        return "encrypted", None
+    if low.startswith(("3des", "blowfish", "cast128", "idea", "des")):
+        return "weak", f"{name} has a 64-bit block (Sweet32)"
+    return "unverified", f"the cipher {name} is not one S.O.N.I.C. knows"
+
+
+class _HelloReader:
+    """The in-order first bytes of one TLS direction, read until its first handshake message."""
+
+    __slots__ = ("buf", "pos", "hs")
+
+    def __init__(self):
+        self.buf = bytearray()
+        self.pos = 0
+        self.hs = bytearray()
+
+    def parse(self):
+        """None (more bytes needed), "stop" (no ServerHello here) or (parsed ServerHello, suite code)."""
+        buf = self.buf
+        while self.pos + 5 <= len(buf):
+            ctype, length = buf[self.pos], int.from_bytes(buf[self.pos + 3:self.pos + 5], "big")
+            if ctype not in (20, 22) or buf[self.pos + 1] != 3 or length > 18432:
+                return "stop"  # application data or an alert before any ServerHello, or not TLS at all
+            if self.pos + 5 + length > len(buf):
+                return None
+            body = bytes(buf[self.pos + 5:self.pos + 5 + length])
+            self.pos += 5 + length
+            if ctype == 20:
+                continue  # TLS 1.3's middlebox-compatibility ChangeCipherSpec after a HelloRetryRequest
+            self.hs += body
+            while len(self.hs) >= 4:
+                if self.hs[0] != 2:
+                    return "stop"  # a ClientHello: the client's direction
+                length = int.from_bytes(self.hs[1:4], "big")
+                if len(self.hs) < 4 + length:
+                    break
+                message = bytes(self.hs[4:4 + length])
+                del self.hs[:4 + length]
+                parsed = parse_server_hello(message)
+                if parsed is None:
+                    return "stop"
+                if parsed["hello_retry_request"]:
+                    continue  # the real ServerHello follows the client's second ClientHello
+                return parsed, server_hello_suite(message)
+        return None
+
+
 class _Direction:
     """One direction of a recognised TCP session: where its key exchange ends (SSH) or its records are (TLS)."""
 
-    __slots__ = ("base", "buf", "lost", "kex_end", "next_record", "last_type", "encrypted_from")
+    __slots__ = ("base", "buf", "lost", "kex_end", "next_record", "last_type", "encrypted_from", "kexinit",
+                 "kexinit_frame", "hello", "server_hello", "hello_frame")
 
-    def __init__(self, base: int):
+    def __init__(self, base: int, read_hello: bool = False):
         self.base = base
         self.buf = bytearray()
         self.lost = False
@@ -136,8 +282,32 @@ class _Direction:
         self.next_record = 0  # TLS: stream offset of the next record header
         self.last_type: Optional[int] = None
         self.encrypted_from: Optional[int] = None
+        self.kexinit: Optional[Dict[str, List[str]]] = None  # SSH: this side's KEXINIT name-lists
+        self.kexinit_frame: Optional[int] = None
+        self.hello: Optional[_HelloReader] = _HelloReader() if read_hello else None  # TLS, until read
+        self.server_hello: Optional[Dict[str, Any]] = None  # TLS: the ServerHello this side sent
+        self.hello_frame: Optional[int] = None
 
-    def ssh_classify(self, rel: int, payload: bytes) -> str:
+    def read_hello(self, rel: int, payload: bytes, complete: bool, frame: int):
+        """Feed one TLS segment to the ServerHello reader (in order only; a gap ends it)."""
+        reader = self.hello
+        if reader is None:
+            return
+        if rel > len(reader.buf):
+            self.hello = None  # a segment before it was not captured
+            return
+        if rel + len(payload) > len(reader.buf):
+            reader.buf += payload[len(reader.buf) - rel:]
+        found = reader.parse()
+        if isinstance(found, tuple):
+            parsed, code = found
+            version = "TLS1.3" if code in TLS13_SUITES else parsed["version"]
+            self.server_hello = {"version": version, "cipher_suite": parsed["cipher_suite"], "code": code}
+            self.hello_frame = frame
+        if found is not None or not complete or len(reader.buf) >= MAX_HELLO_BYTES:
+            self.hello = None
+
+    def ssh_classify(self, rel: int, payload: bytes, frame: Optional[int] = None) -> str:
         """key_exchange or encrypted for one SSH segment starting at stream offset rel."""
         if self.kex_end is not None:
             return "encrypted" if rel >= self.kex_end else "key_exchange"
@@ -158,6 +328,11 @@ class _Direction:
                 self.lost = True
                 break
             code = self.buf[pos + 5]
+            if code == 20 and self.kexinit is None and pos + 4 + length <= len(self.buf):
+                padding = self.buf[pos + 4]
+                if padding < length:
+                    self.kexinit = _parse_kexinit(bytes(self.buf[pos + 5:pos + 4 + length - padding]))
+                    self.kexinit_frame = frame
             if code == 21:  # SSH_MSG_NEWKEYS: the next packet is encrypted
                 self.kex_end = pos + 4 + length
                 self.buf = bytearray()
@@ -212,9 +387,9 @@ class _Direction:
 class _TcpSession:
     """One TCP connection, recognised by content (ssh, tls, http2 or other) and bucketed per direction and class."""
 
-    __slots__ = ("server", "client", "kind", "spoke", "dirs", "buckets", "svc")
+    __slots__ = ("server", "client", "kind", "spoke", "dirs", "buckets", "svc", "midstream", "probe")
 
-    def __init__(self):
+    def __init__(self, ssh_port: bool = False):
         self.server: Optional[Tuple[str, int]] = None
         self.client: Optional[Tuple[str, int]] = None
         self.kind: Optional[str] = None
@@ -222,6 +397,27 @@ class _TcpSession:
         self.dirs: Dict[Tuple[str, int], _Direction] = {}
         self.buckets: Dict[Tuple[Tuple[str, int], str], Dict[str, Any]] = {}
         self.svc: Optional[int] = None
+        self.midstream = False  # recognised without its handshake (the session began before the capture)
+        # On tcp/22 and tcp/830: [payload bytes, printable bytes, byte values seen] while unrecognised.
+        self.probe: Optional[List[int]] = [0, 0, 0] if ssh_port else None
+
+    def sample(self, payload: bytes):
+        """Count an unrecognised payload toward the ciphertext test (an SSH session already under way)."""
+        probe = self.probe
+        if probe is None or probe[0] >= MAX_PROBE_BYTES:
+            return
+        probe[0] += len(payload)
+        probe[1] += len(payload) - len(payload.translate(None, PRINTABLE))
+        for value in set(payload):
+            probe[2] |= 1 << value
+
+    def looks_like_ciphertext(self) -> bool:
+        """Random-looking payload: few printable bytes and nearly as many byte values as random data has."""
+        if self.probe is None or self.probe[0] < MIN_PROBE_BYTES:
+            return False
+        total, printable, values = self.probe
+        expected = 256 * (1 - (255 / 256) ** total)
+        return printable / total <= 0.6 and bin(values).count("1") >= 0.6 * expected
 
     def add(self, src, cls: str, rec: Dict[str, Any]):
         bucket = self.buckets.get((src, cls))
@@ -326,6 +522,83 @@ def _session_label(kind: Optional[str], svc: Optional[int]) -> Tuple[str, str, S
     return port, "cleartext", set()
 
 
+def _ssh_encryption(session: "_TcpSession", client, server) -> Dict[str, Any]:
+    """The SSH session's cipher per direction, from both KEXINITs (RFC 4253 7.1)."""
+    mine, theirs = session.dirs.get(client), session.dirs.get(server)
+    ckex, skex = (mine.kexinit if mine else None), (theirs.kexinit if theirs else None)
+    if not ckex or not skex:
+        missing = " and ".join(side for side, kex in (("client's", ckex), ("server's", skex)) if not kex)
+        return {"state": "unverified", "handshake_captured": False,
+                "reason": f"the {missing} KEXINIT is not in the capture, so the cipher cannot be read"}
+    out: Dict[str, Any] = {"state": "encrypted", "handshake_captured": True,
+                           "kexinit_frames": {"client": mine.kexinit_frame, "server": theirs.kexinit_frame}}
+    whys, readable = [], []
+    for direction, sender in (("client_to_server", client), ("server_to_client", server)):
+        cipher = _ssh_choose(ckex[f"cipher_{direction}"], skex[f"cipher_{direction}"])
+        state, why = _ssh_cipher(cipher)
+        aead = (cipher or "").lower() in SSH_AEAD
+        mac = None if aead else _ssh_choose(ckex[f"mac_{direction}"], skex[f"mac_{direction}"])
+        if state == "encrypted" and not aead and (mac or "").lower() == "none":
+            state, why = "weak", f"{cipher} with the MAC none: encrypted, but not integrity-protected"
+        out[f"cipher_{direction}"] = cipher
+        out[f"mac_{direction}"] = "implicit (AEAD cipher)" if aead else mac
+        if state == "cleartext":
+            readable.append(sender)
+        if why:
+            whys.append((direction.replace("_", " "), why))
+        if STATE_RANK[state] > STATE_RANK[out["state"]]:
+            out["state"] = state
+    if len({why for _d, why in whys}) == 1 and len(whys) == 2:
+        out["reason"] = whys[0][1]  # the same in both directions
+    else:
+        out["reason"] = "; ".join(f"{direction}: {why}" for direction, why in whys) or None
+    out["cleartext_from"] = readable
+    return out
+
+
+def _tls_encryption(session: "_TcpSession", client, server) -> Dict[str, Any]:
+    """The TLS session's encryption from the suite and version its ServerHello chose."""
+    hello_side = next((d for d in session.dirs.values() if d.server_hello), None)
+    if session.midstream:
+        return {"state": "unverified", "handshake_captured": False,
+                "reason": "the session began before the capture: its records look encrypted, but without the "
+                          "ServerHello a NULL cipher cannot be told from a real one"}
+    if hello_side is None:
+        return {"state": "unverified", "handshake_captured": False,
+                "reason": "no ServerHello in the capture (or one S.O.N.I.C. could not read), so the cipher suite "
+                          "is not known"}
+    chosen = hello_side.server_hello
+    code = chosen["code"]
+    state, why = suite_encryption(code) if code is not None else ("unverified", "the ServerHello is truncated")
+    version = chosen["version"]
+    if version_is_weak(version) and state in ("encrypted", "weak"):
+        why = "; ".join(w for w in (f"{version} is deprecated (RFC 8996)", why) if w)
+        state = "weak"
+    return {"state": state, "handshake_captured": True, "version": version,
+            "cipher_suite": suite_name(code) if code is not None else None,
+            "server_hello_frame": hello_side.hello_frame, "reason": why,
+            "cleartext_from": [client, server] if state == "cleartext" else []}
+
+
+def _encryption(kind: str, session: "_TcpSession", client, server, has_encrypted: bool) -> Dict[str, Any]:
+    """
+    One SSH or TLS session's encryption: state encrypted, weak, unverified, cleartext or not_started
+    (no handshake to read and nothing past it), with the cipher and why.
+    """
+    if kind == "ssh" and session.midstream:
+        out = {"state": "unverified", "handshake_captured": False,
+               "reason": "no SSH banner or key exchange in the capture (the session began before it): recognised "
+                         "by its port and by payload that looks like ciphertext, so the cipher cannot be read"}
+    elif kind == "ssh":
+        out = _ssh_encryption(session, client, server)
+    else:
+        out = _tls_encryption(session, client, server)
+    if out["state"] == "unverified" and not has_encrypted:
+        out["state"] = "not_started"
+        out["reason"] = "nothing was sent past the handshake, so there is no encrypted traffic to judge"
+    return out
+
+
 class _Rule:
     """One allowlist token: a set of protocol tokens, optionally scoped to networks."""
 
@@ -412,7 +685,7 @@ class CleartextAuditDetector:
             if len(self.sessions) >= MAX_SESSIONS:
                 self.sessions_dropped += 1
                 return False
-            session = _TcpSession()
+            session = _TcpSession(ssh_port=bool({src[1], dst[1]} & SSH_PORTS))
             self.sessions[key] = session
         flags = tcp.get("flags", 0)
         if flags & 0x02 and not flags & 0x10:
@@ -434,19 +707,26 @@ class CleartextAuditDetector:
                     session.kind = "tls"
                     if session.server is None and len(payload) > 5 and payload[5] == 1:  # ClientHello
                         session.server, session.client = dst, src
+                elif _tls_midstream(payload):
+                    session.kind, session.midstream = "tls", True
                 else:
+                    session.sample(payload)
                     session.spoke.add(src)
                     if len(session.spoke) == 2:
                         session.kind = "other"
+            elif session.kind == "other":
+                session.sample(payload)
             direction = session.dirs.get(src)
             if direction is None and session.kind in ("ssh", "tls"):
-                direction = _Direction(seq)
+                direction = _Direction(seq, read_hello=session.kind == "tls" and not session.midstream)
                 session.dirs[src] = direction
             rel = seq_delta(seq, direction.base) if direction is not None else 0
+            length = tcp.get("len", len(payload))
             if session.kind == "ssh":
-                cls = direction.ssh_classify(rel, payload)
+                cls = direction.ssh_classify(rel, payload, rec["n"])
             elif session.kind == "tls":
-                cls = direction.tls_classify(rel, payload, tcp.get("len", len(payload)))
+                cls = direction.tls_classify(rel, payload, length)
+                direction.read_hello(rel, payload, len(payload) >= length, rec["n"])
             elif session.kind == "http2":
                 cls = "cleartext"
         elif session.kind in ("ssh", "tls"):
@@ -489,14 +769,19 @@ class CleartextAuditDetector:
                                                  "first_t": rec["t"], "last_frame": rec["n"], "last_t": rec["t"],
                                                  "frames": [rec["n"]]}, _protection_of(rec, category))
 
-    def _violate(self, name, category, src, dst, bucket: Dict[str, Any], protection: str):
+    def _violate(self, name, category, src, dst, bucket: Dict[str, Any], protection: str,
+                 reason: Optional[str] = None):
         key = (name, src, dst)
         entry = self.violations.get(key)
         if entry is None:
             entry = {"protocol": name, "category": category, "src": src, "dst": dst, "packets": 0, "bytes": 0,
                      "first_frame": bucket["first_frame"], "first_t": bucket["first_t"],
-                     "last_frame": bucket["last_frame"], "last_t": bucket["last_t"], "frames": [], "protection": {}}
+                     "last_frame": bucket["last_frame"], "last_t": bucket["last_t"], "frames": [], "protection": {},
+                     "reasons": []}
             self.violations[key] = entry
+        if reason and category == "unencrypted_session" and reason not in entry["reasons"] and \
+                len(entry["reasons"]) < 3:
+            entry["reasons"].append(reason)
         entry["packets"] += bucket["packets"]
         entry["bytes"] += bucket["bytes"]
         if bucket["first_frame"] < entry["first_frame"]:
@@ -507,7 +792,7 @@ class CleartextAuditDetector:
         entry["protection"][protection] = entry["protection"].get(protection, 0) + bucket["packets"]
 
     def _settle_sessions(self) -> List[Dict[str, Any]]:
-        """Judge every TCP session's frames now that each session's protocol is known."""
+        """Judge every TCP session's frames now that each session's protocol and encryption are known."""
         summaries = []
         for (end_a, end_b), session in self.sessions.items():
             kind = session.kind or "other"
@@ -517,6 +802,8 @@ class CleartextAuditDetector:
                 svc = service_port(end_a[1], end_b[1])
             server = session.server or (end_a if end_a[1] == svc else end_b)
             client = end_b if server == end_a else end_a
+            if kind == "other" and svc in SSH_PORTS and session.looks_like_ciphertext():
+                kind, session.midstream = "ssh", True  # an SSH session that began before the capture
             name, category, kind_tokens = _session_label(kind, svc)
             ports = {f"tcp:{end_a[1]}", f"tcp:{end_b[1]}", "proto:6"}
             ports |= {PORT_NAMES[p] for p in (end_a[1], end_b[1]) if p in PORT_NAMES}
@@ -524,16 +811,31 @@ class CleartextAuditDetector:
                 routing = ports & GROUPS["routing"]
                 if routing:
                     name, category = sorted(routing)[0], "routing"
+            classes = []
+            for (src, cls), bucket in sorted(session.buckets.items(), key=lambda kv: kv[1]["first_frame"]):
+                if session.midstream and cls in ("pending", "cleartext"):
+                    cls = "encrypted"  # recognised without its handshake: past the key exchange
+                elif cls == "pending":
+                    cls = "key_exchange" if kind in ("ssh", "tls") else "cleartext"
+                if category == "routing":
+                    cls = "cleartext"
+                classes.append((src, cls, bucket))
+            encryption = None
+            if kind in ("ssh", "tls"):
+                encryption = _encryption(kind, session, client, server,
+                                         any(cls == "encrypted" for _s, cls, _b in classes))
+                if encryption["state"] == "cleartext":
+                    name, category, kind_tokens = f"{name} without encryption", "unencrypted_session", set()
+            readable = encryption.pop("cleartext_from", ()) if encryption else ()
             tokens = ports | kind_tokens
             if kind == "ssh" and svc != 830:
                 tokens.discard("netconf")
             totals: Dict[str, int] = {}
             packets = 0
-            for (src, cls), bucket in sorted(session.buckets.items(), key=lambda kv: kv[1]["first_frame"]):
-                if cls == "pending":
-                    cls = "key_exchange" if kind in ("ssh", "tls") else "cleartext"
-                if category == "routing":
-                    cls = "cleartext"
+            by_transport = False
+            for src, cls, bucket in classes:
+                if cls == "encrypted" and src in readable:
+                    cls = "cleartext"  # the handshake chose no encryption for this direction
                 dst = end_b if src == end_a else end_a
                 self._protect(cls, bucket["packets"])
                 totals[cls] = totals.get(cls, 0) + bucket["packets"]
@@ -542,19 +844,65 @@ class CleartextAuditDetector:
                     if rule.matches(tokens, [src[0], dst[0]]):
                         self.allowed += bucket["packets"]
                         self.allowed_by[rule.text] = self.allowed_by.get(rule.text, 0) + bucket["packets"]
+                        by_transport = by_transport or bool(rule.tokens & {"ssh", "tls", "netconf"})
                         break
                 else:
-                    self._violate(name, category, src[0], dst[0], bucket, cls)
-            summaries.append({"protocol": name, "client": f"{client[0]}:{client[1]}",
-                              "server": f"{server[0]}:{server[1]}", "service": f"tcp/{svc}",
-                              "server_known_by": "syn" if session.server is not None else "port",
-                              "category": category, "packets": packets, "protection": totals,
-                              "first_frame": min(b["first_frame"] for b in session.buckets.values())})
+                    self._violate(name, category, src[0], dst[0], bucket, cls,
+                                  encryption.get("reason") if encryption else None)
+            summary = {"protocol": name, "client": f"{client[0]}:{client[1]}",
+                       "server": f"{server[0]}:{server[1]}", "service": f"tcp/{svc}",
+                       "server_known_by": "syn" if session.server is not None else "port",
+                       "category": category, "packets": packets, "protection": totals,
+                       "first_frame": min(b["first_frame"] for b in session.buckets.values())}
+            if encryption:
+                summary["encryption"] = encryption
+                summary["allowed_as_encrypted"] = by_transport
+            summaries.append(summary)
         self.sessions = {}
         return sorted(summaries, key=lambda x: x["first_frame"])
 
     def present(self) -> bool:
         return self.frames > 0
+
+    @staticmethod
+    def _encryption_findings(sessions: List[Dict[str, Any]],
+                             issues: List[Dict[str, Any]]) -> Tuple[Dict[str, int], int]:
+        """
+        Count the SSH and TLS sessions by encryption state, add one warning per protocol for weak and
+        unverified ones and one info issue for those passed as encrypted outside IPsec; returns
+        (the counts, how many passed as encrypted).
+        """
+        judged = [s for s in sessions if s.get("encryption")]
+        counts = {"sessions": len(judged)}
+        for state in ("encrypted", "weak", "unverified", "cleartext", "not_started"):
+            counts[state] = sum(1 for s in judged if s["encryption"]["state"] == state)
+        for state, code, what in (("weak", "WEAK_ENCRYPTION", "passed with weak encryption"),
+                                  ("unverified", "ENCRYPTION_UNVERIFIED", "passed as encrypted, unverified")):
+            groups: Dict[str, List[Dict[str, Any]]] = {}
+            for s in judged:
+                if s["encryption"]["state"] == state:
+                    groups.setdefault(s["protocol"], []).append(s)
+            for protocol, members in groups.items():
+                reasons = []
+                for s in members:
+                    if s["encryption"].get("reason") and s["encryption"]["reason"] not in reasons:
+                        reasons.append(s["encryption"]["reason"])
+                first = members[0]
+                text = (f"{len(members)} {protocol} session(s) {what}: {'; '.join(reasons[:3])} (first "
+                        f"{first['client']} -> {first['server']})")
+                issues.append(make_issue("warning", code, text, sorted(s["first_frame"] for s in members)[:MAX_FRAMES],
+                                         protocol=protocol))
+        outside = [s for s in judged if s.get("allowed_as_encrypted")]
+        if outside:
+            names: Dict[str, int] = {}
+            for s in outside:
+                names[s["protocol"]] = names.get(s["protocol"], 0) + 1
+            listed = ", ".join(f"{n} {name}" for name, n in names.items())
+            text = (f"{len(outside)} SSH or TLS session(s) passed as encrypted by their own transport, not inside "
+                    f"IPsec ({listed}); allow crypto alone to require the tunnel")
+            issues.append(make_issue("info", "ENCRYPTED_OUTSIDE_TUNNEL", text,
+                                     sorted(s["first_frame"] for s in outside)[:MAX_FRAMES]))
+        return counts, len(outside)
 
     def report(self, ctx: Context) -> Dict[str, Any]:
         issues: List[Dict[str, Any]] = []
@@ -578,8 +926,12 @@ class CleartextAuditDetector:
                 "first_t": ctx.rel(v["first_t"]), "last_frame": v["last_frame"], "last_t": ctx.rel(v["last_t"]),
                 "frames": v["frames"], "protection": v["protection"],
                 "hint": HINTS.get(v["category"], HINTS["cleartext"])})
+            if v["reasons"]:
+                violations_out[-1]["reasons"] = v["reasons"]
             text = (f"{v['packets']} {v['protocol']} frame(s) {pair} outside the allowlist "
                     f"({HINTS.get(v['category'], HINTS['cleartext'])})")
+            if v["reasons"]:
+                text += f": {'; '.join(v['reasons'])}"
             if v["category"] == "encrypted":
                 issues.append(make_issue("warning", "ENCRYPTED_OUTSIDE_ALLOWLIST", text, v["frames"],
                                          protocol=v["protocol"], category=v["category"]))
@@ -589,8 +941,10 @@ class CleartextAuditDetector:
                                          protocol=v["protocol"], category=v["category"]))
             events.append(make_event(ctx, v["first_t"], "audit", "first_leak",
                                      f"first {v['protocol']} frame outside the allowlist {pair}", v["first_frame"]))
+        encryption, outside_tunnel = self._encryption_findings(sessions, issues)
         violating = sum(v["packets"] for v in rows)
         passed = violating == 0 and self.frames > 0
+        clean = passed and not encryption["weak"] and not encryption["unverified"]
         cleartext = self.protection.get("cleartext", 0)
         protected = ", ".join(f"{self.protection[k]} {k.replace('_', ' ')}" for k in
                               ("encrypted", "key_exchange", "authenticated_only", "layer2", "cleartext")
@@ -599,8 +953,16 @@ class CleartextAuditDetector:
             verdict = "FAIL: the capture is empty, so nothing proves the link carried only allowed traffic"
             issues.append(make_issue("error", "AUDIT_EMPTY_CAPTURE", verdict))
         elif passed:
-            verdict = (f"PASS: all {self.frames} frames match the allowlist ({', '.join(self.allow_text)}); "
-                       f"no cleartext outside it ({protected})")
+            verdict = (f"{'PASS' if clean else 'PASS with warnings'}: all {self.frames} frames match the allowlist "
+                       f"({', '.join(self.allow_text)}); no cleartext outside it ({protected})")
+            doubts = [f"{encryption[k]} {label}" for k, label in
+                      (("unverified", "encrypted, unverified (see ENCRYPTION_UNVERIFIED)"),
+                       ("weak", "weakly encrypted (see WEAK_ENCRYPTION)")) if encryption[k]]
+            if doubts:
+                verdict += f"; but of the SSH and TLS sessions {' and '.join(doubts)}"
+            if outside_tunnel:
+                verdict += (f"; {outside_tunnel} SSH or TLS session(s) protected by their own encryption, not by "
+                            "IPsec (allow crypto alone to require the tunnel)")
         else:
             parts = [f"{agg['packets']} {name}" for name, agg in
                      sorted(by_protocol.items(), key=lambda kv: kv[1]["first_frame"])]
@@ -609,18 +971,23 @@ class CleartextAuditDetector:
                        f"first at frame {first['first_frame']}")
             outside_clear = sum(v["protection"].get("cleartext", 0) for v in rows)
             if not outside_clear:
-                verdict += (f"; none of them is cleartext ({protected}): allow ssh, tls, netconf or encrypted to "
-                            "accept transport encryption")
+                verdict += (f"; none of them is cleartext ({protected}): allow ssh, tls, netconf or encrypted (the "
+                            "default) to accept transport encryption")
             else:
                 verdict += f"; {outside_clear} of them cleartext"
                 if protected != f"{cleartext} cleartext":
                     verdict += f" (all frames: {protected})"
+            unencrypted = [v for v in rows if v["category"] == "unencrypted_session"]
+            if unencrypted:
+                verdict += (f"; {encryption['cleartext']} SSH or TLS session(s) negotiated no encryption "
+                            f"({unencrypted[0]['reasons'][0] if unencrypted[0]['reasons'] else 'see violations'})")
         listed, omitted = cap(violations_out, ctx.max_items)
         return {
             "detector": self.name,
-            "status": "ok" if passed else "problem",
+            "status": "ok" if clean else ("warning" if passed else "problem"),
             "verdict": verdict,
             "passed": passed,
+            "clean": clean,
             "result": "pass" if passed else "fail",
             "allowlist": self.allow_text,
             "frames_audited": self.frames,
@@ -631,6 +998,7 @@ class CleartextAuditDetector:
                            ("encrypted", "key_exchange", "authenticated_only", "layer2", "cleartext")},
             "tcp_sessions": cap(sessions, ctx.max_items)[0],
             "tcp_sessions_omitted": cap(sessions, ctx.max_items)[1],
+            "encryption": encryption,
             "allowed_by_rule": self.allowed_by,
             "by_protocol": sorted(by_protocol.values(), key=lambda a: a["first_frame"]),
             "violations": listed,
