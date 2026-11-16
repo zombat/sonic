@@ -49,7 +49,9 @@ algorithm and never a passphrase. A passphrase holding a double quote or a backs
 because tshark's table format cannot carry it.
 
 The file is turned into tshark's `snmp_users` table inside a private temporary
-`WIRESHARK_CONFIG_DIR` (directory `0700`, file `0600`, removed after the run), so no passphrase is
+`WIRESHARK_CONFIG_DIR` (directory `0700`, file `0600`, on tmpfs at `/dev/shm` where there is one,
+removed after the run; the README's Decryption section says where it goes without tmpfs and how
+it is cleaned up on a signal), so no passphrase is
 ever on a command line, where any user could read it from `ps`. Every passphrase and community is
 also scrubbed by value from the report, the CLI output and the saved files.
 

@@ -121,6 +121,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `analyze_pcap_partial_streaming` (and `--stream --partial`) failed on every call: `ai/partial_streaming.py` imported `utils.serialization`, which never existed. It now converts the quality and MOS results with `utils.credentials.redact`, the converter every MCP tool result already goes through. `test_mcp_stdio.py` calls the tool over a real stdio session with only the streaming LLM stubbed (`tests/stub_llm_mcp_server.py`)
 - `sonic.py --api-key` is removed: it was never used, and a key typed on the command line lands in shell history and `ps` output. Keys come from the environment, then from the file `--env-file` or `SONIC_ENV_FILE` names
 
+### Security
+- The decryption keys handed to tshark (the TACACS+ key, the RADIUS secret, SNMPv3 passphrases, ESP SA keys) are written to tmpfs (`/dev/shm`) where there is one, so they never reach a disk or its journal; without tmpfs (macOS) they fall back to the temporary directory on disk with a one-time warning on stderr. The directory is now also removed on SIGTERM and SIGINT and at exit, not only when the run ends normally; SIGKILL cannot be caught, and the next run removes a directory whose process is gone (`extractors/wsconfig.py`, `test_aaa.py`)
+
 ---
 
 ## [3.1.0] - 2026-10-25

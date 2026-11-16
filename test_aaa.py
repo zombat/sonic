@@ -14,15 +14,19 @@ Run with:  python3 -m unittest -q test_aaa
 """
 
 import filecmp
+import io
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from analyzers.aaa_inspect import analyze_aaa_capture, read_keys_file
+from extractors import wsconfig
 from extractors.wsconfig import wireshark_config
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -85,6 +89,60 @@ class TestWsConfig(unittest.TestCase):
             with open(pref) as h:
                 self.assertIn("tacplus.key: sekret", h.read())
         self.assertFalse(os.path.exists(seen["dir"]))  # cleaned up
+
+    @unittest.skipUnless(wsconfig.secret_dir_root(), "no writable tmpfs at /dev/shm on this machine")
+    def test_secrets_are_kept_on_tmpfs_where_there_is_one(self):
+        with wireshark_config(preferences={"tacplus.key": "sekret"}) as d:
+            self.assertEqual(os.path.dirname(d), "/dev/shm")
+            self.assertEqual(os.stat(d).st_mode & 0o777, 0o700)
+
+    def test_without_tmpfs_it_falls_back_to_the_temp_dir_and_warns_once(self):
+        with mock.patch.object(wsconfig, "SHM_DIR", "/nonexistent-sonic-shm"), \
+                mock.patch.object(wsconfig, "_warned_on_disk", False), \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            with wireshark_config(preferences={"tacplus.key": "sekret"}) as d:
+                self.assertEqual(os.path.dirname(d), tempfile.gettempdir())
+            with wireshark_config(preferences={"tacplus.key": "sekret"}):
+                pass
+        self.assertEqual(err.getvalue().count("no tmpfs at /nonexistent-sonic-shm"), 1)
+        self.assertNotIn("sekret", err.getvalue())
+
+    def _child_holding_a_config(self):
+        """A python process that makes a config dir, prints its path and waits to be signalled."""
+        code = ("import time\n"
+                "from extractors.wsconfig import wireshark_config\n"
+                "with wireshark_config(preferences={'tacplus.key': 'sekret'}) as d:\n"
+                "    print(d, flush=True)\n"
+                "    time.sleep(60)\n")
+        child = subprocess.Popen([sys.executable, "-c", code], cwd=HERE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL, text=True)
+        self.addCleanup(child.stdout.close)
+        self.addCleanup(lambda: child.poll() is None and child.kill())
+        path = child.stdout.readline().strip()
+        self.assertTrue(os.path.isdir(path), path)
+        return child, path
+
+    def test_sigterm_removes_the_config_dir(self):
+        child, path = self._child_holding_a_config()
+        child.send_signal(signal.SIGTERM)
+        self.assertEqual(child.wait(timeout=20), -signal.SIGTERM)  # still ends as SIGTERM would
+        self.assertFalse(os.path.exists(path))
+
+    def test_sigint_removes_the_config_dir(self):
+        child, path = self._child_holding_a_config()
+        child.send_signal(signal.SIGINT)
+        self.assertNotEqual(child.wait(timeout=20), 0)
+        self.assertFalse(os.path.exists(path))
+
+    def test_a_dir_left_by_sigkill_is_removed_by_the_next_run(self):
+        child, path = self._child_holding_a_config()
+        child.kill()  # SIGKILL cannot be caught: the directory is left behind
+        child.wait(timeout=20)
+        self.assertTrue(os.path.exists(path))
+        with mock.patch.object(wsconfig, "_warned_on_disk", True):
+            with wireshark_config():
+                pass
+        self.assertFalse(os.path.exists(path))
 
 
 @unittest.skipUnless(HAVE_TSHARK, "tshark is not installed")

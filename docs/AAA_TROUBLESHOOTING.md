@@ -30,8 +30,10 @@ radius_secret: <the RADIUS server's shared secret>
 `tacacs_key` (aliases `tacplus.key`, `tacacs`) and `radius_secret` (aliases
 `radius.shared_secret`, `radius`) are both optional; give only the one you have. A file with a
 single bare line (no `name:`) uses that one value for both protocols. The key is passed to
-tshark through a **temporary WIRESHARK_CONFIG_DIR** (a private directory, each file `0600`),
-never with `-o pref:VALUE` on the command line, so the secret is not visible in the tshark
+tshark through a **temporary WIRESHARK_CONFIG_DIR** (a private directory, each file `0600`, on
+tmpfs at `/dev/shm` where there is one, so the key never reaches a disk; see the README's
+Decryption section for the fallback and the cleanup on signals), never with `-o pref:VALUE` on
+the command line, so the secret is not visible in the tshark
 process's `argv` (where any user could read it from `ps` or `/proc`). tshark takes one
 `tacplus.key` and one `radius.shared_secret`, so a capture mixing servers with different keys
 decrypts only the sessions that key fits.

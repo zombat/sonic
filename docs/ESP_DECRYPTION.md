@@ -52,7 +52,9 @@ SAs, and the anti-replay, lifetime and stats lines are ignored.
 Each SA becomes a row of tshark's `esp_sa` table, with the exact labels tshark 3.6.2 uses
 (`AES-CBC [RFC3602]`, `AES-GCM with 16 octet ICV [RFC4106]`, `HMAC-SHA-1-96 [RFC2404]`,
 `HMAC-SHA-256-128 [RFC4868]`, ...), written into a private temporary `WIRESHARK_CONFIG_DIR`
-(directory `0700`, file `0600`, removed after the run), so no key is ever on a command line, where
+(directory `0700`, file `0600`, on tmpfs at `/dev/shm` where there is one, removed after the run;
+the README's Decryption section says where it goes without tmpfs and how it is cleaned up on a
+signal), so no key is ever on a command line, where
 any user could read it from `ps`. tshark runs with `esp.enable_encryption_decode` and
 `esp.enable_authentication_check` on. An unknown algorithm, a key that is not hex or an SPI out of
 range is refused with a message that never quotes a key.
