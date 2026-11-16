@@ -301,7 +301,11 @@ class AuditAssertions:
         self.assertEqual(sessions["tcp/50001"]["server"], "10.70.0.1:50001")  # not the client's 41000
         self.assertEqual(report["protection"]["cleartext"], 12)
         found = codes(report)
-        self.assertEqual(found.count("ENCRYPTED_OUTSIDE_ALLOWLIST"), 4)
+        # The default allowlist (encrypted) accepts the SSH and TLS sessions; crypto alone (IPsec) does not.
+        self.assertNotIn("ENCRYPTED_OUTSIDE_ALLOWLIST", found)
+        self.assertIn("ENCRYPTED_OUTSIDE_TUNNEL", found)
+        self.assertEqual(codes(self.audit("grpc_mgmt_mix.pcap", allow=["crypto"])).count("ENCRYPTED_OUTSIDE_ALLOWLIST"),
+                         4)
         if HAVE_TSHARK:
             self.assertEqual(sessions["tcp/50001"]["protocol"], "grpc (tcp/50001)")
             self.assertEqual([c["key"] for c in report["credentials"]], ["authorization"])
@@ -415,11 +419,13 @@ class TestRealCaptures(unittest.TestCase):
                 self.assertEqual(audit["protection"]["encrypted"] + audit["protection"]["key_exchange"], 1030)
                 self.assertNotIn("CLEARTEXT_OUTSIDE_ALLOWLIST", codes(audit))
                 self.assertNotIn("CLEARTEXT_CREDENTIAL", codes(audit))
-                self.assertIn("none of them is cleartext", audit["verdict"])
+                self.assertTrue(audit["passed"] and audit["clean"], audit["verdict"])  # the default: encrypted
                 names = [s["protocol"] for s in audit["tcp_sessions"]]
                 self.assertEqual(names, ["netconf over ssh (tcp/830)", "tls (tcp/443 https)", "tls (tcp/443 https)",
                                          "tls (tcp/443 https)", "ssh (tcp/22)"])
-                self.assertTrue(audit_cleartext_capture(ENCRYPTED, backend=backend, allow=["encrypted"])["passed"])
+                tunnel = audit_cleartext_capture(ENCRYPTED, backend=backend, allow=["crypto"])
+                self.assertFalse(tunnel["passed"])
+                self.assertIn("none of them is cleartext", tunnel["verdict"])
 
     def test_real_encrypted_tls13_after_hello_retry_and_no_grpc_claimed(self):
         tls = analyze_network_capture(ENCRYPTED, detectors=["tls"])["tls"]

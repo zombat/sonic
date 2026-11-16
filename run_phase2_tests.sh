@@ -189,6 +189,15 @@ else
 fi
 echo ""
 
+# Test 11: the cleartext audit's SSH and TLS judged by their handshake (NULL, integrity-only, weak, unverified)
+echo "✅ TEST 11: Encryption Audit Test Module"
+if python3 -c "import pytest" >/dev/null 2>&1; then
+    python3 -m pytest -q test_tls_audit.py
+else
+    python3 -m unittest -q test_tls_audit.py
+fi
+echo ""
+
 echo "🎉 Phase 2 Testing Complete!"
 echo ""
 echo "📋 Next Steps:"
