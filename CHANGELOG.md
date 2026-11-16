@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🔏 **Encryption proven by the handshake** in the cleartext audit (`analyzers/cleartext_audit.py`)
+  - TLS: the suite the ServerHello chose, read from the record bytes on any port (after a HelloRetryRequest, the real ServerHello). NULL ciphers, anonymous and export key exchange and the RFC 9150 integrity-only suites (`TLS_SHA256_SHA256`, `TLS_SHA384_SHA384`) count as cleartext; TLS 1.1 and older, RC4, DES, 3DES and MD5 pass with a `WEAK_ENCRYPTION` warning
+  - SSH: each direction's cipher and MAC, derived from both KEXINITs as RFC 4253 7.1 does (the first algorithm on the client's list that the server also offers). `none` counts as cleartext; arcfour, CBC modes, 64-bit block ciphers and the MAC `none` pass with a `WEAK_ENCRYPTION` warning
+  - A session that does not encrypt is `<protocol> without encryption` (category `unencrypted_session`), its frames after the handshake count as cleartext, and the verdict names the suite or cipher
+  - A session whose handshake is not in the capture passes only as encrypted, unverified (`ENCRYPTION_UNVERIFIED`, a warning): a TLS session already past its handshake is recognised by its application data records, an SSH session that began before the capture by tcp/22 or tcp/830 and payload that looks like ciphertext (text on tcp/22 without a banner stays cleartext)
+  - `clean` (a pass with no weak or unverified session; the verdict then reads `PASS with warnings` and the detector's status is `warning`), `encryption` (sessions by state), `tcp_sessions[].encryption` (state, version, suite or ciphers, the frames read, why), `violations[].reasons`, and one `ENCRYPTED_OUTSIDE_TUNNEL` info issue naming the SSH and TLS sessions that passed as protected by their own encryption rather than by IPsec
+- 📚 The TLS suite table (`analyzers/tls_inspect.py`) holds every NULL, anonymous, export and integrity-only suite Wireshark knows, plus CCM, ARIA and Camellia GCM, DHE-DSS and static ECDH suites, each name checked against `tshark -G values`; `suite_encryption()` and `version_is_weak()` judge a chosen suite and version
+- `sonic.py --allow TOKENS` for `--network-only --detectors cleartext_audit`
+- 🧪 `test_tls_audit.py`: the suite table against Wireshark's, the SSH choice, both backends on seven synthetic fixtures from `tests/fixtures/generate_tls_audit_fixtures.py` (TLS 1.2 NULL, TLS 1.3 integrity-only, TLS 1.0, SSH `none`, SSH `aes128-cbc`, sessions that began before the capture, text on tcp/22), and the real NETCONF/RESTCONF/SSH capture, which now passes by default with the ciphers Wireshark's own dissectors read, and the plaintext gNMI capture, which still fails with its credentials
 - 📡 **gRPC troubleshooting** (`analyzers/grpc_inspect.py`, `extractors/http2.py`, `analyzers/gnmi_decode.py`; MCP `analyze_grpc_pcap`, prompt `troubleshoot_grpc`, CLI `--grpc`), deterministic, with Wireshark's HTTP/2, HPACK, gRPC, TLS and protobuf dissectors through tshark
   - Finds gRPC by the HTTP/2 preface on any port, by ALPN h2, and on the well-known gRPC ports (9339, 9340, 9559, 57400, 6030, 50001, 50051, 50052, 32767), decoding each with decode-as; each flow is named by its service port
   - Per RPC: method, authority, content-type, deadline, message counts and sizes, HTTP status, grpc-status by name and grpc-message, time to the first response and to the trailers, and a diagnosis
@@ -50,7 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
-- The `ssh` allowlist token means an SSH session recognised by its banner, not port 22; an encrypted session outside the allowlist is a warning (`ENCRYPTED_OUTSIDE_ALLOWLIST`), not a cleartext finding. The default allowlist is unchanged
+- 🔐 **The cleartext audit's default allowlist is now `encrypted`, not `crypto`**: besides IPsec it passes SSH and TLS sessions, but only when their handshake shows real encryption. To get the old behaviour (IPsec only, the tunnel question) pass `allow=["crypto"]` (MCP `audit_cleartext_pcap`, `audit_cleartext_capture`) or `--allow crypto` (CLI, new); SSH and TLS then fail as `ENCRYPTED_OUTSIDE_ALLOWLIST` as before. A harness that pins an earlier S.O.N.I.C. release (such as the CVD harness) is unaffected
+- The `ssh`, `netconf`, `tls` and `encrypted` tokens no longer accept a session that negotiated no encryption (see below); a port token (`tcp:443`) still does, and its frames still count as cleartext
+- The TLS detector's `TLS_WEAK_CIPHER_CHOSEN` says when the chosen suite does not encrypt at all, and the RFC 9150 integrity-only suites count as weak there too
+- The `ssh` allowlist token means an SSH session recognised by its banner, not port 22; an encrypted session outside the allowlist is a warning (`ENCRYPTED_OUTSIDE_ALLOWLIST`), not a cleartext finding
 - Every TCP record carries `svc`, the listening side's port, once the connection's SYN, SYN-ACK, HTTP/2 preface or ClientHello shows it, and flow labels use it
 - `run_phase2_tests.sh` runs `test_grpc.py` and `test_control_plane.py`
 - Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400

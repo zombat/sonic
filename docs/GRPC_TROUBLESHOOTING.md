@@ -12,7 +12,7 @@ python3 sonic.py --file gnmi.pcap --grpc --grpc-ports 7777                  # al
 python3 sonic.py --fetch-grpc-protos                                        # .proto files for Wireshark (optional)
 ```
 
-Over MCP the tool is `analyze_grpc_pcap` (prompt `troubleshoot_grpc`); the cleartext audit (`audit_cleartext_pcap`) uses the same decoding to name cleartext HTTP/2 as gRPC and to flag credentials in its metadata.
+Over MCP the tool is `analyze_grpc_pcap` (prompt `troubleshoot_grpc`); the cleartext audit (`audit_cleartext_pcap`) uses the same decoding to name cleartext HTTP/2 as gRPC and to flag credentials in its metadata. Its default allowlist (`encrypted`) passes TLS-wrapped gRPC only when the ServerHello chose a suite that encrypts: a NULL or RFC 9150 integrity-only suite (`TLS_SHA256_SHA256`) fails it as cleartext, and a session captured without its handshake passes only as encrypted, unverified.
 
 ## 🔎 How it finds gRPC
 

@@ -114,6 +114,12 @@ python3 sonic.py --file wan-link.pcap --network-only --detectors ipsec,gre_nhrp 
 
 # Write the report as JSON instead of markdown
 python3 sonic.py --file wan-link.pcap --network-only --save_file wan-report.json
+
+# Gate a link: pass only IPsec and SSH/TLS whose handshake shows real encryption (the default allowlist)
+python3 sonic.py --file mgmt.pcap --network-only --detectors cleartext_audit
+
+# The tunnel question: pass only IPsec (the default before this release), Cisco keepalives and CDP allowed
+python3 sonic.py --file wan-link.pcap --network-only --detectors cleartext_audit --allow crypto,l2-control
 ```
 
 The report goes to `--save_file`, or to `<capture>.network.md` when none is given. A path ending in `.json` writes the full JSON report.
@@ -417,8 +423,9 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 
 ### Zero-cleartext audit (`cleartext_audit`, run only when named)
 - Every frame is matched against an allowlist; anything else is reported by protocol, category (`tunnel_without_encryption`, `routing`, `icmp`, `layer2`, `encrypted`, `cleartext_management`, `cleartext`, ...) and address pair, with frame numbers, and the audit returns `passed` true or false. An empty capture fails.
-- Default allowlist `crypto` (ESP, ISAKMP on UDP 500 and 4500, NAT-T keepalives). Other tokens: `arp`, `icmp`, `routing` or `bgp`/`ospf`/`eigrp`/..., `gre`, `l2-control` (CDP, STP, LLDP, LACP, Cisco loopback keepalives), `ssh`, `netconf`, `tls`, `http2`, `encrypted` (crypto plus SSH and TLS), service names, `tcp:N`, `udp:N`, `proto:N`, `ethertype:0xN`, each optionally scoped to addresses: `icmp@203.0.113.1`.
-- TCP sessions are recognised by content on any port: SSH by its banner (key exchange up to NEWKEYS, then encrypted), TLS by its record header (handshake, then application data encrypted), cleartext HTTP/2 by its preface (named `grpc` when its requests are gRPC). Every frame is counted in `protection` (`encrypted`, `key_exchange`, `cleartext`, ...) whatever the allowlist, `tcp_sessions` names each flow by its service port, and on cleartext HTTP/2 each credential key in gRPC metadata is one `CLEARTEXT_CREDENTIAL` issue, value masked. An encrypted session outside the allowlist is `ENCRYPTED_OUTSIDE_ALLOWLIST`, not a cleartext finding.
+- Default allowlist `encrypted`: IPsec (ESP, ISAKMP on UDP 500 and 4500, NAT-T keepalives) plus SSH and TLS sessions whose handshake shows real encryption. **Changed in this release**: the default used to be `crypto` (IPsec only); pass `allow=["crypto"]` (MCP `allow: ["crypto"]`, CLI `--network-only --detectors cleartext_audit --allow crypto`) for the old behaviour, which is the tunnel question: is everything on this link inside IPsec. A harness that pins an earlier S.O.N.I.C. release (such as the CVD harness) is unaffected. Other tokens: `arp`, `icmp`, `routing` or `bgp`/`ospf`/`eigrp`/..., `gre`, `l2-control` (CDP, STP, LLDP, LACP, Cisco loopback keepalives), `ssh`, `netconf`, `tls`, `http2`, service names, `tcp:N`, `udp:N`, `proto:N`, `ethertype:0xN`, each optionally scoped to addresses: `icmp@203.0.113.1`.
+- **Encryption proven by the handshake**: TLS by the suite the ServerHello chose (NULL, anonymous, export and the RFC 9150 integrity-only `TLS_SHA256_SHA256`/`TLS_SHA384_SHA384` count as cleartext; TLS 1.1 and older, RC4, DES and 3DES pass with a `WEAK_ENCRYPTION` warning), SSH by the cipher each direction negotiated, derived from both KEXINITs as RFC 4253 does (the first cipher on the client's list that the server also offers: `none` counts as cleartext; arcfour, CBC modes and 64-bit block ciphers pass with a warning). A session that does not encrypt is named `<protocol> without encryption` (category `unencrypted_session`), its frames after the handshake count as cleartext and no `ssh`/`tls` token accepts it. A session whose handshake is not in the capture (it began before the capture) passes only as encrypted, unverified (`ENCRYPTION_UNVERIFIED`): a TLS session by its application data records, an SSH session on tcp/22 or tcp/830 by payload that looks like ciphertext. Each session's cipher and verdict is in `tcp_sessions[].encryption`, the totals in `encryption`, and `clean` is true only for a pass with no weak or unverified session (the verdict then reads `PASS with warnings`). A passing SSH or TLS session is still named, as information (`ENCRYPTED_OUTSIDE_TUNNEL`), as protected by its own encryption rather than by IPsec.
+- TCP sessions are recognised by content on any port: SSH by its banner (key exchange up to NEWKEYS, then encrypted), TLS by its record header (handshake, then application data encrypted), cleartext HTTP/2 by its preface (named `grpc` when its requests are gRPC). Every frame is counted in `protection` (`encrypted`, `key_exchange`, `cleartext`, ...) whatever the allowlist, `tcp_sessions` names each flow by its service port, and on cleartext HTTP/2 each credential key in gRPC metadata is one `CLEARTEXT_CREDENTIAL` issue, value masked. An encrypted session outside the allowlist (with `allow=["crypto"]`) is `ENCRYPTED_OUTSIDE_ALLOWLIST`, not a cleartext finding.
 
 ### Convergence timeline (`convergence`, run only when named)
 - Takes an optional `event_time` (epoch, seconds from the first frame, or ISO-8601) and `failed_peer`; otherwise it starts from the first failure sign and infers the peer.
@@ -783,9 +790,9 @@ One timeline of every detector's events across several captures, with measured d
 Claude: Merge /run/wan1.pcap and /run/lan.pcap and check the failover finished within 30 seconds
 
 #### `audit_cleartext_pcap`
-The zero-cleartext assertion: returns `passed` (true or false), `result`, `verdict`, `frames_outside_allowlist`, `first_violation_frame`, `by_protocol` and `violations` with frame numbers.
+The zero-cleartext assertion: returns `passed` (true or false), `clean` (a pass with no weak or unverified SSH/TLS session), `result`, `verdict`, `frames_outside_allowlist`, `first_violation_frame`, `encryption`, `tcp_sessions` (each SSH/TLS session's cipher and verdict), `by_protocol` and `violations` with frame numbers.
 
-**Parameters**: `file_path`, and optional `allow` (allowlist tokens, default `["crypto"]`), `display_filter`, `max_packets`, `max_items`
+**Parameters**: `file_path`, and optional `allow` (allowlist tokens, default `["encrypted"]`; `["crypto"]` for IPsec only), `display_filter`, `max_packets`, `max_items`
 
 **Example**:
 ```
