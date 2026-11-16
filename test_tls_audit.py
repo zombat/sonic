@@ -40,6 +40,7 @@ HAVE_TSHARK = shutil.which("tshark") is not None
 CAPTURES = os.environ.get("SONIC_GRPC_CAPTURES", "/home/noot/auto-roboto/.IGNORE/cml-capture/proj/captures")
 PLAINTEXT = os.path.join(CAPTURES, "gnmi-plaintext.pcap")
 ENCRYPTED = os.path.join(CAPTURES, "netconf-restconf-ssh.pcap")
+TLS_CAPTURE = os.path.join(CAPTURES, "gnmi-tls-srlinux.pcap")
 
 
 def fixture(name):
@@ -323,6 +324,25 @@ class TestRealCaptures(unittest.TestCase):
         self.assertEqual(sorted(c["key"] for c in audit["credentials"]), ["password", "username"])
         self.assertTrue(all(c["value"] == "masked" for c in audit["credentials"]))
         self.assertIn("credentials in cleartext gRPC metadata", audit["verdict"])
+
+
+@unittest.skipUnless(HAVE_TSHARK and os.path.exists(TLS_CAPTURE), "the real TLS gNMI capture of SR Linux is not here")
+class TestRealTlsCapture(unittest.TestCase):
+    """Four TLS 1.3 gNMI sessions to SR Linux, each with a HelloRetryRequest, read without any key."""
+
+    def test_real_tls_gnmi_passes_by_default_with_the_suites_wireshark_reads(self):
+        hellos = tshark_rows(TLS_CAPTURE, "tls.handshake.type==2", ["tcp.dstport", "tls.handshake.ciphersuite"])
+        suites = {row["tcp.dstport"]: suite_name(int(row["tls.handshake.ciphersuite"], 16)) for row in hellos}
+        self.assertEqual(len(suites), 4)
+        for backend in ("tshark", "scapy"):
+            with self.subTest(backend=backend):
+                audit = audit_cleartext_capture(TLS_CAPTURE, backend=backend)
+                self.assertTrue(audit["passed"] and audit["clean"], audit["verdict"])
+                self.assertEqual(audit["encryption"]["encrypted"], 4)
+                for session in audit["tcp_sessions"]:
+                    enc = session["encryption"]
+                    self.assertEqual((enc["version"], enc["cipher_suite"]),
+                                     ("TLS1.3", suites[session["client"].rsplit(":", 1)[1]]))
 
 
 class TestTlsAuditFixtures(unittest.TestCase):
