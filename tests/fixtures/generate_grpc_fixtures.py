@@ -460,7 +460,8 @@ def build_mgmt_mix():
     return cap
 
 
-def build_tls13_keylog(out_dir: str):
+def build_tls13_keylog(out_dir: str, client_port: int = 55000, start: float = 0.0, cap=None,
+                       label: str = "grpc_tls13"):
     """
     A TLS 1.3 gNMI session with its key log, generated at test time (not a committed fixture).
 
@@ -471,7 +472,10 @@ def build_tls13_keylog(out_dir: str):
     Capabilities answered OK and a Get refused UNAUTHENTICATED, with username and password
     metadata (synthetic values) that only the key log makes visible.
 
-    Returns (pcap path, key log path).
+    With cap, the session is added to that Capture (from client_port, at start seconds) and no
+    pcap is written, so a test can put several sessions, each with its own key log, in one file.
+
+    Returns (pcap path, or None with cap; key log path).
     """
     import datetime
     import ssl
@@ -487,13 +491,13 @@ def build_tls13_keylog(out_dir: str):
             .not_valid_after(datetime.datetime(2035, 1, 1))
             .add_extension(x509.SubjectAlternativeName([x509.DNSName("gnmi-tls.example.net")]), critical=False)
             .sign(key, hashes.SHA256()))
-    cert_path, key_path = os.path.join(out_dir, "server.crt"), os.path.join(out_dir, "server.key")
+    cert_path, key_path = os.path.join(out_dir, f"{label}.server.crt"), os.path.join(out_dir, f"{label}.server.key")
     with open(cert_path, "wb") as handle:
         handle.write(cert.public_bytes(serialization.Encoding.PEM))
     with open(key_path, "wb") as handle:
         handle.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                                        serialization.NoEncryption()))
-    keylog = os.path.join(out_dir, "grpc_tls13.keylog")
+    keylog = os.path.join(out_dir, f"{label}.keylog")
     server_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     server_ctx.load_cert_chain(cert_path, key_path)
     server_ctx.minimum_version = ssl.TLSVersion.TLSv1_3
@@ -563,14 +567,17 @@ def build_tls13_keylog(out_dir: str):
     pump()
     drain(client)
 
-    cap = Capture()
-    tcp = Tcp(cap, "10.60.0.10", 55000, "198.51.100.57", 57400, 7000, 8000)
-    tcp.handshake(0.0)
-    t = 0.05
+    write = cap is None
+    cap = Capture() if write else cap
+    tcp = Tcp(cap, "10.60.0.10", client_port, "198.51.100.57", 57400, 7000, 8000)
+    tcp.handshake(start)
+    t = start + 0.05
     for from_client, data in flights:
         tcp.send(from_client, t, "PA", data, window=502)
         t += 0.01
-    pcap = os.path.join(out_dir, "grpc_tls13_keylog.pcap")
+    if not write:
+        return None, keylog
+    pcap = os.path.join(out_dir, f"{label}_keylog.pcap")
     cap.write(pcap)
     return pcap, keylog
 

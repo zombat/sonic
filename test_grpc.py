@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Tests for gRPC troubleshooting (analyzers/grpc_inspect.py, extractors/http2.py,
-analyzers/gnmi_decode.py, utils/grpc_protos.py), and for what it changed elsewhere:
+extractors/tls_secrets.py, analyzers/gnmi_decode.py, utils/grpc_protos.py), and for what it changed elsewhere:
 the cleartext audit's recognition of SSH, TLS and HTTP/2 by content, the TLS
 detector's IP SANs, alert meanings and HelloRetryRequest fix, and flows labelled by
 their service port.
@@ -9,10 +9,13 @@ their service port.
 Synthetic fixtures (names start with grpc_) are built by
 tests/fixtures/generate_grpc_fixtures.py; the test names say so. A TLS 1.3 gNMI
 session with its key log is generated at test time with Python's ssl module (real
-TLS, never committed). TestRealCaptures runs on two real captures when they are on
-this machine (SONIC_GRPC_CAPTURES names their directory) and skips otherwise:
-S.O.N.I.C. commits only synthetic fixtures. No credential value is written in this
-file: the real capture's values are read from it with tshark at test time, and every
+TLS, never committed); so are a capture of two such sessions with the key log of one,
+and the same session with its key log embedded in a pcapng by editcap. TestRealCaptures
+runs on two real captures when they are on this machine (SONIC_GRPC_CAPTURES names their
+directory) and skips otherwise, and TestRealTlsCapture on a third, TLS gNMI to Nokia SR
+Linux with the key log its client wrote: S.O.N.I.C. commits only synthetic fixtures. No
+credential value or secret is written in this file: the real captures' values are read
+from them with tshark at test time (decrypting with the key log by path), and every
 assertion is that they do not appear.
 
 Run with:  python3 -m unittest -q test_grpc
@@ -23,6 +26,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -30,9 +34,10 @@ import tempfile
 import unittest
 
 from analyzers.gnmi_decode import decode_request, decode_response, parse_fields, render_path
-from analyzers.grpc_inspect import analyze_grpc_capture, parse_timeout
+from analyzers.grpc_inspect import _scrub, _scrub_rules, analyze_grpc_capture, parse_timeout
 from analyzers.network_orchestrator import analyze_network_capture, audit_cleartext_capture
 from extractors.http2 import header_kind, plan_decode_as, protobuf_options
+from extractors.tls_secrets import TLS13_LABELS, labels_by_random, missing_labels, pcapng_secrets
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "tests", "fixtures")
@@ -40,9 +45,12 @@ sys.path.insert(0, FIXTURES)
 import generate_grpc_fixtures as gen  # noqa: E402
 
 HAVE_TSHARK = shutil.which("tshark") is not None
+HAVE_EDITCAP = shutil.which("editcap") is not None
 CAPTURES = os.environ.get("SONIC_GRPC_CAPTURES", "/home/noot/auto-roboto/.IGNORE/cml-capture/proj/captures")
 PLAINTEXT = os.path.join(CAPTURES, "gnmi-plaintext.pcap")
 ENCRYPTED = os.path.join(CAPTURES, "netconf-restconf-ssh.pcap")
+TLS_CAPTURE = os.path.join(CAPTURES, "gnmi-tls-srlinux.pcap")
+TLS_KEYLOG = os.path.join(CAPTURES, "gnmi-tls-srlinux.keylog")
 SYNTHETIC_SECRETS = [gen.SYNTHETIC_USER.decode(), gen.SYNTHETIC_PASSWORD.decode(), gen.SYNTHETIC_API_KEY.decode()]
 
 
@@ -71,6 +79,35 @@ def metadata_values(path, port, names):
             if name in names and value:
                 values.add(value)
     return values
+
+
+def key_log_secrets(path):
+    """The secret column of a key log, to assert it never appears (never printed)."""
+    with open(path) as handle:
+        return [line.split()[-1] for line in handle if len(line.split()) == 3]
+
+
+def decrypted_metadata(path, keylog, names):
+    """{name: values} of the named metadata headers, decrypted by tshark with the key log (never printed)."""
+    out = subprocess.run(["tshark", "-n", "-r", path, "-o", f"tls.keylog_file:{keylog}", "-Y", "http2.header",
+                          "-T", "fields", "-E", "occurrence=a", "-E", "aggregator=\x1f",
+                          "-e", "http2.header.name", "-e", "http2.header.value"],
+                         capture_output=True, text=True, check=True).stdout
+    values = {}
+    for line in out.splitlines():
+        hnames, _, hvalues = line.partition("\t")
+        for name, value in zip(hnames.split("\x1f"), hvalues.split("\x1f")):
+            if name in names and value:
+                values.setdefault(name, set()).add(value)
+    return values
+
+
+def inject_secrets(keylog, pcap, out_dir):
+    """The capture as a pcapng carrying the key log in a Decryption Secrets Block (editcap), in out_dir."""
+    embedded = os.path.join(out_dir, "embedded.pcapng")
+    subprocess.run(["editcap", "--inject-secrets", f"tls,{keylog}", pcap, embedded], check=True, capture_output=True)
+    os.chmod(embedded, 0o600)
+    return embedded
 
 
 class TestGnmiDecode(unittest.TestCase):
@@ -271,6 +308,94 @@ class TestSyntheticGrpc(unittest.TestCase):
             self.assertNotIn("CLEARTEXT_CREDENTIAL", codes(report))
             self.assertEqual(codes(report).count("CREDENTIAL_IN_METADATA"), 2)
 
+    @unittest.skipUnless(HAVE_EDITCAP, "editcap is not installed")
+    def test_synthetic_tls13_secrets_embedded_in_pcapng_need_no_key_log(self):
+        with tempfile.TemporaryDirectory() as out:
+            pcap, keylog = gen.build_tls13_keylog(out)
+            secrets = key_log_secrets(keylog)
+            embedded = inject_secrets(keylog, pcap, out)
+            self.assertEqual(pcapng_secrets(embedded)["blocks"], 1)
+            report = self.ok(analyze_grpc_capture(embedded))
+            text = json.dumps(report)
+            for secret in secrets:
+                self.assertNotIn(secret, text)
+            self.assertFalse(report["capture"]["keylog_file_given"])
+            self.assertEqual(report["capture"]["tls_secrets"]["source"], "the secrets in the pcapng")
+            self.assertEqual(report["capture"]["tls_secrets"]["pcapng_decryption_secrets_blocks"], 1)
+            rpcs = rpc_by_stream(report)
+            self.assertEqual((rpcs[1]["method"], rpcs[1]["grpc_status_name"]), ("/gnmi.gNMI/Capabilities", "OK"))
+            self.assertEqual(rpcs[3]["grpc_status_name"], "UNAUTHENTICATED")
+            self.assertEqual(report["connections"][0]["transport"], "tls (decrypted with the secrets in the pcapng)")
+            self.assertIn("with the secrets in the pcapng", report["verdict"])
+            self.assertIn("TLS_SECRETS_IN_CAPTURE", codes(report))
+            coverage = report["tls_decryption"]
+            self.assertEqual((coverage["decrypted"], coverage["total"]), (1, 1))
+            self.assertEqual(coverage["sessions"][0]["secret_in"], ["pcapng"])
+            self.assertTrue(set(TLS13_LABELS) <= set(coverage["sessions"][0]["labels"]))
+
+    def test_synthetic_decryption_coverage_names_a_session_without_a_secret(self):
+        from generate_dataplane_fixtures import Capture
+        with tempfile.TemporaryDirectory() as out:
+            cap = Capture()
+            _, covered = gen.build_tls13_keylog(out, client_port=55000, cap=cap, label="covered")
+            gen.build_tls13_keylog(out, client_port=55001, start=1.0, cap=cap, label="other")
+            pcap = os.path.join(out, "two_sessions.pcap")
+            cap.write(pcap)
+            report = self.ok(analyze_grpc_capture(pcap, keylog_file=covered))
+            coverage = report["tls_decryption"]
+            self.assertEqual((coverage["decrypted"], coverage["total"]), (1, 2))
+            missed = [row for row in coverage["sessions"] if not row["decrypted"]]
+            self.assertEqual([row["flow"] for row in missed], ["10.60.0.10:55001 -> 198.51.100.57:57400"])
+            self.assertIn("holds no secret for this session", missed[0]["reason"])
+            self.assertEqual(missed[0]["secret_in"], [])
+            self.assertIn("not decrypted: 10.60.0.10:55001", coverage["verdict"])
+            self.assertEqual(codes(report).count("TLS_SESSION_NOT_DECRYPTED"), 1)
+            self.assertEqual(report["summary"]["rpcs"], 2)  # the covered session's Capabilities and Get
+            closed = self.ok(analyze_grpc_capture(pcap))
+            self.assertEqual((closed["tls_decryption"]["decrypted"], closed["tls_decryption"]["total"]), (0, 2))
+            self.assertIn("no key log given", closed["tls_decryption"]["sessions"][0]["reason"])
+            self.assertNotIn("TLS_SESSION_NOT_DECRYPTED", codes(closed))
+
+    def test_synthetic_reset_right_after_the_status_is_normal(self):
+        from generate_dataplane_fixtures import Capture
+        cap = Capture()
+        c = gen.H2Conn(cap, "10.20.0.10", 51500, "10.20.0.1", 9339, 1000, 5000, 0.0)
+        c.client(0.03, gen.PREFACE, gen.settings())
+        c.server(0.031, gen.settings(), gen.SETTINGS_ACK)
+        once = gen.pb_bytes(1, gen.pb_bytes(2, gen.pb_bytes(1, gen.gnmi_path("system"))) + gen.pb_varint(5, 1))
+        c.client(0.04, gen.headers_frame(1, gen.request_headers("/gnmi.gNMI/Subscribe", "10.20.0.1:9339")),
+                 gen.data_frame(1, gen.grpc_message(once)))
+        c.server(0.05, gen.headers_frame(1, gen.RESPONSE_HEADERS), gen.data_frame(1, gen.grpc_message(gen.pb_varint(3, 1))),
+                 gen.headers_frame(1, gen.trailers(0), True), gen.rst_stream(1, 0))
+        c.client(0.06, gen.rst_stream(1, 0))
+        with tempfile.TemporaryDirectory() as out:
+            path = os.path.join(out, "once.pcap")
+            cap.write(path)
+            report = self.ok(analyze_grpc_capture(path))
+        resets = [i for i in report["issues"] if i["code"] == "HTTP2_RST_STREAM"]
+        self.assertEqual([i["severity"] for i in resets], ["info", "info"])
+        self.assertIn("RFC 9113 8.1", resets[0]["message"] + resets[1]["message"])
+        self.assertEqual(report["rpcs"][0]["grpc_status_name"], "OK")
+        self.assertEqual(report["rpcs"][0]["decoded"]["request"]["mode"], "ONCE")
+
+    def test_synthetic_malformed_gnmi_message_is_reported_not_fatal(self):
+        from generate_dataplane_fixtures import Capture
+        cap = Capture()
+        c = gen.H2Conn(cap, "10.20.0.10", 51600, "10.20.0.1", 9339, 1000, 5000, 0.0)
+        c.client(0.03, gen.PREFACE, gen.settings())
+        c.server(0.031, gen.settings(), gen.SETTINGS_ACK)
+        # SubscriptionList field 2 (subscription) carried as a varint where a message belongs
+        bad = gen.pb_bytes(1, gen.pb_varint(2, 1))
+        c.client(0.04, gen.headers_frame(1, gen.request_headers("/gnmi.gNMI/Subscribe", "10.20.0.1:9339")),
+                 gen.data_frame(1, gen.grpc_message(bad)))
+        c.server(0.05, gen.headers_frame(1, gen.RESPONSE_HEADERS + gen.trailers(3, "bad request"), True))
+        with tempfile.TemporaryDirectory() as out:
+            path = os.path.join(out, "bad.pcap")
+            cap.write(path)
+            report = self.ok(analyze_grpc_capture(path))
+        self.assertEqual(report["rpcs"][0]["grpc_status_name"], "INVALID_ARGUMENT")
+        self.assertTrue(report["rpcs"][0]["decoded"]["decode_errors"])
+
     def test_errors_are_data(self):
         self.assertEqual(analyze_grpc_capture("/nonexistent.pcap")["status"], "error")
         self.assertIn("keylog_file", analyze_grpc_capture(fixture("grpc_tls12_alert.pcap"),
@@ -278,6 +403,27 @@ class TestSyntheticGrpc(unittest.TestCase):
         self.assertIn("Not a TCP port", analyze_grpc_capture(fixture("grpc_tls12_alert.pcap"), ports=[70000])["error"])
         empty = self.ok(analyze_grpc_capture(fixture("bgp_session.pcap")))
         self.assertEqual(empty["overall_status"], "not_present")
+
+
+class TestTlsSecretsAndScrubbing(unittest.TestCase):
+    def test_key_log_lines_keep_labels_and_randoms_never_secrets(self):
+        random, secret = "ab" * 32, "cd" * 48
+        lines = [f"CLIENT_TRAFFIC_SECRET_0 {random} {secret}", f"SERVER_TRAFFIC_SECRET_0 {random.upper()} {secret}",
+                 "# a comment", f"RSA {random[:16]} {secret}", "not a key log line"]
+        table = labels_by_random(lines)
+        self.assertEqual(table, {random: {"CLIENT_TRAFFIC_SECRET_0", "SERVER_TRAFFIC_SECRET_0"}})
+        self.assertNotIn(secret, repr(table))
+        self.assertEqual(missing_labels({"CLIENT_TRAFFIC_SECRET_0"}, "TLS1.3"),
+                         ["CLIENT_HANDSHAKE_TRAFFIC_SECRET", "SERVER_HANDSHAKE_TRAFFIC_SECRET", "SERVER_TRAFFIC_SECRET_0"])
+        self.assertEqual(missing_labels({"CLIENT_RANDOM"}, "TLS1.2"), [])
+        self.assertIsNone(pcapng_secrets(fixture("grpc_h2_trouble.pcap")))  # a pcap, not a pcapng
+
+    def test_user_names_are_scrubbed_only_where_they_stand_alone(self):
+        rules = _scrub_rules({"hunter2-not-real"}, {"admin"})
+        self.assertEqual(_scrub({"path": "/interface[name=mgmt0]/admin-state", "message": "user admin denied",
+                                 "echo": ["pw=hunter2-not-real;"]}, rules),
+                         {"path": "/interface[name=mgmt0]/admin-state", "message": "user [REDACTED] denied",
+                          "echo": ["pw=[REDACTED];"]})
 
 
 class AuditAssertions:
@@ -301,7 +447,11 @@ class AuditAssertions:
         self.assertEqual(sessions["tcp/50001"]["server"], "10.70.0.1:50001")  # not the client's 41000
         self.assertEqual(report["protection"]["cleartext"], 12)
         found = codes(report)
-        self.assertEqual(found.count("ENCRYPTED_OUTSIDE_ALLOWLIST"), 4)
+        # The default allowlist (encrypted) accepts the SSH and TLS sessions; crypto alone (IPsec) does not.
+        self.assertNotIn("ENCRYPTED_OUTSIDE_ALLOWLIST", found)
+        self.assertIn("ENCRYPTED_OUTSIDE_TUNNEL", found)
+        self.assertEqual(codes(self.audit("grpc_mgmt_mix.pcap", allow=["crypto"])).count("ENCRYPTED_OUTSIDE_ALLOWLIST"),
+                         4)
         if HAVE_TSHARK:
             self.assertEqual(sessions["tcp/50001"]["protocol"], "grpc (tcp/50001)")
             self.assertEqual([c["key"] for c in report["credentials"]], ["authorization"])
@@ -415,11 +565,13 @@ class TestRealCaptures(unittest.TestCase):
                 self.assertEqual(audit["protection"]["encrypted"] + audit["protection"]["key_exchange"], 1030)
                 self.assertNotIn("CLEARTEXT_OUTSIDE_ALLOWLIST", codes(audit))
                 self.assertNotIn("CLEARTEXT_CREDENTIAL", codes(audit))
-                self.assertIn("none of them is cleartext", audit["verdict"])
+                self.assertTrue(audit["passed"] and audit["clean"], audit["verdict"])  # the default: encrypted
                 names = [s["protocol"] for s in audit["tcp_sessions"]]
                 self.assertEqual(names, ["netconf over ssh (tcp/830)", "tls (tcp/443 https)", "tls (tcp/443 https)",
                                          "tls (tcp/443 https)", "ssh (tcp/22)"])
-                self.assertTrue(audit_cleartext_capture(ENCRYPTED, backend=backend, allow=["encrypted"])["passed"])
+                tunnel = audit_cleartext_capture(ENCRYPTED, backend=backend, allow=["crypto"])
+                self.assertFalse(tunnel["passed"])
+                self.assertIn("none of them is cleartext", tunnel["verdict"])
 
     def test_real_encrypted_tls13_after_hello_retry_and_no_grpc_claimed(self):
         tls = analyze_network_capture(ENCRYPTED, detectors=["tls"])["tls"]
@@ -430,6 +582,103 @@ class TestRealCaptures(unittest.TestCase):
         self.assertEqual(report["credentials"], [])
         self.assertEqual({c["protocol"] for c in report["connections"]}, {"tls, h2 offered"})
         self.assertIn("whether they carry gRPC cannot be seen", report["verdict"])
+
+
+@unittest.skipUnless(HAVE_TSHARK and os.path.exists(TLS_CAPTURE) and os.path.exists(TLS_KEYLOG),
+                     "the real TLS gNMI capture of SR Linux and its key log are not on this machine")
+class TestRealTlsCapture(unittest.TestCase):
+    """
+    gNMI over TLS 1.3 to Nokia SR Linux 26.7.2 on tcp/57400 (four sessions, ten calls), with the key
+    log its client wrote. The calls expected are read from the capture with tshark and the key log,
+    not written here; so are the credential values and the secrets, which must never appear.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.report = analyze_grpc_capture(TLS_CAPTURE, keylog_file=TLS_KEYLOG)
+        cls.text = json.dumps(cls.report)
+        cls.values = decrypted_metadata(TLS_CAPTURE, TLS_KEYLOG, {"username", "password"})
+        cls.secrets = key_log_secrets(TLS_KEYLOG)
+        out = subprocess.run(["tshark", "-n", "-r", TLS_CAPTURE, "-o", f"tls.keylog_file:{TLS_KEYLOG}", "-Y",
+                              'http2.header.name == ":path"', "-T", "fields", "-e", "frame.number",
+                              "-e", "http2.headers.path"], capture_output=True, text=True, check=True).stdout
+        cls.calls = [(int(line.split("\t")[0]), line.split("\t")[1]) for line in out.splitlines()]
+
+    def no_secret(self, text):
+        self.assertTrue(self.secrets and self.values.get("password") and self.values.get("username"))
+        for secret in self.secrets:
+            self.assertNotIn(secret, text)
+        for password in self.values["password"]:
+            self.assertNotIn(password, text)
+        for name in self.values["username"]:  # a user name may stand inside a word (admin-state), never alone
+            self.assertIsNone(re.search(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])", text))
+        self.assertNotIn(TLS_KEYLOG, text)
+
+    def test_real_tls_rpcs_by_name_with_status_and_timing(self):
+        report = self.report
+        self.assertEqual(report["status"], "success")
+        self.no_secret(self.text)
+        self.assertEqual(len(self.calls), 10)
+        self.assertEqual([(r["frames"]["request"], r["method"]) for r in report["rpcs"]], self.calls)
+        self.assertEqual({r["method"].rsplit("/", 1)[1] for r in report["rpcs"]}, {"Capabilities", "Get", "Set",
+                                                                                   "Subscribe"})
+        self.assertEqual({r["grpc_status_name"] for r in report["rpcs"]}, {"OK"})
+        for rpc in report["rpcs"]:
+            self.assertTrue(0 < rpc["timing"]["to_end_ms"] < 1000, rpc["timing"])
+        sets = [r["decoded"]["request"] for r in report["rpcs"] if r["method"].endswith("/Set")]
+        self.assertEqual([(s["update"]["paths"], s["delete"]["paths"]) for s in sets],
+                         [(["/interface[name=lo42]"], []), ([], ["/interface[name=lo42]"])])
+        subscribe = report["rpcs"][-1]["decoded"]
+        self.assertEqual((subscribe["request"]["mode"], subscribe["request"]["subscriptions"][0]["path"]),
+                         ("ONCE", "/interface[name=mgmt0]/admin-state"))
+        self.assertTrue(subscribe["response"]["sync_response"])
+        self.assertEqual(report["overall_status"], "ok")
+        self.assertEqual({c["transport"] for c in report["connections"]}, {"tls (decrypted with the key log)"})
+        self.assertEqual({c["tls"]["certificate"]["subject"] for c in report["connections"]}, {"srl"})
+        for row in report["capture"]["reread_without_out_of_order"]:
+            self.assertGreater(row["http2_packets_after"], row["http2_packets_before"])
+
+    def test_real_tls_credentials_flagged_with_values_masked(self):
+        creds = self.report["credentials"]
+        self.assertEqual(len({c["flow"] for c in creds}), 4)
+        self.assertEqual(sorted({c["key"] for c in creds}), ["password", "username"])
+        self.assertTrue(all(not c["cleartext"] and c["value"] == "masked" for c in creds))
+        self.assertEqual(codes(self.report).count("CREDENTIAL_IN_METADATA"), 8)
+        self.assertNotIn("CLEARTEXT_CREDENTIAL", codes(self.report))
+
+    def test_real_tls_decryption_coverage(self):
+        coverage = self.report["tls_decryption"]
+        self.assertEqual((coverage["decrypted"], coverage["total"]), (4, 4))
+        self.assertEqual(coverage["verdict"], "4 of 4 TLS session(s) decrypted with the key log.")
+        for row in coverage["sessions"]:
+            self.assertEqual((row["version"], row["secret_in"], row["labels"], row["reason"]),
+                             ("TLS1.3", ["key log"], sorted(TLS13_LABELS), None))
+        self.assertEqual(self.report["capture"]["tls_secrets"]["sessions_in_key_log"], 4)
+
+    @unittest.skipUnless(HAVE_EDITCAP, "editcap is not installed")
+    def test_real_tls_secrets_embedded_in_pcapng(self):
+        with tempfile.TemporaryDirectory() as out:
+            report = analyze_grpc_capture(inject_secrets(TLS_KEYLOG, TLS_CAPTURE, out))
+        self.no_secret(json.dumps(report))
+        self.assertEqual([(r["frames"]["request"], r["method"], r["grpc_status_name"]) for r in report["rpcs"]],
+                         [(frame, path, "OK") for frame, path in self.calls])
+        self.assertEqual(report["tls_decryption"]["verdict"], "4 of 4 TLS session(s) decrypted with the secrets in "
+                                                             "the pcapng.")
+        self.assertIn("TLS_SECRETS_IN_CAPTURE", codes(report))
+
+    def test_real_tls_cli_and_report_hold_no_secret(self):
+        with tempfile.TemporaryDirectory() as out:
+            saved = os.path.join(out, "srl.md")
+            done = subprocess.run([sys.executable, os.path.join(HERE, "sonic.py"), "--file", TLS_CAPTURE, "--grpc",
+                                   "--tls-secrets-log", TLS_KEYLOG, "--save_file", saved],
+                                  capture_output=True, text=True, timeout=300, cwd=HERE)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertIn("4 of 4 TLS session(s) decrypted with the key log", done.stdout)
+            self.no_secret(done.stdout + done.stderr)
+            with open(saved) as handle:
+                markdown = handle.read()
+            self.assertIn("## TLS decryption", markdown)
+            self.no_secret(markdown)
 
 
 def proto_dir():

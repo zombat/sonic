@@ -36,7 +36,7 @@ Author: Raymond A Rizzo | Zombat
 
 import struct
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from analyzers.dataplane_common import endpoint, seq_delta, transport
 from analyzers.network_common import Context, cap, make_event, make_issue, sort_issues, status_from_issues
@@ -73,8 +73,68 @@ CIPHER_SUITES = {
     0x0008: "TLS_RSA_EXPORT_WITH_DES40_CBC_SHA", 0x0000: "TLS_NULL_WITH_NULL_NULL", 0x0001: "TLS_RSA_WITH_NULL_MD5",
     0x0002: "TLS_RSA_WITH_NULL_SHA", 0x003B: "TLS_RSA_WITH_NULL_SHA256", 0x0018: "TLS_DH_anon_WITH_RC4_128_MD5",
     0x00FF: "TLS_EMPTY_RENEGOTIATION_INFO_SCSV", 0x5600: "TLS_FALLBACK_SCSV",
+    0x0032: "TLS_DHE_DSS_WITH_AES_128_CBC_SHA", 0x0038: "TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
+    0x0040: "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256", 0x006A: "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256",
+    0x00A2: "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256", 0x00A3: "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384",
+    0x00A8: "TLS_PSK_WITH_AES_128_GCM_SHA256", 0x00A9: "TLS_PSK_WITH_AES_256_GCM_SHA384",
+    0x00AA: "TLS_DHE_PSK_WITH_AES_128_GCM_SHA256", 0x00AB: "TLS_DHE_PSK_WITH_AES_256_GCM_SHA384",
+    0xC004: "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA", 0xC005: "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA",
+    0xC00E: "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA", 0xC00F: "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA",
+    0xC025: "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256", 0xC026: "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384",
+    0xC029: "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256", 0xC02A: "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384",
+    0xC02D: "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256", 0xC02E: "TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384",
+    0xC031: "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256", 0xC032: "TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384",
+    0xC05C: "TLS_ECDHE_ECDSA_WITH_ARIA_128_GCM_SHA256", 0xC05D: "TLS_ECDHE_ECDSA_WITH_ARIA_256_GCM_SHA384",
+    0xC060: "TLS_ECDHE_RSA_WITH_ARIA_128_GCM_SHA256", 0xC061: "TLS_ECDHE_RSA_WITH_ARIA_256_GCM_SHA384",
+    0xC086: "TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256", 0xC087: "TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384",
+    0xC08A: "TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256", 0xC08B: "TLS_ECDHE_RSA_WITH_CAMELLIA_256_GCM_SHA384",
+    0xC09C: "TLS_RSA_WITH_AES_128_CCM", 0xC09D: "TLS_RSA_WITH_AES_256_CCM", 0xC09E: "TLS_DHE_RSA_WITH_AES_128_CCM",
+    0xC09F: "TLS_DHE_RSA_WITH_AES_256_CCM", 0xC0A0: "TLS_RSA_WITH_AES_128_CCM_8",
+    0xC0A1: "TLS_RSA_WITH_AES_256_CCM_8", 0xC0A2: "TLS_DHE_RSA_WITH_AES_128_CCM_8",
+    0xC0A3: "TLS_DHE_RSA_WITH_AES_256_CCM_8", 0xC0A4: "TLS_PSK_WITH_AES_128_CCM", 0xC0A5: "TLS_PSK_WITH_AES_256_CCM",
+    0xC0A6: "TLS_DHE_PSK_WITH_AES_128_CCM", 0xC0A7: "TLS_DHE_PSK_WITH_AES_256_CCM",
+    0xC0A8: "TLS_PSK_WITH_AES_128_CCM_8", 0xC0A9: "TLS_PSK_WITH_AES_256_CCM_8",
+    0xC0AA: "TLS_PSK_DHE_WITH_AES_128_CCM_8", 0xC0AB: "TLS_PSK_DHE_WITH_AES_256_CCM_8",
+    0xC0AC: "TLS_ECDHE_ECDSA_WITH_AES_128_CCM", 0xC0AD: "TLS_ECDHE_ECDSA_WITH_AES_256_CCM",
+    0xC0AE: "TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8", 0xC0AF: "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8",
+    0xD001: "TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256", 0xD002: "TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384",
+    0xD003: "TLS_ECDHE_PSK_WITH_AES_128_CCM_8_SHA256", 0xD005: "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256",
+    # Suites that do not encrypt: NULL ciphers, anonymous and export key exchange, RFC 9150 integrity-only.
+    0x0006: "TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5", 0x000B: "TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA",
+    0x000E: "TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA", 0x0011: "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
+    0x0014: "TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA", 0x0017: "TLS_DH_anon_EXPORT_WITH_RC4_40_MD5",
+    0x0019: "TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA", 0x001A: "TLS_DH_anon_WITH_DES_CBC_SHA",
+    0x001B: "TLS_DH_anon_WITH_3DES_EDE_CBC_SHA", 0x001C: "SSL_FORTEZZA_KEA_WITH_NULL_SHA",
+    0x0026: "TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA", 0x0027: "TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA",
+    0x0028: "TLS_KRB5_EXPORT_WITH_RC4_40_SHA", 0x0029: "TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5",
+    0x002A: "TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5", 0x002B: "TLS_KRB5_EXPORT_WITH_RC4_40_MD5",
+    0x002C: "TLS_PSK_WITH_NULL_SHA", 0x002D: "TLS_DHE_PSK_WITH_NULL_SHA", 0x002E: "TLS_RSA_PSK_WITH_NULL_SHA",
+    0x0034: "TLS_DH_anon_WITH_AES_128_CBC_SHA", 0x003A: "TLS_DH_anon_WITH_AES_256_CBC_SHA",
+    0x0046: "TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA", 0x0060: "TLS_RSA_EXPORT1024_WITH_RC4_56_MD5",
+    0x0061: "TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5", 0x0062: "TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA",
+    0x0063: "TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA", 0x0064: "TLS_RSA_EXPORT1024_WITH_RC4_56_SHA",
+    0x0065: "TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA", 0x006C: "TLS_DH_anon_WITH_AES_128_CBC_SHA256",
+    0x006D: "TLS_DH_anon_WITH_AES_256_CBC_SHA256", 0x0082: "TLS_GOSTR341094_WITH_NULL_GOSTR3411",
+    0x0083: "TLS_GOSTR341001_WITH_NULL_GOSTR3411", 0x0089: "TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA",
+    0x009B: "TLS_DH_anon_WITH_SEED_CBC_SHA", 0x00A6: "TLS_DH_anon_WITH_AES_128_GCM_SHA256",
+    0x00A7: "TLS_DH_anon_WITH_AES_256_GCM_SHA384", 0x00B0: "TLS_PSK_WITH_NULL_SHA256",
+    0x00B1: "TLS_PSK_WITH_NULL_SHA384", 0x00B4: "TLS_DHE_PSK_WITH_NULL_SHA256",
+    0x00B5: "TLS_DHE_PSK_WITH_NULL_SHA384", 0x00B8: "TLS_RSA_PSK_WITH_NULL_SHA256",
+    0x00B9: "TLS_RSA_PSK_WITH_NULL_SHA384", 0x00BF: "TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA256",
+    0x00C5: "TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA256", 0xC001: "TLS_ECDH_ECDSA_WITH_NULL_SHA",
+    0xC006: "TLS_ECDHE_ECDSA_WITH_NULL_SHA", 0xC00B: "TLS_ECDH_RSA_WITH_NULL_SHA",
+    0xC010: "TLS_ECDHE_RSA_WITH_NULL_SHA", 0xC015: "TLS_ECDH_anon_WITH_NULL_SHA",
+    0xC016: "TLS_ECDH_anon_WITH_RC4_128_SHA", 0xC017: "TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA",
+    0xC018: "TLS_ECDH_anon_WITH_AES_128_CBC_SHA", 0xC019: "TLS_ECDH_anon_WITH_AES_256_CBC_SHA",
+    0xC039: "TLS_ECDHE_PSK_WITH_NULL_SHA", 0xC03A: "TLS_ECDHE_PSK_WITH_NULL_SHA256",
+    0xC03B: "TLS_ECDHE_PSK_WITH_NULL_SHA384", 0xC046: "TLS_DH_anon_WITH_ARIA_128_CBC_SHA256",
+    0xC047: "TLS_DH_anon_WITH_ARIA_256_CBC_SHA384", 0xC05A: "TLS_DH_anon_WITH_ARIA_128_GCM_SHA256",
+    0xC05B: "TLS_DH_anon_WITH_ARIA_256_GCM_SHA384", 0xC084: "TLS_DH_anon_WITH_CAMELLIA_128_GCM_SHA256",
+    0xC085: "TLS_DH_anon_WITH_CAMELLIA_256_GCM_SHA384", 0xC0B4: "TLS_SHA256_SHA256", 0xC0B5: "TLS_SHA384_SHA384",
 }
-WEAK_MARKERS = ("RC4", "3DES", "_DES_", "DES40", "NULL", "EXPORT", "anon", "_MD5")
+# Every name above is Wireshark's (test_tls_audit checks the table against tshark -G values when tshark is here).
+WEAK_MARKERS = ("RC4", "3DES", "_DES_", "DES40", "NULL", "EXPORT", "anon", "_MD5", "TLS_SHA256_SHA256",
+                "TLS_SHA384_SHA384")
 SIGNALING = {0x00FF, 0x5600}
 
 GROUPS = {0x0017: "secp256r1", 0x0018: "secp384r1", 0x0019: "secp521r1", 0x001D: "x25519", 0x001E: "x448",
@@ -192,6 +252,51 @@ def suite_is_weak(name: str) -> bool:
 
 def suite_has_forward_secrecy(name: str) -> bool:
     return name.startswith("TLS_ECDHE_") or name.startswith("TLS_DHE_") or (name.startswith("TLS_") and "_WITH_" not in name)
+
+
+# TLS 1.3 suites (RFC 8446 B.4, RFC 9150): a ServerHello choosing one negotiated TLS 1.3.
+TLS13_SUITES = {0x1301, 0x1302, 0x1303, 0x1304, 0x1305, 0xC0B4, 0xC0B5}
+
+
+def suite_encryption(code: int) -> Tuple[str, Optional[str]]:
+    """
+    What a chosen cipher suite does to the records, judged by its name:
+    ("cleartext", why) for a NULL cipher, anonymous or export key exchange or an RFC 9150
+    integrity-only suite; ("weak", why) for RC4, DES, 3DES or MD5; ("unverified", why) for a
+    code not in CIPHER_SUITES; ("encrypted", None) otherwise.
+    """
+    name = suite_name(code)
+    if code in SIGNALING:
+        return "unverified", f"{name} is a signalling value, not a cipher suite"
+    if name in ("TLS_SHA256_SHA256", "TLS_SHA384_SHA384"):
+        return "cleartext", f"{name} is an RFC 9150 integrity-only suite: records carry plaintext with an HMAC"
+    if name == "TLS_NULL_WITH_NULL_NULL":
+        return "cleartext", f"{name}: no cipher and no MAC"
+    if "NULL" in name:
+        return "cleartext", f"{name} has a NULL cipher: records carry plaintext with only a MAC"
+    if "EXPORT" in name:
+        return "cleartext", f"{name} is an export suite (40 or 56 bit keys, broken in hours)"
+    if "anon" in name:
+        return "cleartext", (f"{name} has anonymous key exchange: the server is not authenticated, so anyone "
+                             "on the path can intercept and read the session")
+    if name.startswith("0x"):
+        return "unverified", f"cipher suite {name} is not in S.O.N.I.C.'s table, so its cipher is not known"
+    if suite_is_weak(name):
+        return "weak", f"{name} uses a broken cipher or hash (RC4, DES, 3DES or MD5)"
+    return "encrypted", None
+
+
+def version_is_weak(version: Optional[str]) -> bool:
+    """TLS 1.1 and older (RFC 8996 deprecates them), SSL 3.0 included."""
+    return version in VERSION_RANK and VERSION_RANK[version] < VERSION_RANK["TLS1.2"]
+
+
+def server_hello_suite(body: bytes) -> Optional[int]:
+    """The cipher suite code of a ServerHello body, or None when the body is too short."""
+    try:
+        return _u16(body, 35 + body[34])
+    except (IndexError, struct.error):
+        return None
 
 
 def normalize_version(value: Any) -> Optional[str]:
@@ -554,8 +659,11 @@ class TlsDetector:
                 violations.append(make_issue("error", "TLS_BASELINE_CIPHER",
                                              f"chose {chosen_suite}, not in the baseline list"))
             if suite_is_weak(chosen_suite):
-                violations.append(make_issue("error", "TLS_WEAK_CIPHER_CHOSEN",
-                                             f"chose a weak cipher suite {chosen_suite}"))
+                code = next((c for c, n in CIPHER_SUITES.items() if n == chosen_suite), None)
+                kind, why = suite_encryption(code) if code is not None else ("weak", None)
+                text = (f"chose a suite that does not encrypt: {why}" if kind == "cleartext"
+                        else f"chose a weak cipher suite {chosen_suite}")
+                violations.append(make_issue("error", "TLS_WEAK_CIPHER_CHOSEN", text))
             if base.get("require_forward_secrecy") and not suite_has_forward_secrecy(chosen_suite):
                 violations.append(make_issue("error", "TLS_NO_FORWARD_SECRECY",
                                              f"chose {chosen_suite}: static RSA key exchange, no forward secrecy"))

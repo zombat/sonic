@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 🔓 **TLS decryption proven on a real capture, secrets inside pcapng, and decryption coverage** (`analyzers/grpc_inspect.py`, `extractors/tls_secrets.py`)
+  - Proven on a real capture of gNMI over TLS 1.3 to Nokia SR Linux 26.7.2 with the key log its client wrote: all ten calls (Capabilities, Get, Set, Subscribe) by name with their status and timing, the TLS 1.3 certificate, and the `username`/`password` metadata of every call flagged (`CREDENTIAL_IN_METADATA`) with values masked
+  - A pcapng that carries its TLS secrets in a Decryption Secrets Block (`editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng`) is decrypted with no key log; the report says so (`capture.tls_secrets`, transport `tls (decrypted with the secrets in the pcapng)`, `TLS_SECRETS_IN_CAPTURE`)
+  - `tls_decryption`: every TLS session in the capture, whether the secrets decrypted it, which source held its secret, and when not, why (no secret for its ClientHello random, no ClientHello captured, only the handshake secrets), with a total in the verdict; `TLS_SESSION_NOT_DECRYPTED` names each session the secrets did not open. Shown in the CLI summary and the markdown report
+  - The key log is still handed to tshark by path; to say which sessions it covers only its labels and ClientHello randoms are read, and the secret column is dropped as each line is read
+- 🔏 **Encryption proven by the handshake** in the cleartext audit (`analyzers/cleartext_audit.py`)
+  - TLS: the suite the ServerHello chose, read from the record bytes on any port (after a HelloRetryRequest, the real ServerHello). NULL ciphers, anonymous and export key exchange and the RFC 9150 integrity-only suites (`TLS_SHA256_SHA256`, `TLS_SHA384_SHA384`) count as cleartext; TLS 1.1 and older, RC4, DES, 3DES and MD5 pass with a `WEAK_ENCRYPTION` warning
+  - SSH: each direction's cipher and MAC, derived from both KEXINITs as RFC 4253 7.1 does (the first algorithm on the client's list that the server also offers). `none` counts as cleartext; arcfour, CBC modes, 64-bit block ciphers and the MAC `none` pass with a `WEAK_ENCRYPTION` warning
+  - A session that does not encrypt is `<protocol> without encryption` (category `unencrypted_session`), its frames after the handshake count as cleartext, and the verdict names the suite or cipher
+  - A session whose handshake is not in the capture passes only as encrypted, unverified (`ENCRYPTION_UNVERIFIED`, a warning): a TLS session already past its handshake is recognised by its application data records, an SSH session that began before the capture by tcp/22 or tcp/830 and payload that looks like ciphertext (text on tcp/22 without a banner stays cleartext)
+  - `clean` (a pass with no weak or unverified session; the verdict then reads `PASS with warnings` and the detector's status is `warning`), `encryption` (sessions by state), `tcp_sessions[].encryption` (state, version, suite or ciphers, the frames read, why), `violations[].reasons`, and one `ENCRYPTED_OUTSIDE_TUNNEL` info issue naming the SSH and TLS sessions that passed as protected by their own encryption rather than by IPsec
+- 📚 The TLS suite table (`analyzers/tls_inspect.py`) holds every NULL, anonymous, export and integrity-only suite Wireshark knows, plus CCM, ARIA and Camellia GCM, DHE-DSS and static ECDH suites, each name checked against `tshark -G values`; `suite_encryption()` and `version_is_weak()` judge a chosen suite and version
+- `sonic.py --allow TOKENS` for `--network-only --detectors cleartext_audit`
+- 🧪 `test_tls_audit.py`: the suite table against Wireshark's, the SSH choice, both backends on seven synthetic fixtures from `tests/fixtures/generate_tls_audit_fixtures.py` (TLS 1.2 NULL, TLS 1.3 integrity-only, TLS 1.0, SSH `none`, SSH `aes128-cbc`, sessions that began before the capture, text on tcp/22), and the real NETCONF/RESTCONF/SSH capture, which now passes by default with the ciphers Wireshark's own dissectors read, and the plaintext gNMI capture, which still fails with its credentials
 - 📡 **gRPC troubleshooting** (`analyzers/grpc_inspect.py`, `extractors/http2.py`, `analyzers/gnmi_decode.py`; MCP `analyze_grpc_pcap`, prompt `troubleshoot_grpc`, CLI `--grpc`), deterministic, with Wireshark's HTTP/2, HPACK, gRPC, TLS and protobuf dissectors through tshark
   - Finds gRPC by the HTTP/2 preface on any port, by ALPN h2, and on the well-known gRPC ports (9339, 9340, 9559, 57400, 6030, 50001, 50051, 50052, 32767), decoding each with decode-as; each flow is named by its service port
   - Per RPC: method, authority, content-type, deadline, message counts and sizes, HTTP status, grpc-status by name and grpc-message, time to the first response and to the trailers, and a diagnosis
@@ -50,7 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
-- The `ssh` allowlist token means an SSH session recognised by its banner, not port 22; an encrypted session outside the allowlist is a warning (`ENCRYPTED_OUTSIDE_ALLOWLIST`), not a cleartext finding. The default allowlist is unchanged
+- 🔐 **The cleartext audit's default allowlist is now `encrypted`, not `crypto`**: besides IPsec it passes SSH and TLS sessions, but only when their handshake shows real encryption. To get the old behaviour (IPsec only, the tunnel question) pass `allow=["crypto"]` (MCP `audit_cleartext_pcap`, `audit_cleartext_capture`) or `--allow crypto` (CLI, new); SSH and TLS then fail as `ENCRYPTED_OUTSIDE_ALLOWLIST` as before. A harness that pins an earlier S.O.N.I.C. release (such as the CVD harness) is unaffected
+- The `ssh`, `netconf`, `tls` and `encrypted` tokens no longer accept a session that negotiated no encryption (see below); a port token (`tcp:443`) still does, and its frames still count as cleartext
+- The TLS detector's `TLS_WEAK_CIPHER_CHOSEN` says when the chosen suite does not encrypt at all, and the RFC 9150 integrity-only suites count as weak there too
+- The `ssh` allowlist token means an SSH session recognised by its banner, not port 22; an encrypted session outside the allowlist is a warning (`ENCRYPTED_OUTSIDE_ALLOWLIST`), not a cleartext finding
 - Every TCP record carries `svc`, the listening side's port, once the connection's SYN, SYN-ACK, HTTP/2 preface or ClientHello shows it, and flow labels use it
 - `run_phase2_tests.sh` runs `test_grpc.py` and `test_control_plane.py`
 - Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
@@ -65,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synthetic IKEv2 fixtures carry real NAT detection hashes
 
 ### Fixed
+- TLS-wrapped gRPC was not decrypted when a client's first segment arrived after its second (a large post-quantum ClientHello split in two, as SR Linux's gNMI clients send): TShark 3.6's out-of-order reassembly never fills a gap with a segment it marks as a retransmission, so no ClientHello was read and no secret matched. A connection left undecoded that way is read again without out-of-order reassembly (`capture.reread_without_out_of_order`)
+- A masked user name was scrubbed from the report wherever its value appeared, so a gNMI path `/interface[name=mgmt0]/admin-state` read `.../[REDACTED]-state` (which also gave the name away); user names are now scrubbed only where they stand alone, and passwords and tokens wherever they appear
+- A server's RST_STREAM NO_ERROR right after its own status (RFC 9113 8.1, how SR Linux ends a Subscribe ONCE) was a warning; it is info now, and every reset records whether the server had already ended the stream
+- A gNMI message whose fields had unexpected wire types stopped the whole gRPC analysis with a TypeError; it is now an entry in `decoded.decode_errors`
 - The TLS detector lost every TLS 1.3 handshake that began with a HelloRetryRequest: it took the middlebox-compatibility ChangeCipherSpec after it as the start of encryption and never read the ServerHello, reporting `TLS_NO_SERVER_HELLO` (all three RESTCONF sessions of a real Catalyst 8000V capture)
 - Flows were labelled by the client's ephemeral port when both ports were high (a gNMI session to tcp/50001 read as tcp/47814)
 - The cleartext audit reported SSH and TLS as cleartext
