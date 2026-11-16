@@ -338,7 +338,8 @@ class _Conn:
         self.stream_window: Dict[Tuple[str, int], int] = {}
         self.stalls: List[Dict[str, Any]] = []
         self.open_stall: Dict[Tuple[str, int], Dict[str, Any]] = {}
-        self.track_flow = False
+        # Flow control is followed only when the connection's start (and so its initial windows) was captured.
+        self.track_flow = bool(disc and (disc.syn_frame is not None or disc.preface_frame is not None))
         self.oversize_frames: List[Dict[str, Any]] = []
         self.oversize_headers: List[Dict[str, Any]] = []
         self.max_open = 0
@@ -1062,16 +1063,21 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
 
     status: Dict[str, Any] = {}
     try:
-        disc = discover(file_path, display_filter=display_filter, max_packets=max_packets, status=status)
+        disc = discover(file_path, display_filter=display_filter, max_packets=max_packets, status=status,
+                        extra_ports=extra_ports)
     except RuntimeError as exc:
         return _error(str(exc))
     decode_as, reasons = plan_decode_as(disc, extra_ports)
     extraction = iter_http2_packets(file_path, decode_as, keylog_file=keylog_file, proto_paths=proto_dirs,
                                     display_filter=display_filter, max_packets=max_packets)
     analysis = GrpcAnalysis(disc)
+    wanted = {index for index, conn in disc.items() if conn.carries_http2(extra_ports)}
     try:
         for packet in extraction.packets:
-            analysis.feed(packet)
+            # A decode-as port is decoded on every connection that uses it, also where it is some other
+            # connection's ephemeral port: only the connections discovery picked are read.
+            if packet["tcp_stream"] in wanted:
+                analysis.feed(packet)
     except RuntimeError as exc:
         return _error(str(exc))
     secrets = sorted((s for s in extraction.secret_values if len(s) >= MIN_SCRUB_LENGTH), key=len, reverse=True)
@@ -1097,10 +1103,7 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
     # Connections to report: every one that carried HTTP/2, plus TLS ones that may carry gRPC,
     # plus a preface or gRPC port with no HTTP/2 answer.
     for index, dconn in disc.items():
-        relevant = (dconn.preface_frame is not None or (dconn.is_tls() and ("h2" in dconn.alpn or
-                    dconn.service_port() in GRPC_PORTS)) or (dconn.service_port() in GRPC_PORTS and
-                    dconn.first_payload_frame is not None) or dconn.service_port() in extra_ports)
-        if relevant and index not in analysis.conns:
+        if index in wanted and index not in analysis.conns:
             conn = _Conn(index, dconn)
             conn.first_frame, conn.first_t, conn.last_t = dconn.first_frame, dconn.first_t, dconn.last_t
             analysis.conns[index] = conn

@@ -217,6 +217,8 @@ class TestSyntheticGrpc(unittest.TestCase):
         self.assertEqual((pings["sent"], pings["acked"], pings["interval_s_min"]), (3, 3, 1.0))
         mid = next(c for c in report["connections"] if c["client"].endswith(":52004"))
         self.assertEqual((mid["service"], mid["server_known_by"]), ("tcp/50051", "port"))
+        # decode-as tcp/50051 also hits a connection whose client port is 50051: it is not read as gRPC
+        self.assertNotIn("tcp/8080", {c["service"] for c in report["connections"]})
 
     def test_synthetic_tls12_alert_certificate_and_ip_san(self):
         report = self.ok(analyze_grpc_capture(fixture("grpc_tls12_alert.pcap")))

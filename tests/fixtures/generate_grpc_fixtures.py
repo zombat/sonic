@@ -32,7 +32,7 @@ Fixtures:
                            GOAWAY leaving stream 3 unprocessed; a TCP reset with a Subscribe open; a preface to
                            tcp/57400 the server closed without answering; a connection on tcp/50051 captured
                            mid-way (no SYN, no preface), whose header blocks name HPACK dynamic table entries
-                           the capture never saw
+                           the capture never saw; an HTTP/1.1 connection from client port 50051 to tcp/8080
     grpc_tls12_alert.pcap  TLS 1.2 on tcp/57400, no SNI, ALPN h2: a self-signed certificate with only a DNS SAN,
                            refused by the client with a fatal unknown_ca alert
     grpc_tls13_hrr.pcap    TLS 1.3 on tcp/9339, no SNI, ALPN h2: HelloRetryRequest and the middlebox-compatibility
@@ -310,6 +310,11 @@ def build_connection_trouble():
     m.client(10.1, h2(1, 0x04, 21, bytes([0xBE]) + hpack([(":path", "/gnmi.gNMI/Get")])),
              data_frame(21, grpc_message(pb_bytes(2, gnmi_path("system")) + pb_varint(5, 4)), end_stream=True))
     m.server(10.2, h2(1, 0x05, 21, bytes([0xBF]) + hpack([("grpc-status", "0")])))
+    # 6: an unrelated HTTP/1.1 connection whose client port happens to be 50051, decoded as HTTP/2 too
+    w = Tcp(cap, "10.30.0.20", 50051, server, 8080, 12000, 13000)
+    w.handshake(11.0)
+    w.send(True, 11.03, "PA", b"GET / HTTP/1.1\r\nHost: 10.30.0.1:8080\r\n\r\n")
+    w.send(False, 11.04, "PA", b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
     return cap
 
 

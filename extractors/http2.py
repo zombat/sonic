@@ -132,8 +132,8 @@ DISCOVERY_FIELDS = ["frame.number", "frame.time_epoch", "tcp.stream", "ip.src", 
                     "tls.handshake.extensions_alpn_str"]
 
 
-def discovery_filter() -> str:
-    ports = " ".join(str(p) for p in sorted(GRPC_PORTS))
+def discovery_filter(extra_ports: Optional[List[int]] = None) -> str:
+    ports = " ".join(str(p) for p in sorted(set(GRPC_PORTS) | set(extra_ports or [])))
     return (f"tcp.flags.syn==1 || tcp.flags.reset==1 || tls.handshake.type==1 || tls.handshake.type==2 || "
             f"(tcp.len>=24 && tcp.payload[0:24]=={PREFACE_FILTER}) || (tcp.port in {{{ports}}} && tcp.len>0)")
 
@@ -181,19 +181,26 @@ class TcpConnection:
                 return end[1]
         return min(self.a[1], self.b[1])
 
+    def carries_http2(self, extra_ports=()) -> bool:
+        """Whether this connection is one the HTTP/2 pass should read (and decode-as aimed at)."""
+        port = self.service_port()
+        return (self.preface_frame is not None or (self.is_tls() and ("h2" in self.alpn or port in GRPC_PORTS))
+                or (port in GRPC_PORTS and self.first_payload_frame is not None) or port in extra_ports)
+
     def is_tls(self) -> bool:
         return self.tls_client_hello is not None or self.tls_server_hello is not None or bool(self.first_payload_tls)
 
 
 def discover(file_path: str, display_filter: Optional[str] = None, max_packets: Optional[int] = None,
-             status: Optional[Dict[str, Any]] = None) -> Dict[int, TcpConnection]:
+             status: Optional[Dict[str, Any]] = None,
+             extra_ports: Optional[List[int]] = None) -> Dict[int, TcpConnection]:
     """
     Pass 1: the TCP connections that matter for HTTP/2, keyed by tcp.stream index.
 
     Raises:
         RuntimeError: tshark failed before producing anything
     """
-    flt = discovery_filter()
+    flt = discovery_filter(extra_ports)
     if display_filter:
         flt = f"({display_filter}) && ({flt})"
     command = ["tshark", "-n", "-r", file_path, "-Y", flt, "-T", "fields", "-E", "separator=\t",
