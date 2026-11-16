@@ -11,12 +11,18 @@ part of the handshake:
       version), cipher suites, ALPN, supported groups, key share groups, and
       whether Encrypted Client Hello was offered (GREASE values dropped)
     - ServerHello: the chosen version, cipher suite, ALPN, key share group, and
-      HelloRetryRequest
+      HelloRetryRequest (the TLS 1.3 middlebox-compatibility ChangeCipherSpec that
+      follows one does not end the cleartext part; the real ServerHello is read)
     - TLS 1.2 and older: the server certificate chain is cleartext; the leaf
-      subject, issuer, validity (checked against the capture time) and DNS names
-      are read when the cryptography package is installed. In TLS 1.3 the
-      certificate is encrypted and the report says so.
-    - cleartext alerts (handshake_failure, protocol_version, unknown_ca, ...)
+      subject, issuer, validity (checked against the capture time), DNS names and
+      IP addresses (SANs) are read when the cryptography package is installed. In
+      TLS 1.3 the certificate is encrypted and the report says so.
+    - cleartext alerts (handshake_failure, protocol_version, unknown_ca, ...), with
+      who sent each and what it means (a client's unknown_ca, bad_certificate or
+      certificate_unknown: the client refused the server's certificate)
+    - hints per session: a client that sent no SNI most likely dialled an IP
+      address, so a visible certificate without that IP as a SAN fails
+      verification (TLS_CERT_NO_IP_SAN); in TLS 1.3 the hint says it cannot be seen
     - a check against a baseline passed as a parameter:
         {"min_version": "TLS1.2", "versions": ["TLS1.3"], "cipher_suites": [names or "0x1301"],
          "require_sni": true, "alpn": ["h2", "http/1.1"], "require_forward_secrecy": true,
@@ -82,6 +88,79 @@ ALERTS = {0: "close_notify", 10: "unexpected_message", 20: "bad_record_mac", 22:
           71: "insufficient_security", 80: "internal_error", 86: "inappropriate_fallback", 90: "user_canceled",
           109: "missing_extension", 110: "unsupported_extension", 112: "unrecognized_name",
           116: "certificate_required", 120: "no_application_protocol"}
+
+# What an alert means, by who sent it: (description, "client" | "server" | None for either).
+ALERT_HINTS = {
+    ("unknown_ca", "client"): "the client refused the server's certificate: it does not trust the CA that signed it "
+                              "(a self-signed or private-CA certificate); give the client that CA (for example "
+                              "gnmic --tls-ca), or in a lab only skip verification",
+    ("bad_certificate", "client"): "the client refused the server's certificate: it failed the client's checks, "
+                                   "often the name (the name or address the client dialled is not in the SANs; "
+                                   "dialling an IP needs an IP SAN)",
+    ("certificate_unknown", "client"): "the client refused the server's certificate for a reason it did not name "
+                                       "(an untrusted CA or a name mismatch, most often)",
+    ("certificate_expired", "client"): "the client refused the server's certificate: outside its validity period "
+                                       "(or one of the clocks is wrong)",
+    ("certificate_revoked", "client"): "the client refused the server's certificate: it is revoked",
+    ("unsupported_certificate", "client"): "the client refused the server's certificate: its key type or usage is "
+                                           "not supported",
+    ("bad_certificate", "server"): "the server refused the client's certificate (mutual TLS)",
+    ("unknown_ca", "server"): "the server refused the client's certificate: it does not trust its CA (mutual TLS)",
+    ("certificate_unknown", "server"): "the server refused the client's certificate (mutual TLS)",
+    ("certificate_expired", "server"): "the server refused the client's certificate: expired (mutual TLS)",
+    ("certificate_required", "server"): "the server requires a client certificate (mutual TLS) and the client sent none",
+    ("handshake_failure", None): "no cipher suite, version or group both sides accept, or a client certificate was "
+                                 "required",
+    ("protocol_version", None): "no TLS version both sides support",
+    ("no_application_protocol", None): "the server offers none of the client's ALPN protocols (a gRPC client needs h2)",
+    ("unrecognized_name", None): "the server does not recognise the SNI name the client sent",
+    ("decrypt_error", None): "a signature or key check failed (the private key does not match the certificate, or "
+                             "a corrupted handshake)",
+    ("access_denied", None): "the peer refused the connection by policy",
+    ("insufficient_security", None): "the peer requires stronger parameters than were offered",
+    ("illegal_parameter", None): "a handshake field had a value the peer does not accept",
+    ("internal_error", None): "the peer hit an internal error",
+}
+
+
+def alert_hint(description: str, sender: Optional[str]) -> Optional[str]:
+    """What a TLS alert means given who sent it ("client" or "server")."""
+    return ALERT_HINTS.get((description, sender)) or ALERT_HINTS.get((description, None))
+
+
+def _ip_literal(text: Optional[str]) -> bool:
+    import ipaddress
+    try:
+        ipaddress.ip_address((text or "").strip("[]"))
+        return True
+    except ValueError:
+        return False
+
+
+def session_hints(session: Dict[str, Any], version: Optional[str], certificate: Dict[str, Any]) -> List[Dict[str, str]]:
+    """
+    Hints about the server name and the certificate's SANs ({"code", "severity", "text"}): a client
+    that dialled an IP address needs the certificate to carry it as an IP SAN.
+    """
+    hints = []
+    sni = (session.get("client_hello") or {}).get("sni")
+    server_ip = session["server"][0]
+    by_ip = not sni or _ip_literal(sni)
+    if certificate.get("parsed"):
+        ips = certificate.get("ip_addresses") or []
+        if by_ip and server_ip not in ips:
+            hints.append({"code": "TLS_CERT_NO_IP_SAN", "severity": "warning", "text":
+                          f"the client sent no SNI name, so it most likely dialled the address {server_ip}, and the "
+                          f"certificate has no IP SAN for it (IP SANs: {', '.join(ips) or 'none'}; DNS names: "
+                          f"{', '.join(certificate.get('dns_names') or []) or 'none'}): a client that verifies the "
+                          "server refuses it (Go reports that the certificate does not contain any IP SANs); dial "
+                          "a name the certificate lists, or reissue it with the IP as a SAN"})
+    elif version == "TLS1.3" and by_ip:
+        hints.append({"code": "TLS_NO_SNI", "severity": "info", "text":
+                      f"the client sent no SNI name, so it most likely dialled the address {server_ip}; TLS 1.3 "
+                      "encrypts the certificate, so whether it carries that address as an IP SAN cannot be seen here"})
+    return hints
+
 
 HRR_RANDOM = bytes.fromhex("cf21ad74e59a6111be1d8c021e65b891c2a211167abb8c5e079e09e2c8a8339c")
 
@@ -264,14 +343,17 @@ def parse_certificate(body: bytes, capture_time: float) -> Dict[str, Any]:
     not_after = getattr(cert, "not_valid_after_utc", None) or cert.not_valid_after.replace(tzinfo=timezone.utc)
     now = datetime.fromtimestamp(capture_time, tz=timezone.utc)
     try:
-        san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
+        san_ext = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+        san = san_ext.get_values_for_type(x509.DNSName)
+        san_ips = [str(ip) for ip in san_ext.get_values_for_type(x509.IPAddress)]
     except x509.ExtensionNotFound:
-        san = []
+        san, san_ips = [], []
     out.update({"parsed": True, "subject": cn(cert.subject), "issuer": cn(cert.issuer),
                 "self_signed": cert.subject == cert.issuer,
                 "not_before": not_before.isoformat().replace("+00:00", "Z"),
                 "not_after": not_after.isoformat().replace("+00:00", "Z"),
-                "valid_at_capture_time": not_before <= now <= not_after, "dns_names": list(san)[:20]})
+                "valid_at_capture_time": not_before <= now <= not_after, "dns_names": list(san)[:20],
+                "ip_addresses": san_ips[:20]})
     return out
 
 
@@ -370,7 +452,13 @@ class TlsDetector:
             body = bytes(buf[stream.pos + 5:stream.pos + 5 + length])
             stream.pos += 5 + length
             if ctype == 20:
-                stream.encrypted = True
+                # In TLS 1.2 and older ChangeCipherSpec starts encryption. TLS 1.3 sends a dummy one for
+                # middlebox compatibility (RFC 8446 D.4), even before the real ServerHello when the server
+                # answered with a HelloRetryRequest, so it counts only once a pre-1.3 ServerHello is known.
+                session = self.sessions.get((src, dst)) or self.sessions.get((dst, src))
+                chosen = (session or {}).get("server_hello") or {}
+                if chosen.get("version") and chosen["version"] != "TLS1.3":
+                    stream.encrypted = True
             elif ctype == 23:
                 stream.done = True
             elif ctype == 21:
@@ -514,11 +602,18 @@ class TlsDetector:
             label = f"{endpoint(*session['client'])} -> {endpoint(*session['server'])}"
             sni = (session["client_hello"] or {}).get("sni")
             frames = sorted(set(session["frames"].values()))
+            client_end = endpoint(*session["client"])
             for alert in session["alerts"]:
+                alert["sender"] = "client" if alert["from"] == client_end else "server"
+                hint = alert_hint(alert["description"], alert["sender"]) if alert["level"] != "encrypted" else None
+                if hint:
+                    alert["hint"] = hint
                 if alert["level"] == "fatal" or alert["description"] not in ("close_notify",):
                     if alert["level"] == "encrypted":
                         continue
                     text = f"TLS {label}: {alert['level']} alert {alert['description']} from {alert['from']}"
+                    if hint:
+                        text += f" ({hint})"
                     issues.append(make_issue("error" if alert["level"] == "fatal" else "warning", "TLS_ALERT", text,
                                              [alert["frame"]]))
                     events.append(make_event(ctx, alert["t"], "tls", "alert", text, alert["frame"]))
@@ -528,6 +623,10 @@ class TlsDetector:
                 events.append(make_event(ctx, session["first_t"], "tls", "no_server_hello", text, frames[0] if frames else None))
             for v in violations:
                 issues.append(dict(v, message=f"TLS {label} (SNI {sni}): {v['message']}", frames=frames))
+            hints = session_hints(session, version, certificate)
+            for hint in hints:
+                if hint["code"] == "TLS_CERT_NO_IP_SAN":
+                    issues.append(make_issue("warning", "TLS_CERT_NO_IP_SAN", f"TLS {label}: {hint['text']}", frames))
             if sh:
                 events.append(make_event(ctx, session.get("server_hello_t", session["first_t"]), "tls", "handshake",
                                          f"TLS {label} SNI {sni}: {version} {sh['cipher_suite']}",
@@ -537,6 +636,7 @@ class TlsDetector:
                 "client_offered": session["client_hello"], "server_chose": sh,
                 "hello_retry_request": bool(session.get("hello_retry_request")),
                 "certificate": certificate,
+                "hints": hints,
                 "alerts": [{k: v for k, v in a.items() if k != "t"} for a in session["alerts"]],
                 "baseline_pass": not any(v["severity"] == "error" for v in violations) if self.baseline else None,
                 "findings": violations, "frames": session["frames"], "first_t": ctx.rel(session["first_t"]),

@@ -20,7 +20,9 @@ Record keys (a key is present only when the frame carries that protocol):
     llc          "cdp" | "stp" | "llc" for an 802.3/LLC frame (no EtherType)
     ip           outer IP header: {"v": 4|6, "src", "dst", "proto", "ttl"}
     tcp          {"sport", "dport", "flags", "len"}       (outer TCP; a SYN also
-                  carries "mss" when the MSS option is present)
+                  carries "mss" when the MSS option is present; "svc" is the
+                  server's port once the connection's SYN, SYN-ACK, HTTP/2 preface
+                  or TLS ClientHello showed which side listens)
     udp          {"sport", "dport", "len"}                (outer UDP, len = payload bytes)
     inner        IPv4 header carried inside GRE: {"src", "dst", "proto"}
     ike          {"version", "ispi", "rspi", "exch", "flags", "msgid", "length",
@@ -1069,6 +1071,45 @@ def _fill_l4(rec: Dict[str, Any], ip: Dict[str, Any], payload: bytes, bgp: _BgpR
 # Entry point
 # ---------------------------------------------------------------------------
 
+HTTP2_PREFACE = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+MAX_TRACKED_CONNECTIONS = 200000
+
+
+def annotate_service_ports(records: Iterator[Dict[str, Any]]) -> Iterator[Dict[str, Any]]:
+    """
+    Add rec["tcp"]["svc"], the listening side's port, to every outer TCP record whose
+    connection showed it: the SYN's destination, the SYN-ACK's source, else the receiver
+    of an HTTP/2 preface or a TLS ClientHello. A label built from it names a flow by its
+    service (tcp/50001) rather than by the client's ephemeral port (tcp/47814), which no
+    port-number rule can tell apart when both are high. Frames before the evidence, and
+    connections that started before the capture without either, keep no svc.
+    """
+    servers: Dict[tuple, tuple] = {}
+    for rec in records:
+        tcp, ip = rec.get("tcp"), rec.get("ip")
+        if tcp and ip:
+            a, b = (ip["src"], tcp["sport"]), (ip["dst"], tcp["dport"])
+            key = (a, b) if a <= b else (b, a)
+            server = servers.get(key)
+            flags = tcp.get("flags", 0)
+            if flags & 0x02 and not flags & 0x10:
+                server = b
+            elif flags & 0x02 and server is None:
+                server = a
+            elif server is None:
+                head = (rec.get("dp") or {}).get("pl") or b""
+                if head.startswith(HTTP2_PREFACE) or (len(head) > 5 and head[0] == 22 and head[1] == 3 and
+                                                       head[5] == 1):
+                    server = b
+            if server is not None:
+                if key not in servers and len(servers) < MAX_TRACKED_CONNECTIONS:
+                    servers[key] = server
+                elif key in servers:
+                    servers[key] = server
+                tcp["svc"] = server[1]
+        yield rec
+
+
 class NetworkExtraction:
     """
     A started extraction: which backend runs, and the record stream it yields.
@@ -1134,10 +1175,10 @@ def open_network_records(file_path: str, display_filter: Optional[str] = None,
                     yield first
                 yield from stream
 
-            return NetworkExtraction("tshark", chained(), info)
+            return NetworkExtraction("tshark", annotate_service_ports(chained()), info)
     if display_filter:
         raise RuntimeError("display_filter needs tshark, which is not available; "
                            "remove the filter to analyze the whole capture with scapy")
     info["backend"] = "scapy"
     info["missing_fields"] = []
-    return NetworkExtraction("scapy", iter_records_scapy(file_path, max_packets), info)
+    return NetworkExtraction("scapy", annotate_service_ports(iter_records_scapy(file_path, max_packets)), info)

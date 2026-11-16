@@ -55,7 +55,8 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Reachability**: ICMP echo loss, RTT and outage windows, ICMP errors, ARP without replies, top talkers
 - **Data plane**: path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP and RTP quality
 - **Several captures at once**: follow packets through NAT and across links (translations, drops, asymmetric paths), and one merged event timeline with failover timing against thresholds
-- See the Network and VPN Detectors section below
+- **gRPC, gNMI and gNOI troubleshooting**: every RPC with its grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, gNMI encodings and Subscribe modes, and credentials sent in cleartext metadata (by key, never the value), with Wireshark's own dissectors
+- See the Network and VPN Detectors and gRPC Troubleshooting sections below
 
 ## 📋 Prerequisites
 
@@ -116,6 +117,21 @@ python3 sonic.py --file wan-link.pcap --network-only --save_file wan-report.json
 ```
 
 The report goes to `--save_file`, or to `<capture>.network.md` when none is given. A path ending in `.json` writes the full JSON report.
+
+### gRPC / gNMI / gNOI Troubleshooting (No LLM, needs tshark)
+```bash
+# Every RPC's status, HTTP/2 trouble, TLS findings and credentials in cleartext metadata
+python3 sonic.py --file gnmi.pcap --grpc
+
+# TLS-wrapped gNMI (for example SR Linux on 57400): decrypt with the key log the client wrote
+gnmic -a 192.0.2.10:57400 --tls-ca ca.pem -u admin --log-tls-secret capabilities   # while capturing
+python3 sonic.py --file srl.pcapng --grpc --tls-secrets-log 192.0.2.10:57400.tlssecret.log --json
+
+# Optional: .proto files so Wireshark's protobuf dissector names every message (downloaded once, pinned)
+python3 sonic.py --fetch-grpc-protos
+```
+
+The report goes to `--save_file`, or to `<capture>.grpc.md`. See [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOTING.md).
 
 ### Basic LLM Analysis (Local Ollama)
 ```bash
@@ -400,13 +416,27 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 - `merge_pcap_timelines` analyzes each capture once with every detector and merges their events by timestamp into one timeline, each tagged with its capture label. Measurements pick two events by selector (`capture`, `detector`, `protocol`, `event`, `contains`, `occurrence`) and report the delta against `max_s` (`within`, `exceeded`, `not_found`); without measurements, every ping outage and each routing down event paired with the next up event is measured against `failover_max_s`. `output_path` writes the result as JSON beside the run's captures.
 
 ### Zero-cleartext audit (`cleartext_audit`, run only when named)
-- Every frame is matched against an allowlist; anything else is reported by protocol, category (`tunnel_without_encryption`, `routing`, `icmp`, `layer2`, `cleartext`, ...) and address pair, with frame numbers, and the audit returns `passed` true or false. An empty capture fails.
-- Default allowlist `crypto` (ESP, ISAKMP on UDP 500 and 4500, NAT-T keepalives). Other tokens: `arp`, `icmp`, `routing` or `bgp`/`ospf`/`eigrp`/..., `gre`, `l2-control` (CDP, STP, LLDP, LACP, Cisco loopback keepalives), service names, `tcp:N`, `udp:N`, `proto:N`, `ethertype:0xN`, each optionally scoped to addresses: `icmp@203.0.113.1`.
+- Every frame is matched against an allowlist; anything else is reported by protocol, category (`tunnel_without_encryption`, `routing`, `icmp`, `layer2`, `encrypted`, `cleartext_management`, `cleartext`, ...) and address pair, with frame numbers, and the audit returns `passed` true or false. An empty capture fails.
+- Default allowlist `crypto` (ESP, ISAKMP on UDP 500 and 4500, NAT-T keepalives). Other tokens: `arp`, `icmp`, `routing` or `bgp`/`ospf`/`eigrp`/..., `gre`, `l2-control` (CDP, STP, LLDP, LACP, Cisco loopback keepalives), `ssh`, `netconf`, `tls`, `http2`, `encrypted` (crypto plus SSH and TLS), service names, `tcp:N`, `udp:N`, `proto:N`, `ethertype:0xN`, each optionally scoped to addresses: `icmp@203.0.113.1`.
+- TCP sessions are recognised by content on any port: SSH by its banner (key exchange up to NEWKEYS, then encrypted), TLS by its record header (handshake, then application data encrypted), cleartext HTTP/2 by its preface (named `grpc` when its requests are gRPC). Every frame is counted in `protection` (`encrypted`, `key_exchange`, `cleartext`, ...) whatever the allowlist, `tcp_sessions` names each flow by its service port, and on cleartext HTTP/2 each credential key in gRPC metadata is one `CLEARTEXT_CREDENTIAL` issue, value masked. An encrypted session outside the allowlist is `ENCRYPTED_OUTSIDE_ALLOWLIST`, not a cleartext finding.
 
 ### Convergence timeline (`convergence`, run only when named)
 - Takes an optional `event_time` (epoch, seconds from the first frame, or ISO-8601) and `failed_peer`; otherwise it starts from the first failure sign and infers the peer.
 - Failure signs: the last ESP/IKE from a peer before it went quiet, DPD left unanswered, the last BGP message from a speaker whose session dropped, a ping outage. Detection: DPD giving up, Hold Timer Expired, an inferred hold expiry, BFD Down. Reaction: the first BGP UPDATE on a session not involving the failed peer. Resumed: a ping answered again, the surviving tunnels' ESP rate taking over the failed tunnel's (heuristic), or ESP from the failed peer returning.
 - Returns the deltas from the event and the driver: `bfd`, `bgp_hold_timer`, `dpd`, `explicit_close` or `undetermined`, with the reason. Without an event, a quiet period counts only when the other side kept sending into it, so idle tunnels are not mistaken for failures.
+
+## 📡 gRPC Troubleshooting (gNMI, gNOI, any gRPC service)
+
+`analyze_grpc_pcap` (CLI `--grpc`) reads gRPC with Wireshark's own HTTP/2, HPACK, gRPC, TLS and protobuf dissectors through tshark. Deterministic, no LLM.
+
+- **Where gRPC runs**: cleartext HTTP/2 by its connection preface on any port, TLS offering ALPN `h2`, and the well-known gRPC ports (9339 gNMI/gNOI, 9340 gRIBI, 9559 P4Runtime, 57400 SR Linux and IOS XR, 6030 Arista, 50001 Stratum, 50051, 50052, 32767). Each flow is named by its service port, the SYN's destination.
+- **Per RPC**: method (`/gnmi.gNMI/Subscribe`), authority, content-type, deadline, message counts and sizes each way, HTTP status, `grpc-status` by name and `grpc-message`, time to the first response and to the trailers, and a diagnosis (`UNAUTHENTICATED`: check the username and password metadata; `UNIMPLEMENTED` on a gNMI Get: the encoding asked for against what Capabilities listed; a client `RST_STREAM CANCEL` at the deadline; a cancelled Set may or may not have applied).
+- **HTTP/2 trouble**: `RST_STREAM` and `GOAWAY` error codes and debug data (`too_many_pings` named), flow-control stalls with their duration, PING round trips, SETTINGS per side, frames over the peer's max frame size, header lists over its limit, more streams than the server allows, messages over the 4 MiB default receive limit, a preface nobody answered, a TCP reset with RPCs open.
+- **gNMI and gNOI**: Capabilities (version, encodings, models), Get and Set paths, Subscribe mode and subscriptions, notifications, `sync_response`, in-band errors in the deprecated `error` field, and the target's clock from gNOI `system.Time`, all without .proto files. With them (`--fetch-grpc-protos`), Wireshark names every message type.
+- **Credentials in metadata**: `username`, `password`, `authorization`, `x-api-key`, tokens and cookies, found in the HPACK-decoded headers (a byte search cannot find them: HPACK Huffman-codes values), one finding per key and flow. Values are never shown: they are masked at extraction and scrubbed from the report by value.
+- **TLS without keys**: SNI, ALPN, version, the certificate's subject, issuer, validity, DNS and IP SANs (TLS 1.2; TLS 1.3 encrypts it), alerts with who sent them and what they mean, and a hint when the client dialled an IP the certificate has no IP SAN for. With a key log the sessions are decrypted, the TLS 1.3 certificate is read, and every check above runs on them.
+
+Details, codes and limits: [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOTING.md).
 
 ### What packets cannot show
 - A verdict covers only what crossed the capture point. Capture on the underlay (WAN) link to prove encryption; a capture on the tunnel interface shows decrypted traffic.
@@ -424,6 +454,8 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing. Bot
 
 ### Test fixtures
 `tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call; plus, for the control plane detectors, IKEv2 proposals with a DH retry and DPD, four IKEv2 failure shapes, a stale SPI, one leaked packet of each kind on an encrypted link, broken and encrypted Phase 3 sequences, BGP failover with MSS options, a DPD-driven failover, and OSPF stuck in EXSTART and EXCHANGE. `test_control_plane.py` runs them on both backends (test names say `synthetic`) and checks the Pleiades lab captures when they exist on the machine.
+
+`tests/fixtures/generate_grpc_fixtures.py` builds the gRPC fixtures (names start with `grpc_`): HTTP/2 trouble on gNMI (statuses, resets, a flow-control stall, limits exceeded, credentials), connection trouble (GOAWAY too_many_pings and graceful, a TCP reset, an unanswered preface, a mid-connection capture), TLS 1.2 with an `unknown_ca` alert and no IP SAN, TLS 1.3 with a HelloRetryRequest, and SSH, TLS, telnet and cleartext gRPC sessions for the audit. `test_grpc.py` also builds a TLS 1.3 gNMI session with its key log at test time with Python's `ssl` module, and checks two real captures (plaintext gNMI to Stratum; NETCONF, RESTCONF and SSH to a Catalyst 8000V) when `SONIC_GRPC_CAPTURES` points at them.
 
 `tests/fixtures/generate_dataplane_fixtures.py` builds the data plane fixtures the same way (names start with `dp_`): Fragmentation Needed, a PMTUD black hole (ICMP and TCP) beside plain loss, complete, incomplete and overlapping fragments, ESP sizes for AES-GCM, AES-CBC/SHA1 and NAT-T with an ESP packet fragmented after encryption, seven TCP connection outcomes, four TLS handshakes (1.3, 1.2 split over two segments with an expired certificate, 1.0 with RC4, a fatal alert), RTP with and without EF plus GRE marking copied and lost, and two multi-capture sets (inside/outside of a NAT router; a LAN with WAN1 out and WAN2 back). `test_dataplane_detectors.py` runs every detector on both backends, the correlation and timeline tools, and the same code over real lab captures when they are present.
 
@@ -760,6 +792,16 @@ The zero-cleartext assertion: returns `passed` (true or false), `result`, `verdi
 Claude: Fail the run if /captures/br1-wan.pcap carried anything but IPsec (Cisco link keepalives allowed): audit_cleartext_pcap with allow ["crypto", "l2-control"]
 ```
 
+#### `analyze_grpc_pcap`
+gRPC troubleshooting: `verdict`, `connections` (service port, transport, SETTINGS, pings, GOAWAY, RST_STREAM, flow-control stalls, TLS), `rpcs` (method, `grpc_status_name`, `grpc_message`, sizes, timing, decoded gNMI, `diagnosis`), `credentials` (key and flow, value `masked`) and `issues` with frames.
+
+**Parameters**: `file_path`, and optional `keylog_file` (SSLKEYLOGFILE key log; never copied into the result), `proto_paths`, `ports`, `display_filter`, `max_packets`, `max_items`
+
+**Example**:
+```
+Claude: Why does gnmic fail against the switch in /captures/gnmi.pcap? Use analyze_grpc_pcap
+```
+
 #### `analyze_convergence_pcap`
 The failover timeline: `driver` (`dpd`, `bgp_hold_timer`, `bfd`, `explicit_close`, `undetermined`), `failed_peer`, `measurements` (seconds from the event to the first failure sign, detection, first UPDATE on the surviving path and traffic resuming) and an ordered `timeline` with frames.
 
@@ -778,8 +820,8 @@ The server teaches the agent that connects to it, so the agent does not need thi
 
 - **Instructions**: the MCP initialize result carries a short guide (under 2 KB): what S.O.N.I.C. answers, which tool fits which question, the order of a typical investigation, which tools call an LLM, size limits and what every tool returns.
 - **Tools**: each tool has a title, annotations (all read-only; the deterministic tools are idempotent, the LLM tools are marked open world) and a description saying when to use it, what it needs, what it costs and what it returns.
-- **Prompts**: `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `diagnose_sip_call` walk the agent through a common investigation.
-- **Resources**: `sonic://guide/overview` and one page per area (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `interpreting-results`), read only when the agent needs that area.
+- **Prompts**: `diagnose_capture`, `check_vpn_encryption`, `investigate_failover`, `troubleshoot_grpc`, `diagnose_sip_call` walk the agent through a common investigation.
+- **Resources**: `sonic://guide/overview` and one page per area (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `grpc`, `interpreting-results`), read only when the agent needs that area.
 
 For skills-based clients such as Claude Code, write the same guidance as an Agent Skill:
 

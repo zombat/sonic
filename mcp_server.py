@@ -8,7 +8,7 @@ assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
 Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap,
 analyze_data_plane_pcap, audit_cleartext_pcap, correlate_pcaps, analyze_convergence_pcap,
-merge_pcap_timelines.
+merge_pcap_timelines, analyze_grpc_pcap.
 
 The server teaches its client how to use it: the initialize result carries
 instructions (which tool for which question, cost, limits), every tool has a
@@ -65,6 +65,7 @@ from analyzers.network_orchestrator import (
     audit_cleartext_capture,
 )
 from analyzers.correlate import correlate_captures
+from analyzers.grpc_inspect import analyze_grpc_capture
 from analyzers.timeline import merge_timelines
 from utils.credentials import (
     EnvFileError,
@@ -975,6 +976,76 @@ def merge_pcap_timelines(
         return {"status": "error", "error": str(e), "type": type(e).__name__}
 
 
+@mcp.tool(**tool_options("analyze_grpc_pcap"))
+@redact_result
+def analyze_grpc_pcap(
+    file_path: str,
+    keylog_file: Optional[str] = None,
+    proto_paths: Optional[List[str]] = None,
+    ports: Optional[List[int]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Troubleshoot gRPC from a capture: gNMI, gNOI, gRIBI, P4Runtime or any gRPC service.
+    Deterministic, no LLM, a few tshark passes: seconds for a typical capture. Needs
+    tshark (Wireshark's HTTP/2, HPACK, gRPC, TLS and protobuf dissectors do the decoding).
+
+    Finds gRPC wherever it runs: cleartext HTTP/2 by its connection preface on any port,
+    TLS offering ALPN h2, and the well-known gRPC ports (9339 gNMI/gNOI, 9340 gRIBI, 9559
+    P4Runtime, 57400 SR Linux and IOS XR, 6030 Arista, 50001 Stratum, 50051, 50052, 32767).
+    Each flow is named by its service port (the SYN's destination). Per RPC: method, the
+    grpc-status by name and grpc-message, request and response message counts and sizes,
+    time to the first response and to the trailers, and a diagnosis. Per connection:
+    SETTINGS, RST_STREAM and GOAWAY with their error codes (too_many_pings named),
+    flow-control stalls, PING round trips, frames or header lists over the peer's limits,
+    TCP resets with RPCs open. gNMI requests and responses are decoded (paths, encoding
+    against the Capabilities answer, Subscribe mode, notifications, in-band errors) and
+    gNOI system.Time gives the target's clock. Credentials in gRPC metadata (username,
+    password, authorization, x-api-key, tokens) are found through HPACK and reported by key
+    only: values are never returned. TLS without keys shows SNI, ALPN, version, the TLS 1.2
+    certificate (subject, issuer, validity, DNS and IP SANs) and alerts with what they mean.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (connections, rpcs, rpc_status counts, cleartext_credentials), connections (flow,
+    service, transport, protocol, services, settings, pings, goaways, rst_streams,
+    flow_control, credential_keys, metadata_keys, tls), rpcs (flow, stream_id, method,
+    family, grpc_status, grpc_status_name, grpc_message, request, response, timing,
+    decoded, diagnosis, frames), credentials (flow, key, cleartext, requests, frames,
+    value "masked"), issues (stable codes such as GRPC_UNAUTHENTICATED, GRPC_UNIMPLEMENTED,
+    CLEARTEXT_CREDENTIAL, HTTP2_RST_STREAM, HTTP2_GOAWAY, HTTP2_TOO_MANY_PINGS,
+    HTTP2_FLOW_CONTROL_STALL, TLS_ALERT, TLS_CERT_NO_IP_SAN, with frames), timeline,
+    capture (tshark version, decode_as, keylog_file_given, proto_paths) and limits. On
+    failure {"status": "error", "error": "..."}.
+
+    Limits (also in limits): TLS-wrapped gRPC without a key log shows only the handshake
+    (TLS 1.3 encrypts the certificate too); a capture that starts mid-connection may leave
+    HPACK headers undecodable; message values are never decoded.
+
+    For example, analyze_grpc_pcap(file_path="/captures/gnmi.pcap") or
+    analyze_grpc_pcap(file_path="/captures/srl.pcapng", keylog_file="/tmp/keys.log").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        keylog_file: Optional TLS key log (SSLKEYLOGFILE format; gnmic writes one with
+            --log-tls-secret) to decrypt TLS; passed to tshark by path, never read into or
+            copied to the result.
+        proto_paths: Optional directories of .proto files for Wireshark's protobuf dissector
+            (default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from
+            `sonic.py --fetch-grpc-protos`). Without them gNMI is still decoded.
+        ports: Optional extra TCP ports to decode as HTTP/2.
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (connections; RPCs at four times this; default 25).
+    """
+    try:
+        return analyze_grpc_capture(file_path, keylog_file=keylog_file, proto_paths=proto_paths, ports=ports,
+                                    display_filter=display_filter, max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
 # ---------------------------------------------------------------------------
 # Guide resources and workflow prompts (progressive disclosure for MCP clients)
 # ---------------------------------------------------------------------------
@@ -1021,6 +1092,12 @@ def investigate_failover(file_path: str) -> str:
             description="Quality and MOS first without an LLM, then an LLM diagnosis only if wanted.")
 def diagnose_sip_call(file_path: str) -> str:
     return workflow_text("diagnose_sip_call", file_path=file_path)
+
+
+@mcp.prompt(name="troubleshoot_grpc", title="Troubleshoot gRPC, gNMI or gNOI",
+            description="Read every RPC's status and message, HTTP/2 trouble, TLS problems and cleartext credentials.")
+def troubleshoot_grpc(file_path: str, keylog_file: str = "") -> str:
+    return workflow_text("troubleshoot_grpc", file_path=file_path, keylog_file=keylog_file)
 
 
 def main(argv=None) -> int:

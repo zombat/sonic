@@ -61,6 +61,8 @@ TOOL_GUIDE: List[Dict[str, Any]] = [
      "question": "Did BGP/OSPF/EIGRP adjacencies form, and if not why; how long did a failover take; is ping lost?"},
     {"name": "analyze_data_plane_pcap", "short": "MTU, ESP, TCP, TLS baseline, DSCP/RTP", "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS", "llm": False,
      "question": "Do packets get through: path MTU and fragmentation, ESP overhead, TCP retransmissions or zero window, TLS policy, DSCP and RTP quality"},
+    {"name": "analyze_grpc_pcap", "short": "gRPC/gNMI/gNOI: RPC status, creds", "title": "Troubleshoot gRPC, gNMI and gNOI from a capture", "llm": False,
+     "question": "Why a gRPC, gNMI or gNOI client fails: each RPC's grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, credentials sent in cleartext metadata"},
     {"name": "audit_cleartext_pcap", "short": "pass/fail: only allowlisted traffic on a link", "title": "Assert a transport link carried no cleartext", "llm": False,
      "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, ...) cross the link?"},
     {"name": "correlate_pcaps", "short": "2+ capture points: NAT, lost replies, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
@@ -87,6 +89,7 @@ TOPICS = [
     ("network-detectors", "Network and VPN detectors and their issue codes"),
     ("sip-rtp", "SIP and RTP analysis"),
     ("cli", "Command line (sonic.py)"),
+    ("grpc", "gRPC, gNMI and gNOI troubleshooting"),
     ("interpreting-results", "Interpreting results and common pitfalls"),
 ]
 
@@ -103,6 +106,8 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "the failover_timeline and ping_outages.",
          "If sip is present, call quick_quality_check for the grade and MOS. Use analyze_pcap only if the "
          "user wants a written SIP diagnosis and accepts an LLM call.",
+         "If http2 is present, or tls on a gRPC port (9339, 57400, 6030, 50051), call analyze_grpc_pcap for "
+         "each RPC's status, HTTP/2 trouble and credentials in cleartext metadata.",
          "Answer with the verdict sentences, issue codes and Wireshark frame numbers, and say what the "
          "capture point could not show.",
      ]},
@@ -128,6 +133,21 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "a link), call analyze_convergence_pcap with event_time for the deltas and the driver.",
          "Explain any mismatch issue (for example OSPF_HELLO_INTERVAL_MISMATCH, EIGRP_K_VALUE_MISMATCH, "
          "BGP_TCP_REFUSED) with the values the issue carries.",
+     ]},
+    {"name": "troubleshoot_grpc", "title": "Troubleshoot gRPC, gNMI or gNOI",
+     "args": ["file_path", "keylog_file"],
+     "steps": [
+         "Call analyze_grpc_pcap(file_path={file_path}, keylog_file={keylog_file}). Leave keylog_file out "
+         "if there is none.",
+         "Read verdict and summary.rpc_status, then for each failing RPC quote method, grpc_status_name, "
+         "grpc_message and diagnosis, with its frames.",
+         "Report HTTP/2 trouble from issues (HTTP2_RST_STREAM, HTTP2_GOAWAY, HTTP2_TOO_MANY_PINGS, "
+         "HTTP2_FLOW_CONTROL_STALL, HTTP2_FRAME_TOO_LARGE) and TCP_RESET_DURING_RPC.",
+         "For TLS connections read connections[].tls: alerts with their hint, the certificate, and "
+         "TLS_CERT_NO_IP_SAN. Without a key log the RPCs are encrypted: ask for one captured with "
+         "SSLKEYLOGFILE on the client.",
+         "Report every CLEARTEXT_CREDENTIAL by key and flow; never ask for or repeat a value. To gate on "
+         "encryption, call audit_cleartext_pcap with allow [\"encrypted\"].",
      ]},
     {"name": "diagnose_sip_call", "title": "Diagnose SIP call quality",
      "args": ["file_path"],
@@ -179,13 +199,13 @@ def build_instructions() -> str:
         lines.append(f"- {row['name']}{' [LLM]' if row['llm'] else ''}: {row['short']}")
     lines += [
         "",
-        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing or data_plane; "
-        "audit_cleartext_pcap to gate a crypto link; correlate_pcaps for 2+ capture points; "
+        "Order: analyze_network_pcap; then vpn (peers: WAN IPs), routing, data_plane, grpc; "
+        "audit_cleartext_pcap to gate a link; correlate_pcaps for 2+ points; "
         "analyze_convergence_pcap or merge_pcap_timelines for a failover; SIP: quick_quality_check, "
         "then analyze_pcap. Quote codes and frames.",
         "",
         "[LLM] tools take seconds to minutes; provider defaults to the server's SONIC_LLM_PROVIDER, "
-        "else ollama (see list_llm_providers). A cloud provider sends SIP data, auth headers "
+        "else ollama. A cloud provider sends SIP data, auth headers "
         "included, off this machine: ask first.",
         "",
         "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
@@ -340,6 +360,7 @@ def render_skill_md() -> str:
         "analyze_vpn_pcap": "`--file F --network-only --detectors ipsec,gre_nhrp --peers A,B`",
         "analyze_routing_pcap": "`--file F --network-only --detectors routing,reachability`",
         "analyze_data_plane_pcap": "`--file F --network-only --detectors path_mtu,esp_overhead,tcp,tls,qos`",
+        "analyze_grpc_pcap": "`--file F --grpc [--tls-secrets-log K]`",
         "correlate_pcaps": "MCP only",
         "merge_pcap_timelines": "MCP only",
         "quick_quality_check": "`--file F --quality-only`",
@@ -441,6 +462,58 @@ def render_network_detectors() -> str:
                   "Issue codes (`<...>` is filled in from the packet, for example a NOTIFY or ICMP type name):", ""]
         lines.append(", ".join(f"`{code}`" for code in group["codes"]) or "none")
         lines.append("")
+    return "\n".join(lines)
+
+
+def render_grpc() -> str:
+    from analyzers import grpc_inspect
+    from extractors import http2
+    from utils import grpc_protos
+    doc = inspect.getdoc(grpc_inspect) or ""
+    body = [line for line in doc.splitlines() if not line.startswith("Author:")]
+    if body and body[0].startswith("S.O.N.I.C."):
+        body = body[1:]
+    lines = [
+        "# gRPC, gNMI and gNOI troubleshooting",
+        "",
+        "Deterministic, no LLM; needs tshark. MCP `analyze_grpc_pcap`, CLI `--grpc`. The cleartext audit "
+        "(`audit_cleartext_pcap`) uses the same decoding to name cleartext HTTP/2 as gRPC and to flag "
+        "credentials in its metadata.",
+        "",
+        "\n".join(body).strip(),
+        "",
+        "## Ports decoded as HTTP/2 without a preface",
+        "",
+        "| Port | Service |",
+        "|---|---|",
+    ]
+    for port, name in sorted(http2.GRPC_PORTS.items()):
+        lines.append(f"| {port} | {name} |")
+    lines += [
+        "",
+        "## Header values shown",
+        "",
+        "Only these header values appear in a report; every other value is masked, and a credential-like "
+        "name (username, password, authorization, x-api-key, token, cookie, ...) is flagged: "
+        + ", ".join(f"`{h}`" for h in sorted(http2.SHOWN_HEADERS)) + ".",
+        "",
+        "## Decryption and .proto files",
+        "",
+        "- `keylog_file` (CLI `--tls-secrets-log`): a TLS key log (SSLKEYLOGFILE format) the client wrote while "
+        "it ran: gnmic with `--log-tls-secret`, Python clients and curl with SSLKEYLOGFILE set, a Go program "
+        "through tls.Config.KeyLogWriter. It is handed to tshark by path and never read into or copied to a "
+        "report.",
+        f"- `proto_paths` (CLI `--proto-path`), else `SONIC_PROTO_PATH`, else `{grpc_protos.DEFAULT_PROTO_DIR}` "
+        "when it exists: .proto files for Wireshark's protobuf dissector, which then names each message "
+        "type (`wireshark_protobuf` on an RPC). `sonic.py --fetch-grpc-protos [DIR]` downloads the gNMI and "
+        "gNOI files (Apache-2.0) and the protobuf well-known types (BSD-3-Clause) at pinned commits with "
+        "SHA-256 checks; S.O.N.I.C. does not ship them.",
+        "",
+        "Issue codes (`<...>` is the grpc-status name, for example `GRPC_UNAUTHENTICATED`):",
+        "",
+        ", ".join(f"`{code}`" for code in _issue_codes(grpc_inspect)),
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -581,6 +654,7 @@ def render_topic(topic: str, tools: List[Any]) -> str:
     renderers = {
         "mcp-tools": lambda: render_mcp_tools(tools),
         "network-detectors": render_network_detectors,
+        "grpc": render_grpc,
         "sip-rtp": render_sip_rtp,
         "cli": render_cli,
         "interpreting-results": render_interpreting,
