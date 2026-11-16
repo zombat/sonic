@@ -12,7 +12,9 @@ cnonce, opaque) and loses its credential: a Digest `response=` (and `auts=`) val
 Basic or Bearer credential, or everything after the scheme for any other scheme. A
 digest response is a hash, but one an offline dictionary attack can test passwords
 against, so it is never sent to a cloud LLM. WWW-Authenticate and Proxy-Authenticate
-challenges carry no credential and are kept as they are.
+challenges carry no credential and are kept as they are. SDP media keys in the raw
+text (an a=crypto inline: SRTP master key, an a=key-mgmt payload such as MIKEY, a k=
+key) are masked the same way, keeping the crypto suite and the key-mgmt protocol id.
 
 Author: Raymond A Rizzo | Zombat
 """
@@ -54,10 +56,12 @@ def mask_sip_credentials(value: str) -> str:
 
 
 def mask_sip_text(text: str) -> str:
-    """Raw SIP messages (or raw tshark output) with every Authorization credential masked."""
+    """Raw SIP messages (or raw tshark output) with every Authorization credential and SDP key masked."""
     if not text:
         return text
+    from utils.credentials import mask_sdp_keys
     text = _SIP_AUTH_LINE.sub(lambda m: m.group(1) + mask_sip_credentials(m.group(2)), text)
+    text = mask_sdp_keys(text, SIP_CREDENTIAL_MASK)
     # A response= anywhere else (a tshark JSON string, an unrecognised layout) is masked too.
     return _DIGEST_SECRET_PARAMS.sub(
         lambda m: m.group(0) if SIP_CREDENTIAL_MASK in m.group(2) else m.group(1) + SIP_CREDENTIAL_MASK, text)

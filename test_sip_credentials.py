@@ -9,6 +9,8 @@ test. The capture goes through the real extraction (tshark, and the scapy fallba
 prompt S.O.N.I.C. hands the LLM client, and the quality-only CLI report; the digest
 response, the Basic credential and the password inside it must appear in none of them,
 while the username, realm, nonce and algorithm stay visible for troubleshooting.
+An INVITE's SDP carries an SRTP master key (a=crypto inline:), a MIKEY payload (a=key-mgmt)
+and a k= key; none may appear either, while the crypto suite stays.
 
 Run with:  python3 -m pytest -q test_sip_credentials.py
 """
@@ -36,7 +38,11 @@ DIGEST_RESPONSE = "6629fae49393a05397450978507c4ef1"
 NONCE = "dcd98b7102dd2f0e8b11d0f600bfb0c093"
 BASIC_PASSWORD = "not-a-real-password"
 BASIC_CREDENTIAL = base64.b64encode(f"bob:{BASIC_PASSWORD}".encode()).decode()
-SECRETS = (DIGEST_RESPONSE, BASIC_CREDENTIAL, BASIC_PASSWORD)
+# Made-up SDP media keys: an SDES SRTP master key||salt, a MIKEY payload and a k= key.
+SRTP_KEY = "WVNfX19zZW1jdGwgKCkgewkyMjA7fQp9CnVubGVz"
+MIKEY_PAYLOAD = "AQAFgM0XflABAAAAAAAAAAAAAAsAyOOh4RqXbQ"
+SDP_K_KEY = "not-a-real-sdp-key"
+SECRETS = (DIGEST_RESPONSE, BASIC_CREDENTIAL, BASIC_PASSWORD, SRTP_KEY, MIKEY_PAYLOAD, SDP_K_KEY)
 
 CLIENT, SERVER = "192.0.2.10", "192.0.2.20"
 
@@ -51,6 +57,22 @@ def _common(method, cseq, call_id="reg-1@192.0.2.10"):
             f"Call-ID: {call_id}", f"CSeq: {cseq} {method}", "Max-Forwards: 70", "Content-Length: 0"]
 
 
+def _sdp():
+    return ("v=0\r\no=alice 2890844526 2890844526 IN IP4 192.0.2.10\r\ns=call\r\n"
+            "c=IN IP4 192.0.2.10\r\nt=0 0\r\n"
+            f"k=clear:{SDP_K_KEY}\r\n"
+            "m=audio 49170 RTP/SAVP 0\r\n"
+            f"a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:{SRTP_KEY}|2^20|1:4\r\n"
+            f"a=key-mgmt:mikey {MIKEY_PAYLOAD}\r\n")
+
+
+def _invite_with_sdp():
+    body = _sdp()
+    head = ["INVITE sip:dave@example.com SIP/2.0"] + _common("INVITE", 1, "inv-2@192.0.2.10")[:-1] + [
+        "Content-Type: application/sdp", f"Content-Length: {len(body)}"]
+    return ("\r\n".join(head) + "\r\n\r\n" + body).encode()
+
+
 def build_capture(path):
     messages = [
         (CLIENT, SERVER, _sip(["REGISTER sip:example.com SIP/2.0"] + _common("REGISTER", 1))),
@@ -63,6 +85,7 @@ def build_capture(path):
         (SERVER, CLIENT, _sip(["SIP/2.0 200 OK"] + _common("REGISTER", 2) + ["Expires: 3600"])),
         (CLIENT, SERVER, _sip(["INVITE sip:carol@example.com SIP/2.0"] + _common("INVITE", 1, "inv-1@192.0.2.10") + [
             f"Proxy-Authorization: Basic {BASIC_CREDENTIAL}"])),
+        (CLIENT, SERVER, _invite_with_sdp()),
     ]
     packets = [IP(src=s, dst=d) / UDP(sport=5060, dport=5060) / Raw(load=m) for s, d, m in messages]
     for index, packet in enumerate(packets):
@@ -101,6 +124,16 @@ class TestMasking(unittest.TestCase):
         self.assertEqual(mask_sip_credentials("Bearer abc.def.ghi"), f"Bearer {SIP_CREDENTIAL_MASK}")
         self.assertEqual(mask_sip_credentials("NTLM TlRMTVNTUAAB"), f"NTLM {SIP_CREDENTIAL_MASK}")
 
+    def test_sdp_keys_are_masked_and_the_suite_stays(self):
+        from extractors.tshark import mask_sip_text
+        masked = mask_sip_text(_sdp())
+        for secret in (SRTP_KEY, MIKEY_PAYLOAD, SDP_K_KEY):
+            self.assertNotIn(secret, masked)
+        self.assertIn(f"AES_CM_128_HMAC_SHA1_80 inline:{SIP_CREDENTIAL_MASK}|2^20|1:4", masked)
+        self.assertIn(f"a=key-mgmt:mikey {SIP_CREDENTIAL_MASK}", masked)
+        self.assertIn(f"k=clear:{SIP_CREDENTIAL_MASK}", masked)
+        self.assertIn("m=audio 49170 RTP/SAVP 0", masked)
+
     def test_unquoted_response_and_auts(self):
         masked = mask_sip_credentials(f'Digest username="a",response={DIGEST_RESPONSE},auts="AKAresync"')
         self.assertNotIn(DIGEST_RESPONSE, masked)
@@ -125,6 +158,7 @@ class TestExtraction(SipCaptureCase):
     def test_scapy_fallback_masks_the_credential(self):
         text = read_pcap_with_scapy(self.pcap)
         self.assertIn("Authorization: Digest", text)
+        self.assertIn("a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:", text)
         self.assertIn('username="alice"', text)
         self.assertNoCredential(text)
 
@@ -156,6 +190,23 @@ class TestLlmPayloadAndReport(SipCaptureCase):
         payload = json.dumps(seen)
         self.assertTrue(seen, "the LLM client was never called")
         self.assertIn("alice", payload)  # the SIP summary really was in the prompt
+        self.assertNoCredential(payload)
+
+    def test_the_llm_prompt_from_the_scapy_fallback_holds_no_credential(self):
+        import dspy
+        from ai.analysis import sip_diagnostic_test
+        from llm_config import RedactingLM
+        seen = []
+
+        def capture(self_lm, prompt=None, *, messages=None, **kwargs):
+            seen.append({"prompt": prompt, "messages": messages})
+            return ['{"analysis": "{}"}']
+
+        lm = RedactingLM(model="anthropic/claude-haiku-5-5", api_key="placeholder-not-a-key")
+        with mock.patch.object(dspy.LM, "__call__", capture):
+            sip_diagnostic_test(lm, read_pcap_with_scapy(self.pcap), self.pcap)
+        payload = json.dumps(seen)
+        self.assertIn("AES_CM_128_HMAC_SHA1_80", payload)  # the SDP really was in the prompt
         self.assertNoCredential(payload)
 
     def test_the_cli_report_holds_no_credential(self):

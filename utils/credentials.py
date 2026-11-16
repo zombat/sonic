@@ -33,8 +33,10 @@ prompts): provider API keys (sk-ant-, sk-, sk-proj-, Stripe sk_live_/rk_live_,
 Google AIza), AWS access key ids (AKIA, ASIA), GitHub tokens (ghp_, gho_, ghu_,
 ghs_, ghr_, github_pat_), Slack tokens (xoxb-, xoxp-, xoxa-, xoxs-), JWTs, PEM
 private key blocks, the credential of an Authorization or Proxy-Authorization
-Basic or Bearer value, and the value of a password=, secret=, token=, key=
-style assignment (and password:, secret:, passphrase:). Shapes are matched
+Basic or Bearer value, the value of a password=, secret=, token=, key=
+style assignment (and password:, secret:, passphrase:), and SDP media keys
+(an a=crypto inline: SRTP master key, an a=key-mgmt payload such as MIKEY,
+a k=clear:/k=base64: key). Shapes are matched
 narrowly so that ordinary report text (OIDs, MAC addresses, packet hashes,
 SPIs, nonces) is left alone; a value with none of these shapes and not loaded
 here is not masked.
@@ -86,6 +88,12 @@ _ASSIGNMENT = re.compile(
 _COLON_ASSIGNMENT = re.compile(
     r"(?i)(?<![A-Za-z0-9_.\-])([\"']?[A-Za-z0-9_.\-]*(?:password|passwd|passphrase|secret)[\"']?\s*:[ \t]*)"
     r"(\"[^\"\n]*\"|'[^'\n]*'|[^\s,;&\"'<>()\[\]{}]+)")
+# SDP media keys: SDES a=crypto inline: key||salt (RFC 4568; the suite, lifetime and MKI stay),
+# a=key-mgmt data such as a MIKEY payload (RFC 4567; the protocol id stays), and the k= line
+# (RFC 4566 clear:, base64:; uri: and prompt carry no key and stay).
+_SDP_INLINE = re.compile(r"(\binline:)([A-Za-z0-9+/]{16,}={0,2})")  # SRTP key||salt: 40+ chars
+_SDP_KEY_MGMT = re.compile(r"(?im)(\ba=key-mgmt:[ \t]*[A-Za-z0-9._\-]+[ \t]+)([^\r\n\"]+)")
+_SDP_K_LINE = re.compile(r"(?im)(^k=(?:clear|base64):)([^\r\n\"]+)")
 _NOT_A_VALUE = {"", "none", "null", "true", "false", "redacted", REDACTED.lower(), "masked", "[masked]"}
 
 
@@ -114,6 +122,15 @@ def _assigned_value(match: "re.Match") -> str:
     return match.group(1) + quote + REDACTED + quote
 
 
+def mask_sdp_keys(text: str, mask: str = REDACTED) -> str:
+    """SDP with every SRTP master key (a=crypto inline:), key-mgmt payload and k= key replaced by mask."""
+    if not isinstance(text, str) or not text:
+        return text
+    text = _SDP_INLINE.sub(lambda m: m.group(1) + mask, text)
+    text = _SDP_KEY_MGMT.sub(lambda m: m.group(1) + mask, text)
+    return _SDP_K_LINE.sub(lambda m: m.group(1) + mask, text)
+
+
 # One list, applied in order by mask_secret_shapes and so by redact_text, which every output
 # path (the streams, the log filter, write_redacted, redact, the LLM prompt) goes through.
 SECRET_SHAPES = (
@@ -125,6 +142,9 @@ SECRET_SHAPES = (
     (_BASIC, _basic_credential),
     (_ASSIGNMENT, _assigned_value),
     (_COLON_ASSIGNMENT, _assigned_value),
+    (_SDP_INLINE, lambda m: m.group(1) + REDACTED),
+    (_SDP_KEY_MGMT, lambda m: m.group(1) + REDACTED),
+    (_SDP_K_LINE, lambda m: m.group(1) + REDACTED),
 )
 
 

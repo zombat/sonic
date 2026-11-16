@@ -187,6 +187,10 @@ SHAPED = [
     ("token assignment", 'client_token="abc123xyz"', "abc123xyz"),
     ("password colon", "Password: correct-horse", "correct-horse"),
     ("password json", '{"password": "battery-staple"}', "battery-staple"),
+    ("sdp srtp key", "a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:" + _dummy("WVNfX19zZW1j", "dGwgKCkgewkyMjA7") + "|2^20",
+     _dummy("WVNfX19zZW1j", "dGwgKCkgewkyMjA7")),
+    ("sdp mikey", "a=key-mgmt:mikey " + _dummy("AQAFgM0Xfl", "ABAAAAAAAAAsAyOOh"), _dummy("AQAFgM0Xfl", "ABAAAAAAAAAsAyOOh")),
+    ("sdp k line", "s=x\nk=clear:sdpdummykey\nm=audio 4000 RTP/AVP 0", "sdpdummykey"),
 ]
 
 ORDINARY = [
@@ -200,6 +204,7 @@ ORDINARY = [
     "SIP/2.0 401 Unauthorized, Call-ID a84b4c76e66710@pc33.atlanta.com, branch=z9hG4bK776asdhds",
     "TLS 1.3 client_random 52362c10a2665e323a2adb4b9da0c10d4a8823719272f8b4c97af24f92784812",
     "frame 42: risk-free disk-0123456789abcdefghij task_id=7 password=None",
+    "shown inline: yes, inline:true, k=prompt, a=crypto:1 AES_CM_128_HMAC_SHA1_80 (key masked)",
 ]
 
 
