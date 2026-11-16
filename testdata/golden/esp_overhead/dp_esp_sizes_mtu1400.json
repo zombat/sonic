@@ -1,0 +1,795 @@
+{
+  "assumptions": {
+    "gre_header_bytes": 8,
+    "transport_mtu": 1500,
+    "tunnel_mtu": 1400
+  },
+  "detector": "esp_overhead",
+  "estimate": true,
+  "events": [
+    {
+      "detail": "ESP 198.51.100.3 -> 192.0.2.1 fragmented after encryption: 2 fragment(s) of 1 datagram(s), largest 1500 bytes; the receiver must reassemble before decrypting (CPU cost, drops under load): lower the tunnel ip mtu or adjust the MSS so encrypted packets fit the transport MTU",
+      "event": "outer_fragmented",
+      "frame": 23,
+      "protocol": "esp",
+      "t": 4.0,
+      "time": "2026-01-01T00:00:04.000Z"
+    }
+  ],
+  "flows": [
+    {
+      "confidence": "high",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 96,
+              "inner_bytes": [
+                67,
+                70
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 136,
+              "inner_bytes": [
+                107,
+                110
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 164,
+              "inner_bytes": [
+                135,
+                138
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 612,
+              "inner_bytes": [
+                583,
+                586
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 1036,
+              "inner_bytes": [
+                1007,
+                1010
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 1436,
+              "inner_bytes": [
+                1407,
+                1410
+              ],
+              "packets": 2
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1438,
+              "outer_size_at_tunnel_mtu": 1464,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1426,
+              "outer_size_at_tunnel_mtu": 1476,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 96,
+              "inner_bytes": [
+                79,
+                82
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 136,
+              "inner_bytes": [
+                119,
+                122
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 164,
+              "inner_bytes": [
+                147,
+                150
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 612,
+              "inner_bytes": [
+                595,
+                598
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 1036,
+              "inner_bytes": [
+                1019,
+                1022
+              ],
+              "packets": 2
+            },
+            {
+              "esp_payload": 1436,
+              "inner_bytes": [
+                1419,
+                1422
+              ],
+              "packets": 2
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1450,
+              "outer_size_at_tunnel_mtu": 1452,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1438,
+              "outer_size_at_tunnel_mtu": 1464,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 6,
+      "dst": "192.0.2.1",
+      "estimate": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+      "estimate_basis": "this flow's sizes",
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "largest_outer_packet": 1464,
+      "nat_t": false,
+      "packets": 12,
+      "size_histogram": [
+        {
+          "esp_payload": 96,
+          "packets": 2
+        },
+        {
+          "esp_payload": 136,
+          "packets": 2
+        },
+        {
+          "esp_payload": 164,
+          "packets": 2
+        },
+        {
+          "esp_payload": 612,
+          "packets": 2
+        },
+        {
+          "esp_payload": 1036,
+          "packets": 2
+        },
+        {
+          "esp_payload": 1436,
+          "packets": 2
+        }
+      ],
+      "spi": "0xc0000001",
+      "src": "198.51.100.2"
+    },
+    {
+      "confidence": "high",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 108,
+              "inner_bytes": [
+                79,
+                82
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 140,
+              "inner_bytes": [
+                111,
+                114
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 172,
+              "inner_bytes": [
+                143,
+                146
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 620,
+              "inner_bytes": [
+                591,
+                594
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1052,
+              "inner_bytes": [
+                1023,
+                1026
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1452,
+              "inner_bytes": [
+                1423,
+                1426
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1438,
+              "outer_size_at_tunnel_mtu": 1464,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1426,
+              "outer_size_at_tunnel_mtu": 1476,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 108,
+              "inner_bytes": [
+                63,
+                78
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 140,
+              "inner_bytes": [
+                95,
+                110
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 172,
+              "inner_bytes": [
+                127,
+                142
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 620,
+              "inner_bytes": [
+                575,
+                590
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1052,
+              "inner_bytes": [
+                1007,
+                1022
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1452,
+              "inner_bytes": [
+                1407,
+                1422
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1430,
+              "outer_size_at_tunnel_mtu": 1480,
+              "overhead_bytes": [
+                66,
+                81
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1418,
+              "outer_size_at_tunnel_mtu": 1480,
+              "overhead_bytes": [
+                78,
+                93
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 8,
+          "family": "3DES/DES-CBC + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [
+            "3DES/DES-CBC + HMAC-MD5-96"
+          ],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 108,
+              "inner_bytes": [
+                79,
+                86
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 140,
+              "inner_bytes": [
+                111,
+                118
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 172,
+              "inner_bytes": [
+                143,
+                150
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 620,
+              "inner_bytes": [
+                591,
+                598
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1052,
+              "inner_bytes": [
+                1023,
+                1030
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1452,
+              "inner_bytes": [
+                1423,
+                1430
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1438,
+              "outer_size_at_tunnel_mtu": 1464,
+              "overhead_bytes": [
+                58,
+                65
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1426,
+              "outer_size_at_tunnel_mtu": 1472,
+              "overhead_bytes": [
+                70,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 108,
+              "inner_bytes": [
+                91,
+                94
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 140,
+              "inner_bytes": [
+                123,
+                126
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 172,
+              "inner_bytes": [
+                155,
+                158
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 620,
+              "inner_bytes": [
+                603,
+                606
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1052,
+              "inner_bytes": [
+                1035,
+                1038
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 1452,
+              "inner_bytes": [
+                1435,
+                1438
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1450,
+              "outer_size_at_tunnel_mtu": 1452,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1438,
+              "outer_size_at_tunnel_mtu": 1464,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 6,
+      "dst": "192.0.2.1",
+      "estimate": "AES-CBC + HMAC-SHA1-96",
+      "estimate_basis": "this flow's sizes",
+      "frames": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "largest_outer_packet": 1480,
+      "nat_t": false,
+      "packets": 6,
+      "size_histogram": [
+        {
+          "esp_payload": 108,
+          "packets": 1
+        },
+        {
+          "esp_payload": 140,
+          "packets": 1
+        },
+        {
+          "esp_payload": 172,
+          "packets": 1
+        },
+        {
+          "esp_payload": 620,
+          "packets": 1
+        },
+        {
+          "esp_payload": 1052,
+          "packets": 1
+        },
+        {
+          "esp_payload": 1452,
+          "packets": 1
+        }
+      ],
+      "spi": "0xcb000001",
+      "src": "198.51.100.3"
+    },
+    {
+      "confidence": "high",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 96,
+              "inner_bytes": [
+                67,
+                70
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 136,
+              "inner_bytes": [
+                107,
+                110
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 164,
+              "inner_bytes": [
+                135,
+                138
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 612,
+              "inner_bytes": [
+                583,
+                586
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1430,
+              "outer_size_at_tunnel_mtu": 1472,
+              "overhead_bytes": [
+                70,
+                73
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1418,
+              "outer_size_at_tunnel_mtu": 1484,
+              "overhead_bytes": [
+                82,
+                85
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 96,
+              "inner_bytes": [
+                79,
+                82
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 136,
+              "inner_bytes": [
+                119,
+                122
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 164,
+              "inner_bytes": [
+                147,
+                150
+              ],
+              "packets": 1
+            },
+            {
+              "esp_payload": 612,
+              "inner_bytes": [
+                595,
+                598
+              ],
+              "packets": 1
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1442,
+              "outer_size_at_tunnel_mtu": 1460,
+              "overhead_bytes": [
+                58,
+                61
+              ]
+            },
+            "tunnel": {
+              "fits_transport_mtu": true,
+              "largest_inner_packet_without_fragmentation": 1430,
+              "outer_size_at_tunnel_mtu": 1472,
+              "overhead_bytes": [
+                70,
+                73
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 4,
+      "dst": "192.0.2.1",
+      "estimate": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+      "estimate_basis": "this flow's sizes",
+      "frames": [
+        19,
+        20,
+        21,
+        22
+      ],
+      "largest_outer_packet": 648,
+      "nat_t": true,
+      "packets": 4,
+      "size_histogram": [
+        {
+          "esp_payload": 96,
+          "packets": 1
+        },
+        {
+          "esp_payload": 136,
+          "packets": 1
+        },
+        {
+          "esp_payload": 164,
+          "packets": 1
+        },
+        {
+          "esp_payload": 612,
+          "packets": 1
+        }
+      ],
+      "spi": "0xab000001",
+      "src": "203.0.113.9"
+    }
+  ],
+  "flows_omitted": 0,
+  "issues": [
+    {
+      "code": "ESP_OUTER_FRAGMENTED",
+      "frames": [
+        23,
+        24
+      ],
+      "message": "ESP 198.51.100.3 -> 192.0.2.1 fragmented after encryption: 2 fragment(s) of 1 datagram(s), largest 1500 bytes; the receiver must reassemble before decrypting (CPU cost, drops under load): lower the tunnel ip mtu or adjust the MSS so encrypted packets fit the transport MTU",
+      "severity": "warning"
+    }
+  ],
+  "limits": [
+    "ESP is encrypted: the cipher, tunnel or transport mode, and the inner packets are estimates from packet sizes, never read from the packet. Families with equal IV, ICV and alignment (AES-GCM, AES-CCM, ChaCha20-Poly1305) cannot be told apart.",
+    "Padding is assumed minimal (no TFC padding); an implementation that pads more makes the inner sizes smaller than the bounds shown.",
+    "Tunnel versus transport mode cannot be read from sizes alone; both are computed. The IKE exchange that agreed the mode is encrypted (IKEv2 IKE_AUTH, IKEv1 Quick Mode)."
+  ],
+  "outer_fragmentation": [
+    {
+      "datagrams": 1,
+      "dst": "192.0.2.1",
+      "first_t": 4.0,
+      "fragments": 2,
+      "frames": [
+        23,
+        24
+      ],
+      "largest_fragment": 1500,
+      "spis": [
+        "0xcb000001"
+      ],
+      "src": "198.51.100.3"
+    }
+  ],
+  "status": "warning",
+  "summary": {
+    "capture_wide_distinct_sizes": 12,
+    "capture_wide_estimate": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+    "esp_flows": 3,
+    "esp_fragments": 2,
+    "family_estimates": {
+      "AES-CBC + HMAC-SHA1-96": 1,
+      "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)": 2
+    },
+    "flows_dropped_at_cap": 0
+  },
+  "verdict": "3 ESP flow(s); sizes fit AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV) on 2 flow(s), AES-CBC + HMAC-SHA1-96 on 1 flow(s) (estimate); 2 ESP fragment(s): encrypted packets fragmented at the transport edge."
+}

@@ -1,0 +1,115 @@
+{
+  "black_holes": [
+    {
+      "dst": "10.3.3.30",
+      "frames": [
+        5,
+        6,
+        7
+      ],
+      "kind": "icmp_echo",
+      "largest_answered": 1400,
+      "path_mtu_between": [
+        1400,
+        1499
+      ],
+      "smallest_vanished": 1500,
+      "src": "10.1.1.10",
+      "vanished_probes": 3
+    },
+    {
+      "dport": 40100,
+      "dst": "10.1.1.10",
+      "frames": [
+        25,
+        26,
+        27,
+        28
+      ],
+      "kind": "tcp",
+      "largest_answered": 240,
+      "path_mtu_between": [
+        240,
+        1487
+      ],
+      "smallest_vanished": 1488,
+      "sport": 80,
+      "src": "10.3.3.30",
+      "vanished_probes": 1
+    }
+  ],
+  "black_holes_omitted": 0,
+  "detector": "path_mtu",
+  "events": [
+    {
+      "detail": "PMTUD black hole 10.1.1.10 -> 10.3.3.30: DF probes up to 1400 bytes answered, 3 probe(s) of 1500 bytes or more vanished with no ICMP Fragmentation Needed seen; path MTU is between 1400 and 1499",
+      "event": "pmtu_black_hole",
+      "frame": 5,
+      "protocol": "icmp",
+      "t": 2.0,
+      "time": "2026-01-01T00:00:02.000Z"
+    },
+    {
+      "detail": "TCP black hole 10.3.3.30:80 -> 10.1.1.10:40100: 1 DF segment(s) of 1488+ bytes retransmitted and never acknowledged while segments up to 240 bytes were; no ICMP seen: lower the MSS (ip tcp adjust-mss) or let ICMP type 3 code 4 through",
+      "event": "pmtu_black_hole",
+      "frame": 25,
+      "protocol": "tcp",
+      "t": 10.1,
+      "time": "2026-01-01T00:00:10.100Z"
+    }
+  ],
+  "frag_needed": [],
+  "frag_needed_omitted": 0,
+  "fragments": {
+    "by_pair": [],
+    "by_pair_omitted": 0,
+    "complete": 0,
+    "datagrams": 0,
+    "groups_dropped_at_cap": 0,
+    "incomplete": [],
+    "incomplete_count": 0,
+    "incomplete_omitted": 0,
+    "overlapping": []
+  },
+  "issues": [
+    {
+      "code": "PMTU_BLACK_HOLE",
+      "frames": [
+        5,
+        6,
+        7
+      ],
+      "message": "PMTUD black hole 10.1.1.10 -> 10.3.3.30: DF probes up to 1400 bytes answered, 3 probe(s) of 1500 bytes or more vanished with no ICMP Fragmentation Needed seen; path MTU is between 1400 and 1499",
+      "severity": "error"
+    },
+    {
+      "code": "TCP_PMTU_BLACK_HOLE",
+      "frames": [
+        25,
+        26,
+        27,
+        28
+      ],
+      "message": "TCP black hole 10.3.3.30:80 -> 10.1.1.10:40100: 1 DF segment(s) of 1488+ bytes retransmitted and never acknowledged while segments up to 240 bytes were; no ICMP seen: lower the MSS (ip tcp adjust-mss) or let ICMP type 3 code 4 through",
+      "severity": "error"
+    }
+  ],
+  "limits": [
+    "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+    "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+    "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+    "IPv6 extension headers (including fragment headers) are not decoded."
+  ],
+  "status": "problem",
+  "summary": {
+    "black_holes": 2,
+    "df_packets_over_576": 22,
+    "frag_needed_messages": 0,
+    "fragmented_datagrams": 0,
+    "incomplete_datagrams": 0,
+    "largest_df_packet": 1500,
+    "reassembly_timeouts": 0,
+    "smallest_mtu_advertised": null
+  },
+  "verdict": "PMTUD black hole 10.1.1.10 -> 10.3.3.30 (path MTU between 1400 and 1499)."
+}

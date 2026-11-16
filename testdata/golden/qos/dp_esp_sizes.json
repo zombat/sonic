@@ -1,0 +1,92 @@
+{
+  "detector": "qos",
+  "esp_sas": [
+    {
+      "dscp": {
+        "CS0/BE": 4,
+        "CS6": 4,
+        "EF": 4
+      },
+      "dst": "192.0.2.1",
+      "frames": [
+        2,
+        3,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12
+      ],
+      "reading": "several markings on one SA: DSCP is copied from the inner header per packet",
+      "spi": "0xc0000001",
+      "src": "198.51.100.2"
+    },
+    {
+      "dscp": {
+        "CS0/BE": 7
+      },
+      "dst": "192.0.2.1",
+      "frames": [],
+      "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+      "spi": "0xcb000001",
+      "src": "198.51.100.3"
+    },
+    {
+      "dscp": {
+        "CS0/BE": 4
+      },
+      "dst": "192.0.2.1",
+      "frames": [],
+      "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+      "spi": "0xab000001",
+      "src": "203.0.113.9"
+    }
+  ],
+  "esp_sas_omitted": 0,
+  "events": [],
+  "gre_tunnels": [],
+  "issues": [],
+  "limits": [
+    "ESP hides the inner header: from one capture the inner DSCP of encrypted traffic is unknown, so 'copied' is inferred from several markings on one SA. Compare an inside and an outside capture with correlate_captures to see the rewrite directly.",
+    "RTP latency is not measurable from one capture point; jitter and loss are what arrived here. RTP is found by its header shape, so a non-RTP UDP flow that looks like RTP for 10+ packets can be counted.",
+    "Clock rate is 8000 Hz for static audio payload types and estimated from timestamps for dynamic ones."
+  ],
+  "marked_flows": [
+    {
+      "dscp": {
+        "CS0/BE": 4,
+        "CS6": 4,
+        "EF": 4
+      },
+      "dst": "192.0.2.1",
+      "frames": [
+        2,
+        3,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12
+      ],
+      "packets": 12,
+      "protocol": "esp",
+      "src": "198.51.100.2"
+    }
+  ],
+  "marked_flows_omitted": 0,
+  "rtp_streams": [],
+  "rtp_streams_omitted": 0,
+  "status": "ok",
+  "summary": {
+    "ecn_ce_packets": 0,
+    "esp_sas": 3,
+    "flows_dropped_at_cap": 0,
+    "gre_tunnels": 0,
+    "marked_flows": 1,
+    "rtp_streams": 0,
+    "unmarked_flows": 3
+  },
+  "verdict": "1 marked flow(s), 3 unmarked; ESP: 1 of 3 SA(s) show DSCP copied per packet."
+}

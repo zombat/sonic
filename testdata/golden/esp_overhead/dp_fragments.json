@@ -1,0 +1,29 @@
+{
+  "assumptions": {
+    "gre_header_bytes": 8,
+    "transport_mtu": 1500,
+    "tunnel_mtu": null
+  },
+  "detector": "esp_overhead",
+  "estimate": true,
+  "events": [],
+  "flows": [],
+  "flows_omitted": 0,
+  "issues": [],
+  "limits": [
+    "ESP is encrypted: the cipher, tunnel or transport mode, and the inner packets are estimates from packet sizes, never read from the packet. Families with equal IV, ICV and alignment (AES-GCM, AES-CCM, ChaCha20-Poly1305) cannot be told apart.",
+    "Padding is assumed minimal (no TFC padding); an implementation that pads more makes the inner sizes smaller than the bounds shown.",
+    "Tunnel versus transport mode cannot be read from sizes alone; both are computed. The IKE exchange that agreed the mode is encrypted (IKEv2 IKE_AUTH, IKEv1 Quick Mode)."
+  ],
+  "outer_fragmentation": [],
+  "status": "not_present",
+  "summary": {
+    "capture_wide_distinct_sizes": 0,
+    "capture_wide_estimate": "AES-CBC + HMAC-SHA512-256",
+    "esp_flows": 0,
+    "esp_fragments": 0,
+    "family_estimates": {},
+    "flows_dropped_at_cap": 0
+  },
+  "verdict": "No ESP in this capture."
+}

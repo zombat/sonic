@@ -1,0 +1,38 @@
+{
+  "black_holes": [],
+  "black_holes_omitted": 0,
+  "detector": "path_mtu",
+  "events": [],
+  "frag_needed": [],
+  "frag_needed_omitted": 0,
+  "fragments": {
+    "by_pair": [],
+    "by_pair_omitted": 0,
+    "complete": 0,
+    "datagrams": 0,
+    "groups_dropped_at_cap": 0,
+    "incomplete": [],
+    "incomplete_count": 0,
+    "incomplete_omitted": 0,
+    "overlapping": []
+  },
+  "issues": [],
+  "limits": [
+    "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+    "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+    "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+    "IPv6 extension headers (including fragment headers) are not decoded."
+  ],
+  "status": "not_present",
+  "summary": {
+    "black_holes": 0,
+    "df_packets_over_576": 0,
+    "frag_needed_messages": 0,
+    "fragmented_datagrams": 0,
+    "incomplete_datagrams": 0,
+    "largest_df_packet": null,
+    "reassembly_timeouts": 0,
+    "smallest_mtu_advertised": null
+  },
+  "verdict": "No large DF packets, no Fragmentation Needed and no fragments in this capture."
+}

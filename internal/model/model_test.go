@@ -321,3 +321,56 @@ func TestCapAddFrameAndEdgeFallbacks(t *testing.T) {
 		t.Fatal("unknown enum defaults mismatch")
 	}
 }
+
+func TestMathAndICMPDescribe(t *testing.T) {
+	t.Parallel()
+
+	if got := Round(2.5, 0); got != 2.0 {
+		t.Fatalf("Round(2.5, 0) = %v, want 2.0 (half-to-even)", got)
+	}
+	if got := Round(3.5, 0); got != 4.0 {
+		t.Fatalf("Round(3.5, 0) = %v, want 4.0 (half-to-even)", got)
+	}
+	if got := Round(-0.0001, 2); got != 0 {
+		t.Fatalf("Round(-0.0001, 2) = %v, want 0", got)
+	}
+
+	if Median(nil) != nil || Percentile(nil, 0.95) != nil {
+		t.Fatal("empty Median/Percentile should return nil")
+	}
+	mOdd := Median([]float64{5, 1, 3})
+	if mOdd == nil || *mOdd != 3 {
+		t.Fatalf("Median(odd) = %v, want 3", mOdd)
+	}
+	mEven := Median([]float64{4, 1, 2, 3})
+	if mEven == nil || *mEven != 2.5 {
+		t.Fatalf("Median(even) = %v, want 2.5", mEven)
+	}
+	p95 := Percentile([]float64{10, 20, 30, 40}, 0.95)
+	if p95 == nil || *p95 != 40 {
+		t.Fatalf("Percentile(0.95) = %v, want 40", p95)
+	}
+
+	cases := []struct {
+		v6           bool
+		typ, code    int
+		wantName     string
+		wantCodeText string
+	}{
+		{false, 3, 4, "destination_unreachable", "fragmentation needed and DF set"},
+		{false, 11, 1, "time_exceeded", "fragment reassembly time exceeded"},
+		{false, 5, 1, "redirect", "redirect for host"},
+		{false, 99, 7, "type_99", "code 7"},
+		{true, 1, 4, "destination_unreachable", "port unreachable"},
+		{true, 3, 0, "time_exceeded", "hop limit exceeded in transit"},
+		{true, 3, 1, "time_exceeded", "fragment reassembly time exceeded"},
+		{true, 2, 0, "packet_too_big", "code 0"},
+	}
+	for _, tc := range cases {
+		name, codeText := ICMPDescribe(tc.v6, tc.typ, tc.code)
+		if name != tc.wantName || codeText != tc.wantCodeText {
+			t.Fatalf("ICMPDescribe(%v,%d,%d) = (%q,%q), want (%q,%q)",
+				tc.v6, tc.typ, tc.code, name, codeText, tc.wantName, tc.wantCodeText)
+		}
+	}
+}

@@ -1,0 +1,78 @@
+{
+  "black_holes": [],
+  "black_holes_omitted": 0,
+  "detector": "path_mtu",
+  "events": [
+    {
+      "detail": "10.1.1.1 sent Fragmentation Needed to 10.1.1.10 for packets 10.1.1.10 -> 10.2.2.20 (1500 bytes): next-hop MTU 1400 (1x); refers to frame(s) 3",
+      "event": "frag_needed",
+      "frame": 4,
+      "protocol": "icmp",
+      "t": 1.001,
+      "time": "2026-01-01T00:00:01.001Z"
+    }
+  ],
+  "frag_needed": [
+    {
+      "count": 1,
+      "first_t": 1.001,
+      "frames": [
+        4
+      ],
+      "mtu": 1400,
+      "original_dport": null,
+      "original_dst": "10.2.2.20",
+      "original_len": 1500,
+      "original_protocol": 1,
+      "original_src": "10.1.1.10",
+      "probe_frames": [
+        3
+      ],
+      "router": "10.1.1.1",
+      "to": "10.1.1.10",
+      "tunneled": false
+    }
+  ],
+  "frag_needed_omitted": 0,
+  "fragments": {
+    "by_pair": [],
+    "by_pair_omitted": 0,
+    "complete": 0,
+    "datagrams": 0,
+    "groups_dropped_at_cap": 0,
+    "incomplete": [],
+    "incomplete_count": 0,
+    "incomplete_omitted": 0,
+    "overlapping": []
+  },
+  "issues": [
+    {
+      "code": "PMTU_FRAG_NEEDED",
+      "frames": [
+        4
+      ],
+      "message": "10.1.1.1 sent Fragmentation Needed to 10.1.1.10 for packets 10.1.1.10 -> 10.2.2.20 (1500 bytes): next-hop MTU 1400 (1x); refers to frame(s) 3",
+      "mtu": 1400,
+      "router": "10.1.1.1",
+      "severity": "warning"
+    }
+  ],
+  "limits": [
+    "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+    "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+    "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+    "IPv6 extension headers (including fragment headers) are not decoded."
+  ],
+  "status": "warning",
+  "summary": {
+    "black_holes": 0,
+    "df_packets_over_576": 5,
+    "frag_needed_messages": 1,
+    "fragmented_datagrams": 0,
+    "incomplete_datagrams": 0,
+    "largest_df_packet": 1500,
+    "reassembly_timeouts": 0,
+    "smallest_mtu_advertised": 1400
+  },
+  "verdict": "1 Fragmentation Needed / Packet Too Big advertising MTU 1400."
+}

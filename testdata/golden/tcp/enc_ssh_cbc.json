@@ -1,0 +1,133 @@
+{
+  "connections": [
+    {
+      "client": "10.80.0.10:52100",
+      "detail": "no retransmissions, gaps, zero windows or resets seen",
+      "directions": {
+        "client_to_server": {
+          "bytes": 461,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.80.0.10:52100",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 200.0,
+          "mss": 1460,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 1000.0,
+          "rtt_ms": {
+            "max": 10.0,
+            "median": 5.0,
+            "min": 5.0,
+            "p95": 10.0,
+            "samples": 5
+          },
+          "sack_permitted": true,
+          "segments_with_data": 7,
+          "srtt_ms": 8.35,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": 7,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        },
+        "server_to_client": {
+          "bytes": 589,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.80.0.5:22",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 200.0,
+          "mss": 1460,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 1000.0,
+          "rtt_ms": {
+            "max": 10.0,
+            "median": 7.5,
+            "min": 5.0,
+            "p95": 10.0,
+            "samples": 4
+          },
+          "sack_permitted": true,
+          "segments_with_data": 6,
+          "srtt_ms": 8.828,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": 7,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        }
+      },
+      "first_t": 0.0,
+      "frames": [],
+      "handshake": {
+        "capture_point_to_client_ms": 10.0,
+        "capture_point_to_server_ms": 10.0,
+        "syn_count": 1,
+        "syn_frames": [
+          1
+        ],
+        "synack_frame": 2
+      },
+      "handshake_seen": true,
+      "last_t": 0.125,
+      "other_conditions": [],
+      "over_gre": false,
+      "packets": 16,
+      "server": "10.80.0.5:22",
+      "verdict": "healthy"
+    }
+  ],
+  "connections_omitted": 0,
+  "detector": "tcp",
+  "events": [],
+  "issues": [],
+  "limits": [
+    "Retransmissions, gaps and RTT are what this capture point saw: a segment lost after the capture point shows as a retransmission here, one lost before it shows as a gap. RTT is from the capture point to the receiver and back, not end to end unless the capture was taken on the sender.",
+    "A connection whose handshake was not captured has no window scale, so window-full checks and options are skipped for it.",
+    "Payload contents are not judged here (see the tls detector for TLS handshakes)."
+  ],
+  "status": "ok",
+  "summary": {
+    "by_verdict": {
+      "healthy": 1,
+      "loss_on_path": 0,
+      "no_answer": 0,
+      "receive_window_limited": 0,
+      "receiver_buffer_exhausted": 0,
+      "refused": 0,
+      "reset": 0
+    },
+    "connections": 1,
+    "connections_dropped_at_cap": 0,
+    "mss_offered": [
+      1460
+    ]
+  },
+  "verdict": "1 TCP connection(s): all healthy; MSS offered 1460."
+}

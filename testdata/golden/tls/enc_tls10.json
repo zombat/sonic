@@ -1,0 +1,107 @@
+{
+  "baseline": null,
+  "detector": "tls",
+  "events": [
+    {
+      "detail": "TLS 10.80.0.10:51200 -> 10.80.0.3:443 SNI legacy.example.net: TLS1.0 TLS_RSA_WITH_AES_128_CBC_SHA",
+      "event": "handshake",
+      "frame": 5,
+      "protocol": "tls",
+      "t": 0.05,
+      "time": "2026-01-01T00:00:00.050Z"
+    }
+  ],
+  "issues": [
+    {
+      "code": "TLS_OLD_VERSION",
+      "frames": [
+        4,
+        5
+      ],
+      "message": "TLS 10.80.0.10:51200 -> 10.80.0.3:443 (SNI legacy.example.net): negotiated TLS1.0 (deprecated by RFC 8996)",
+      "severity": "warning"
+    },
+    {
+      "code": "TLS_WEAK_OFFERED",
+      "frames": [
+        4,
+        5
+      ],
+      "message": "TLS 10.80.0.10:51200 -> 10.80.0.3:443 (SNI legacy.example.net): client offered versions TLS1.0",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "Only the cleartext handshake is read. In TLS 1.3 everything after the ServerHello is encrypted: the certificate, the server's extensions and any later alert cannot be seen. In TLS 1.2 and older the certificate is visible and is read here.",
+    "Certificate trust (chain to a trusted root, revocation) is not judged; only what the certificate says.",
+    "In TLS 1.3 the server's ALPN choice travels in the encrypted EncryptedExtensions message, so server_chose.alpn is null and an ALPN baseline is checked only for TLS 1.2 and older.",
+    "With Encrypted Client Hello the visible SNI is the outer, public name, not the real server name.",
+    "A handshake split across segments is reassembled from the first bytes of each direction; one that starts before the capture, or whose segments were lost before the capture point, cannot be read.",
+    "QUIC, DTLS and STARTTLS are not decoded."
+  ],
+  "sessions": [
+    {
+      "alerts": [],
+      "baseline_pass": null,
+      "certificate": {
+        "reason": "Certificate message not captured (resumed session, or segments missing)",
+        "visible": false
+      },
+      "client": "10.80.0.10:51200",
+      "client_offered": {
+        "alpn": [],
+        "cipher_suites": [
+          "TLS_RSA_WITH_AES_128_CBC_SHA",
+          "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        ],
+        "ech_offered": false,
+        "extensions": 1,
+        "groups": [],
+        "key_share_groups": [],
+        "legacy_version": "TLS1.0",
+        "sni": "legacy.example.net",
+        "versions": [
+          "TLS1.0"
+        ]
+      },
+      "findings": [
+        {
+          "code": "TLS_OLD_VERSION",
+          "frames": [],
+          "message": "negotiated TLS1.0 (deprecated by RFC 8996)",
+          "severity": "warning"
+        },
+        {
+          "code": "TLS_WEAK_OFFERED",
+          "frames": [],
+          "message": "client offered versions TLS1.0",
+          "severity": "info"
+        }
+      ],
+      "first_t": 0.03,
+      "frames": {
+        "client_hello": 4,
+        "server_hello": 5
+      },
+      "hello_retry_request": false,
+      "hints": [],
+      "server": "10.80.0.3:443",
+      "server_chose": {
+        "alpn": null,
+        "cipher_suite": "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "hello_retry_request": false,
+        "key_share_group": null,
+        "version": "TLS1.0"
+      },
+      "sni": "legacy.example.net"
+    }
+  ],
+  "sessions_omitted": 0,
+  "status": "warning",
+  "summary": {
+    "baseline_failures": 0,
+    "handshakes": 1,
+    "streams_dropped_at_cap": 0
+  },
+  "verdict": "1 TLS handshake(s): 1 TLS1.0."
+}

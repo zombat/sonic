@@ -9,24 +9,24 @@ import (
 
 // ClientHello holds decoded extensions and offered ciphers from a TLS ClientHello body.
 type ClientHello struct {
-	SNI            *string
-	LegacyVersion  string
-	Versions       []string
-	CipherSuites   []string
-	ALPN           []string
-	Groups         []string
-	KeyShareGroups []string
-	ECHOffered     bool
-	Extensions     int
+	SNI            *string  `json:"sni"`
+	LegacyVersion  string   `json:"legacy_version"`
+	Versions       []string `json:"versions"`
+	CipherSuites   []string `json:"cipher_suites"`
+	ALPN           []string `json:"alpn"`
+	Groups         []string `json:"groups"`
+	KeyShareGroups []string `json:"key_share_groups"`
+	ECHOffered     bool     `json:"ech_offered"`
+	Extensions     int      `json:"extensions"`
 }
 
 // ServerHello holds the selected parameters from a TLS ServerHello body.
 type ServerHello struct {
-	Version           string
-	CipherSuite       string
-	ALPN              *string
-	KeyShareGroup     *string
-	HelloRetryRequest bool
+	Version           string  `json:"version"`
+	CipherSuite       string  `json:"cipher_suite"`
+	ALPN              *string `json:"alpn"`
+	KeyShareGroup     *string `json:"key_share_group"`
+	HelloRetryRequest bool    `json:"hello_retry_request"`
 }
 
 // ServerHelloSuite extracts only the chosen 16-bit cipher suite code from a ServerHello body.
@@ -222,6 +222,7 @@ func ParseServerHello(body []byte) *ServerHello {
 	}
 }
 
+// versionLabel maps a 16-bit TLS protocol version code to its canonical label or hex string.
 func versionLabel(code uint16) string {
 	if name, ok := Versions[code]; ok {
 		return name
@@ -229,6 +230,7 @@ func versionLabel(code uint16) string {
 	return fmt.Sprintf("0x%04x", code)
 }
 
+// groupLabel maps a TLS supported group / curve ID to its canonical name or hex string.
 func groupLabel(code uint16) string {
 	if name, ok := Groups[code]; ok {
 		return name
@@ -236,6 +238,7 @@ func groupLabel(code uint16) string {
 	return fmt.Sprintf("0x%04x", code)
 }
 
+// parseExtensions decodes a sequence of TLS type-length-value extension records, keeping the first occurrence of each type.
 func parseExtensions(data []byte) map[uint16][]byte {
 	out := make(map[uint16][]byte)
 	pos := 0
@@ -251,6 +254,7 @@ func parseExtensions(data []byte) map[uint16][]byte {
 	return out
 }
 
+// parseALPNList decodes the ProtocolNameList inside TLS extension 16 (ALPN).
 func parseALPNList(body []byte) []string {
 	out := []string{}
 	if len(body) < 2 {
@@ -270,6 +274,7 @@ func parseALPNList(body []byte) []string {
 	return out
 }
 
+// decodeASCIIReplace converts ASCII bytes to a string, substituting non-ASCII bytes with U+FFFD like Python decode("ascii", "replace").
 func decodeASCIIReplace(b []byte) string {
 	var sb strings.Builder
 	sb.Grow(len(b))

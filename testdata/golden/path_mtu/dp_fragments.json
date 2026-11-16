@@ -1,0 +1,122 @@
+{
+  "black_holes": [],
+  "black_holes_omitted": 0,
+  "detector": "path_mtu",
+  "events": [
+    {
+      "detail": "1 fragmented datagram(s) incomplete at this capture point (e.g. 10.4.4.40 -> 10.5.5.50 id 4343: middle fragment missing); the receiver cannot reassemble them",
+      "event": "fragment_incomplete",
+      "frame": 4,
+      "protocol": "ip",
+      "t": 0.9,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "10.5.5.50 gave up reassembling fragments towards it from 10.4.4.40 (ICMP fragment reassembly time exceeded): a fragment was lost on the way",
+      "event": "reassembly_timeout",
+      "frame": 8,
+      "protocol": "ip",
+      "t": 31.9,
+      "time": "2026-01-01T00:00:32.000Z"
+    }
+  ],
+  "frag_needed": [],
+  "frag_needed_omitted": 0,
+  "fragments": {
+    "by_pair": [
+      {
+        "datagrams": 3,
+        "dst": "10.5.5.50",
+        "first_fragment_sizes": [
+          68,
+          1500
+        ],
+        "incomplete": 1,
+        "protocol": 17,
+        "split_at_mtu": 1500,
+        "src": "10.4.4.40"
+      }
+    ],
+    "by_pair_omitted": 0,
+    "complete": 2,
+    "datagrams": 3,
+    "groups_dropped_at_cap": 0,
+    "incomplete": [
+      {
+        "dst": "10.5.5.50",
+        "first_t": 0.9,
+        "frames": [
+          4,
+          5
+        ],
+        "id": 4343,
+        "missing": [
+          "middle"
+        ],
+        "pieces_seen": 2,
+        "protocol": 17,
+        "src": "10.4.4.40"
+      }
+    ],
+    "incomplete_count": 1,
+    "incomplete_omitted": 0,
+    "overlapping": [
+      {
+        "dst": "10.5.5.50",
+        "frames": [
+          6,
+          7
+        ],
+        "id": 4444,
+        "protocol": 17,
+        "src": "10.4.4.40"
+      }
+    ]
+  },
+  "issues": [
+    {
+      "code": "FRAGMENT_OVERLAP",
+      "frames": [
+        6,
+        7
+      ],
+      "message": "1 datagram(s) with overlapping fragments (a broken fragmenter or an evasion attempt; many hosts drop them)",
+      "severity": "error"
+    },
+    {
+      "code": "FRAGMENT_REASSEMBLY_TIMEOUT",
+      "frames": [
+        8
+      ],
+      "message": "10.5.5.50 gave up reassembling fragments towards it from 10.4.4.40 (ICMP fragment reassembly time exceeded): a fragment was lost on the way",
+      "severity": "error"
+    },
+    {
+      "code": "FRAGMENT_INCOMPLETE",
+      "frames": [
+        4,
+        5
+      ],
+      "message": "1 fragmented datagram(s) incomplete at this capture point (e.g. 10.4.4.40 -> 10.5.5.50 id 4343: middle fragment missing); the receiver cannot reassemble them",
+      "severity": "warning"
+    }
+  ],
+  "limits": [
+    "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+    "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+    "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+    "IPv6 extension headers (including fragment headers) are not decoded."
+  ],
+  "status": "problem",
+  "summary": {
+    "black_holes": 0,
+    "df_packets_over_576": 0,
+    "frag_needed_messages": 0,
+    "fragmented_datagrams": 3,
+    "incomplete_datagrams": 1,
+    "largest_df_packet": null,
+    "reassembly_timeouts": 1,
+    "smallest_mtu_advertised": null
+  },
+  "verdict": "3 fragmented datagram(s), 1 incomplete."
+}

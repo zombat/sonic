@@ -1,0 +1,118 @@
+{
+  "arp_duplicate_ips": [],
+  "arp_unanswered": [],
+  "arp_unanswered_omitted": 0,
+  "detector": "reachability",
+  "echo": [
+    {
+      "answered": 3,
+      "dst": "10.2.2.20",
+      "duplicate_requests_seen": 0,
+      "first_t": 0.0,
+      "frames": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "ipv6": false,
+      "loss_percent": 25.0,
+      "lost": 1,
+      "outages": [
+        {
+          "duration_s": 1.012,
+          "end_t": 1.0,
+          "first_frame": 3,
+          "last_frame": 3,
+          "lost_requests": 1,
+          "next_reply_frame": 6,
+          "recovered_t": 2.012,
+          "start_t": 1.0
+        }
+      ],
+      "pending_at_capture_end": 0,
+      "rtt_ms": {
+        "avg": 11.0,
+        "max": 12.0,
+        "min": 10.0
+      },
+      "sent": 4,
+      "src": "10.1.1.10",
+      "tunneled": false,
+      "verdict": "loss"
+    }
+  ],
+  "echo_omitted": 0,
+  "events": [
+    {
+      "detail": "ping 10.1.1.10 -> 10.2.2.20: 1 consecutive request(s) unanswered, recovered after 1.012 s",
+      "event": "outage",
+      "frame": 3,
+      "protocol": "icmp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "10.1.1.1 sent destination_unreachable (fragmentation needed and DF set) to 10.1.1.10 for icmp towards 10.2.2.20 (1x); a packet too big for the path with DF set: check tunnel MTU / TCP MSS adjust",
+      "event": "destination_unreachable",
+      "frame": 4,
+      "protocol": "icmp",
+      "t": 1.001,
+      "time": "2026-01-01T00:00:01.001Z"
+    }
+  ],
+  "icmp_errors": [
+    {
+      "code": 4,
+      "code_text": "fragmentation needed and DF set",
+      "count": 1,
+      "first_t": 1.001,
+      "frames": [
+        4
+      ],
+      "from": "10.1.1.1",
+      "original_dport": null,
+      "original_dst": "10.2.2.20",
+      "original_protocol": 1,
+      "original_src": "10.1.1.10",
+      "to": "10.1.1.10",
+      "type": 3,
+      "type_name": "destination_unreachable",
+      "v6": false
+    }
+  ],
+  "icmp_errors_omitted": 0,
+  "issues": [
+    {
+      "code": "ICMP_LOSS",
+      "frames": [
+        3
+      ],
+      "message": "ping 10.1.1.10 -> 10.2.2.20: 1 of 4 lost (25.0%), 1 outage window(s)",
+      "severity": "warning"
+    },
+    {
+      "code": "ICMP_DESTINATION_UNREACHABLE",
+      "frames": [
+        4
+      ],
+      "icmp_code": 4,
+      "icmp_type": 3,
+      "message": "10.1.1.1 sent destination_unreachable (fragmentation needed and DF set) to 10.1.1.10 for icmp towards 10.2.2.20 (1x); a packet too big for the path with DF set: check tunnel MTU / TCP MSS adjust",
+      "severity": "warning"
+    }
+  ],
+  "status": "warning",
+  "summary": {
+    "arp_targets_answered": 0,
+    "arp_targets_unanswered": 0,
+    "echo_lost": 1,
+    "echo_pairs": 1,
+    "echo_replies_matched": 3,
+    "echo_requests": 4,
+    "gratuitous_arp": 0,
+    "icmp_errors": 1,
+    "unmatched_replies": 0
+  },
+  "verdict": "ping loss: 10.1.1.10->10.2.2.20 1/4 lost; 1 ICMP error(s): destination_unreachable (fragmentation needed and DF set) from 10.1.1.1"
+}

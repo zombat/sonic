@@ -144,12 +144,18 @@ func SeverityOrder(s Severity) int {
 
 // Issue represents one structured finding emitted by a detector or audit run.
 type Issue struct {
-	Severity Severity `json:"severity"`
-	Code     string   `json:"code"`
-	Message  string   `json:"message"`
-	Frames   []int    `json:"frames"`
-	Category string   `json:"category,omitempty"`
-	Protocol string   `json:"protocol,omitempty"`
+	Severity    Severity `json:"severity"`
+	Code        string   `json:"code"`
+	Message     string   `json:"message"`
+	Frames      []int    `json:"frames"`
+	Category    string   `json:"category,omitempty"`
+	Protocol    string   `json:"protocol,omitempty"`
+	ICMPType    *int     `json:"icmp_type,omitempty"`
+	ICMPCode    *int     `json:"icmp_code,omitempty"`
+	MTU         *int     `json:"mtu,omitempty"`
+	Router      string   `json:"router,omitempty"`
+	Estimate    *bool    `json:"estimate,omitempty"`
+	Connections *int     `json:"connections,omitempty"`
 }
 
 // Event represents one chronological timeline entry from a detector run.
