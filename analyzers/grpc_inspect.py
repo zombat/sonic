@@ -582,10 +582,11 @@ class GrpcAnalysis:
         entry = {"from": side, "stream_id": sid, "error_code": code, "error": H2_ERRORS.get(code, f"code {code}"),
                  "frame": n, "t": t, "method": rpc.method if rpc else None}
         conn.rst_streams.append(entry)
+        if rpc is not None:
+            entry["after_end"] = rpc.server_ended
         if rpc is not None and rpc.reset is None:
             rpc.reset = entry
             rpc.server_ended_before_reset = rpc.server_ended
-            entry["after_end"] = rpc.server_ended
             rpc.t_end = rpc.t_end or t
         self._close_stalls(conn, sid, t, n, "the stream was reset")
 
@@ -1190,6 +1191,10 @@ def analyze_grpc_capture(file_path: str, keylog_file: Optional[str] = None,
                 severity = "info"
                 text += ("after the server had already ended the stream with its status: the client closing its "
                          "half (normal cleanup)")
+            elif rst.get("after_end") and rst["error_code"] == 0:
+                severity = "info"
+                text += ("right after the server's own status: asks the client to stop sending on a stream whose "
+                         "response is complete (RFC 9113 8.1; normal for a ONCE or server-streaming call)")
             else:
                 text += H2_ERROR_HINTS.get(rst["error_code"], "")
             issues.append(make_issue(severity, "HTTP2_RST_STREAM", text, [rst["frame"]], error=rst["error"]))
