@@ -108,8 +108,8 @@ def analyze_pcap(
     deterministic quality score and MOS.
 
     Calls an LLM: tens of seconds to minutes, and with a cloud provider (anthropic,
-    openai, azure) the extracted SIP/SDP data, including authentication headers,
-    leaves this machine, so ask the user first. For numbers only, quick_quality_check
+    openai, azure) the extracted SIP/SDP data (addresses, users, authentication
+    headers with their credentials masked) leaves this machine, so ask the user first. For numbers only, quick_quality_check
     answers in seconds without an LLM. Needs SIP in the capture; for anything else use
     analyze_network_pcap. Without provider it uses the server's SONIC_LLM_PROVIDER, else
     ollama; list_llm_providers says which.

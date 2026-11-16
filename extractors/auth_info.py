@@ -16,6 +16,10 @@ import re
 from typing import Dict, Any, List, Optional, Tuple
 
 
+def _shorten(header: str) -> str:
+    return header[:80] + "..." if len(header) > 80 else header
+
+
 def extract_auth_and_registration_info(file_path: str) -> Dict[str, Any]:
     """
     Extracts comprehensive authentication and registration information from a pcap file.
@@ -330,6 +334,8 @@ def extract_auth_responses(sip_packets: List[Dict[str, Any]]) -> List[Dict[str, 
     Returns:
         List of auth response dicts with digest parameters and timing info
     """
+    from .tshark import SIP_CREDENTIAL_MASK, mask_sip_credentials
+
     responses = []
     
     for packet in sip_packets:
@@ -355,12 +361,13 @@ def extract_auth_responses(sip_packets: List[Dict[str, Any]]) -> List[Dict[str, 
                 "realm": auth_params.get("realm", ""),
                 "nonce": auth_params.get("nonce", ""),
                 "uri": auth_params.get("uri", ""),
-                "response_hash": auth_params.get("response", "")[:16] + "..." if auth_params.get("response") else "",
+                # Never any part of the digest response: it can be tested offline against guessed passwords
+                "response_hash": SIP_CREDENTIAL_MASK if auth_params.get("response") else "",
                 "algorithm": auth_params.get("algorithm", "MD5"),
                 "qop": auth_params.get("qop", ""),
                 "nc": auth_params.get("nc", ""),
                 "cnonce": auth_params.get("cnonce", "")[:8] + "..." if auth_params.get("cnonce") else "",
-                "full_header": auth_header[:80] + "..." if len(auth_header) > 80 else auth_header,
+                "full_header": _shorten(mask_sip_credentials(auth_header)),
             })
     
     return responses
