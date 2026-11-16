@@ -128,6 +128,8 @@ GRPC_DEFAULT_MAX_RECV = 4 * 1024 * 1024
 STALL_WARN_S = 0.2
 MAX_MESSAGES_DECODED = 50
 MAX_DECODE_BYTES = 65536  # bytes of one message kept for decoding
+# What decoding a message whose fields have unexpected wire types can raise (a varint where bytes belong).
+MALFORMED = (ValueError, TypeError, AttributeError, IndexError, KeyError, UnicodeDecodeError)
 
 SERVICE_FAMILIES = [("gnmi.", "gNMI"), ("gnoi.", "gNOI"), ("gribi.", "gRIBI"), ("p4.v1.", "P4Runtime"),
                     ("gnsi.", "gNSI"), ("grpc.health.", "gRPC health"), ("grpc.reflection.", "gRPC reflection")]
@@ -707,8 +709,8 @@ class GrpcAnalysis:
                 continue
             try:
                 requests.append(decode_request(method, bytes(data)))
-            except ValueError as exc:
-                errors.append(f"request at frame {msg['frame']}: {exc}")
+            except MALFORMED as exc:  # bytes from the wire: a field of an unexpected type must not stop the report
+                errors.append(f"request at frame {msg['frame']}: {exc or type(exc).__name__}")
         responses = []
         for msg in rpc.framers["server"].messages:
             data = msg.get("partial")
@@ -716,8 +718,8 @@ class GrpcAnalysis:
                 continue
             try:
                 responses.append(decode_response(method, bytes(data), msg.get("t")))
-            except ValueError as exc:
-                errors.append(f"response at frame {msg['frame']}: {exc}")
+            except MALFORMED as exc:
+                errors.append(f"response at frame {msg['frame']}: {exc or type(exc).__name__}")
         name = method.rsplit("/", 1)[-1]
         if requests and any(requests):
             subs = [r for r in requests if r and not r.get("poll")]
