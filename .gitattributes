@@ -1,0 +1,10 @@
+# Normalize line endings: text files are stored and checked out with LF.
+* text=auto eol=lf
+
+# Packet captures and other binaries are never line-ending converted or diffed as text.
+*.pcap binary
+*.pcapng binary
+*.cap binary
+*.png binary
+*.jpg binary
+*.gz binary

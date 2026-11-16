@@ -108,3 +108,11 @@ uploads/*
 
 # coverage output (CI and local --cov runs)
 coverage.xml
+
+# Local MCP client configs (keep mcp.json.example tracked)
+.mcp.json
+mcp.json
+mcp_config.json
+.agents/mcp_config.json
+.gemini/mcp_config.json
+.cursor/mcp.json
