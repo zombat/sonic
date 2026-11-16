@@ -1,5 +1,8 @@
 # S.O.N.I.C. Advanced RTP MOS Analysis - Usage Examples
 
+> **Note:** the `samples/` captures cited below are not in the repository. Substitute your own capture files.
+
+
 ## 🚀 Overview
 
 S.O.N.I.C. now includes **Advanced RTP MOS (Mean Opinion Score) Analysis** with flexible command-line options for comprehensive VoIP quality assessment.

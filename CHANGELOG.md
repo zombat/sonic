@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation and CI
+- 📐 **Architecture diagrams** (`docs/ARCHITECTURE.md`): component, sequence (gRPC/TLS, MCP, SIP with LLM), class (gRPC analyzer, SIP schemas) and CI pipeline diagrams, in Mermaid so GitHub renders them
+- 🧪 **Test reference** (`docs/TESTING.md`): 275 tests in 11 files with per-file counts, the last full run (274 passed, 1 skipped), fixtures, real-capture gates and CI. The README Testing section now lists every file
+- 🔌 **MCP reference** (`docs/MCP.md`): all 14 tools, 5 prompts and 7 resources, from the running server. The README now documents `analyze_batch_pcaps` and `analyze_pcap_partial_streaming`, which it omitted
+- ⚙️ **GitHub Actions** (`.github/workflows/`): `ci.yml` runs the suite on Python 3.10 to 3.13 with tshark, uploads coverage, checks that the fixtures regenerate identically, and runs black and flake8 (non-blocking until the code passes them) and a dependency audit. `codeql.yml` runs CodeQL weekly and on each change. `dependabot.yml` keeps pip and actions current
+- 📦 `requirements-dev.txt` adds `pytest-cov` to the runtime requirements; `.flake8` and `.coveragerc` hold the lint and coverage settings
+- 📝 README: Python 3.10+ (was 3.8+, which the project is not tested on), corrected version footer, repaired headings
+
 ### Added
 - 🔐 **IPsec ESP decrypted from SA keys, and the inner traffic analysed** (`analyzers/esp_decrypt.py`, `extractors/esp.py`, `utils/esp_reporting.py`; MCP `analyze_esp_pcap`, CLI `--esp-decrypt`, `--esp-sa`), deterministic, through tshark's ESP decryption and its `esp_sa` table
   - The SA file (src, dst, spi, encryption and key, integrity and key; AES-GCM keys with their salt) or the output of `ip -s xfrm state` as it is (`enc`, `auth-trunc`, `aead rfc4106(gcm(aes))`), read by path and written to a private temporary `esp_sa` table, never a command line, with the exact labels tshark 3.6.2 takes (each checked; its ESP NULL label is plain `NULL`)

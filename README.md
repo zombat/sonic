@@ -1,12 +1,13 @@
 # S.O.N.I.C. - SIP Observation and Network Inspection Console
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/zombat/sonic/actions/workflows/ci.yml/badge.svg)](https://github.com/zombat/sonic/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![AI-Powered](https://img.shields.io/badge/AI-Powered-brightgreen.svg)](https://github.com/stanfordnlp/dspy)
 
 **S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a comprehensive SIP (Session Initiation Protocol) diagnostic tool that leverages AI to analyze VoIP call quality issues, call termination problems, and network-related issues from packet capture files. It provides intelligent analysis of SIP message flows and RTP media streams to identify problems like choppy audio, unexpected disconnects, and codec-related issues.
 
-## � Background: From Manual to AI-Powered
+## 📖 Background: From Manual to AI-Powered
 
 **S.O.N.I.C. started as a personal tool to automate what I was already doing by hand.**
 
@@ -24,7 +25,7 @@ To bridge that gap, I launched a 2025 weekend project integrating Claude (LLM) t
 
 This isn't a generic SIP parser. It's the systematic approach I developed through years of hands-on VoIP troubleshooting, now executable at scale.
 
-## �🚀 Key Features
+## 🚀 Key Features
 
 ### 🤖 AI-Powered Analysis
 - **Dual AI Models**: Fast structured analysis + detailed natural language insights
@@ -173,7 +174,7 @@ python3 sonic.py --file capture.pcapng --model fast --save_file my_capture_repor
 python3 sonic.py --file capture.pcapng --model combined --save_file my_capture_report.md
 ```
 
-**Note**: `--save_file` defaults to `TEST_CAPTURE.md` when not provided. Use any filename you like for real captures (e.g. `--save_file my_capture_report.md`). `TEST_CAPTURE.md` in the repository is a sanitized sample report generated from the included sample captures.
+**Note**: `--save_file` defaults to `TEST_CAPTURE.md` when not provided. Use any filename you like for real captures (e.g. `--save_file my_capture_report.md`). `TEST_CAPTURE.md` in the repository is a sanitized sample report generated from a sample capture that is not shipped with the repository.
 
 ## 🌐 Agentic Platform Integrations
 
@@ -210,15 +211,15 @@ for file in /path/to/pcap/files/*.pcap*; do
   python3 sonic.py --file "$file" --model combined --save_file "${file%.pcap*}_report.md"
 done
 
-# Test with included samples
-python3 sonic.py --file samples/MG-SIP-1.pcapng --model combined --save_file TEST_CAPTURE.md
+# Analyze one capture (the repository ships no capture files; use your own)
+python3 sonic.py --file capture.pcapng --model combined --save_file TEST_CAPTURE.md
 ```
 
 ## 📖 Usage Examples
 
 ### 1. Combined Analysis (Recommended)
 ```bash
-python3 sonic.py --file "samples/MG-SIP-1.pcapng" --model combined
+python3 sonic.py --file "capture.pcapng" --model combined
 ```
 
 **Output:**
@@ -509,12 +510,26 @@ S.O.N.I.C. decrypts what a capture holds encrypted when the operator has the key
 
 ## 🏗️ Architecture
 
-### Data Extraction Pipeline
+S.O.N.I.C. has two entry points, the CLI (`sonic.py`) and the MCP server (`mcp_server.py`). Both call the same orchestrators. The orchestrators use the extractors, the only code that runs tshark or scapy, then the analyzers, and the reporting layer writes the result.
+
+```mermaid
+flowchart LR
+    CLI["sonic.py CLI"] --> ORCH
+    MCP["mcp_server.py MCP"] --> ORCH
+    subgraph ORCH["Orchestrators"]
+        direction TB
+        O1["SIP + LLM"]
+        O2["network and VPN"]
+        O3["gRPC and TLS"]
+    end
+    ORCH --> EX["Extractors<br/>tshark, scapy,<br/>http2, tls_secrets"]
+    EX --> AN["Analyzers<br/>detectors, call quality,<br/>gnmi_decode"]
+    O1 -. optional .-> AI["LLM via DSPy<br/>ollama, anthropic, openai"]
+    AN --> RP["Reports<br/>markdown, JSON, console"]
+    EX --> TS[("tshark")]
 ```
-PCAP File → tshark JSON → SIP/RTP Correlation → Codec Enrichment → AI Analysis
-     ↓
-   scapy fallback (if tshark unavailable)
-```
+
+Full diagrams, with sequence diagrams for the gRPC/TLS, MCP and SIP paths, and the class diagrams for the gRPC analyzer and the SIP schemas, are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### AI Analysis Workflow
 1. **Fast Model (qwen2.5:0.5b)**: Provides structured JSON output with reliable format compliance
@@ -546,7 +561,7 @@ PCAP File → tshark JSON → SIP/RTP Correlation → Codec Enrichment → AI An
 - **Opus**: Check dynamic bitrate adaptation and configuration compatibility
 - **iLBC**: Verify compatibility and packet loss recovery
 
-## � Known Limitations & Roadmap
+## 🗺️ Known Limitations & Roadmap
 
 S.O.N.I.C. provides comprehensive VoIP diagnostics for the most common real-world scenarios. The following areas represent the next evolution toward even deeper enterprise analysis:
 
@@ -595,7 +610,7 @@ These advanced features separate enterprise-grade troubleshooting from foundatio
 
 S.O.N.I.C. prioritizes the **most common 80% of real-world VoIP issues** where you'll have the fastest ROI. The roadmap items address the remaining specialized edge cases.
 
-## �🔧 Configuration
+## 🔧 Configuration
 
 ### Environment Variables
 ```bash
@@ -887,6 +902,14 @@ Claude: CORE1 was stopped at 2026-10-27T19:49:30Z; how long until BR1's traffic 
 
 Each tool's description (what an MCP client shows the agent) explains its inputs, outputs, verdict values and limits, so an agent can learn the tool from the tool itself.
 
+#### `analyze_batch_pcaps`
+Diagnoses every SIP capture in one directory with an LLM, running `analyze_pcap` once per file. Uses the `SONIC_LLM_PROVIDER` provider unless `provider` is passed.
+
+#### `analyze_pcap_partial_streaming`
+Runs the deterministic quality and MOS analysis, then the LLM diagnosis, on one capture, streaming partial results as they are produced.
+
+The complete list of 14 tools, with their prompts and resources, is in [docs/MCP.md](docs/MCP.md).
+
 ### Agent guidance: instructions, prompts, resources and a skill
 
 The server teaches the agent that connects to it, so the agent does not need this README:
@@ -974,24 +997,36 @@ python3 sonic.py --file capture.pcapng --model combined --verbose
 
 ## 🧪 Testing
 
-Validate S.O.N.I.C. with sample VoIP captures:
+**275 tests** in 11 files. The last full run gave **274 passed, 1 skipped** (the skip needs gNMI `.proto` files that are not on disk), in about 100 seconds. None of the tests needs an LLM, an API key or network access. They do need **tshark** on the `PATH`.
 
 ```bash
-# Test with included sample captures
-python3 sonic.py --file samples/MG-SIP-1.pcapng --quality-only
-
-# Run detailed analysis
-python3 sonic.py --file samples/MG-SIP-1.pcapng --model combined --save_file test_report.md
+python3 -m pytest -q                       # the whole suite
+python3 -m pytest -q --cov                 # with coverage (install requirements-dev.txt first)
+python3 -m unittest -q test_grpc           # one file, with the standard library runner
 ```
 
-Network detector tests (no LLM, no network access; the MCP test starts the server over stdio):
+| File | Tests | Covers |
+|---|---:|---|
+| `test_control_plane.py` | 44 | IPsec, GRE/NHRP, DMVPN, routing, reachability, convergence, cleartext audit |
+| `test_network_detectors.py` | 45 | Network and VPN detectors and the orchestrator, both backends |
+| `test_dataplane_detectors.py` | 41 | Path MTU, ESP, TCP, TLS handshakes, QoS, correlation, timeline |
+| `test_grpc.py` | 41 | gNMI decoding, HTTP/2 framing, TLS key log and pcapng secrets, scrubbing |
+| `test_tls_audit.py` | 29 | TLS handshake and encryption findings, both backends |
+| `test_mcp_guidance.py` | 25 | MCP instructions, generated skill, provider resolution |
+| `test_credentials.py` | 17 | Env-file parsing, key loading, redaction |
+| `test_phase3_reporting.py` | 15 | SIP authentication reports and sequence diagrams |
+| `test_network_mcp.py` | 13 | Network tools directly and over the MCP stdio handshake |
+| `test_auth_diagnostics.py` | 3 | SIP authentication diagnostics |
+| `test_mcp_stdio.py` | 2 | stdout carries only JSON-RPC |
+| **Total** | **275** | |
 
-```bash
-python3 -m pytest -q test_network_detectors.py test_network_mcp.py
+**Fixtures.** The test captures are small synthetic files in `tests/fixtures/`, built by four deterministic generators (`generate_*.py`). Rebuild them with `for g in tests/fixtures/generate_*.py; do python3 "$g"; done`. The output is byte-identical on every run, and CI checks that.
 
-# Rebuild the fixtures (identical bytes on every run)
-python3 tests/fixtures/generate_fixtures.py
-```
+**Real captures.** Some tests use captures that are not in the repository. They are skipped unless `SONIC_GRPC_CAPTURES` points at a directory of them. `SONIC_PROTO_PATH` enables the protobuf view test.
+
+**Continuous integration.** `.github/workflows/ci.yml` runs the suite on Python 3.10 to 3.13 with tshark installed, uploads a coverage report, checks that the fixtures regenerate identically, and runs black and flake8 (non-blocking for now). CodeQL and a dependency audit run alongside it.
+
+See [docs/TESTING.md](docs/TESTING.md) for the full reference.
 
 ## 🤝 Contributing
 
@@ -1005,8 +1040,11 @@ python3 tests/fixtures/generate_fixtures.py
 ```bash
 git clone https://github.com/zombat/sonic.git
 cd sonic
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime requirements plus pytest-cov
+python3 -m pytest -q                  # needs tshark on the PATH
 ```
+
+Lint (non-blocking in CI until the existing code passes): `python3 -m black --check *.py analyzers ai extractors handlers models utils tests` and `python3 -m flake8 .`. flake8 settings are in `.flake8`.
 
 ## 📝 License
 
@@ -1026,6 +1064,6 @@ For support, bug reports, or feature requests, please open an issue on GitHub or
 ---
 
 **Author**: Raymond A Rizzo | Zombat  
-**Version**: 3.0 (NetClaw MCP Integration + Phase 3 Auth Reporting)  
-**Last Updated**: March 4, 2026  
+**Version**: 3.2 (Enhanced with MOS Analysis)  
+**Last Updated**: November 16, 2026  
 **Project**: S.O.N.I.C. - SIP Observation and Network Inspection Console
