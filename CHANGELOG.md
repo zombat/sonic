@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation and CI
+- 📐 **Architecture diagrams** (`docs/ARCHITECTURE.md`): component, sequence (gRPC/TLS, MCP, SIP with LLM), class (gRPC analyzer, SIP schemas) and CI pipeline diagrams, in Mermaid so GitHub renders them
+- 🧪 **Test reference** (`docs/TESTING.md`): 275 tests in 11 files with per-file counts, the last full run (274 passed, 1 skipped), fixtures, real-capture gates and CI. The README Testing section now lists every file
+- 🔌 **MCP reference** (`docs/MCP.md`): all 14 tools, 5 prompts and 7 resources, from the running server. The README now documents `analyze_batch_pcaps` and `analyze_pcap_partial_streaming`, which it omitted
+- ⚙️ **GitHub Actions** (`.github/workflows/`): `ci.yml` runs the suite on Python 3.10 to 3.13 with tshark, uploads coverage, checks that the fixtures regenerate identically, and runs black and flake8 (non-blocking until the code passes them) and a dependency audit. `codeql.yml` runs CodeQL weekly and on each change. `dependabot.yml` keeps pip and actions current
+- 📦 `requirements-dev.txt` adds `pytest-cov` to the runtime requirements; `.flake8` and `.coveragerc` hold the lint and coverage settings
+- 📝 README: Python 3.10+ (was 3.8+, which the project is not tested on), corrected version footer, repaired headings
+
 ### Added
 - 🔓 **TLS decryption proven on a real capture, secrets inside pcapng, and decryption coverage** (`analyzers/grpc_inspect.py`, `extractors/tls_secrets.py`)
   - Proven on a real capture of gNMI over TLS 1.3 to Nokia SR Linux 26.7.2 with the key log its client wrote: all ten calls (Capabilities, Get, Set, Subscribe) by name with their status and timing, the TLS 1.3 certificate, and the `username`/`password` metadata of every call flagged (`CREDENTIAL_IN_METADATA`) with values masked

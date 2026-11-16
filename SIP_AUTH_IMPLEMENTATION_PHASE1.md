@@ -198,7 +198,7 @@ Detects authentication anomalies and security issues:
 | Anomaly detection logic | extractors/auth_info.py (67 lines) | ✅ Complete |
 | AuthenticationMetrics schema | models/schemas.py | ✅ Complete |
 | Orchestrator integration | analyzers/orchestrator.py | ✅ Complete |
-| Unit test suite | 7 test cases covering all functions | ✅ All passing |
+| Unit test suite | 3 test cases in `test_auth_diagnostics.py` (this count was 7 when the phase was written; it is stale) | ✅ All passing |
 | Syntax validation | py_compile, import tests | ✅ All passing |
 
 ## Next Steps (Phase 2)

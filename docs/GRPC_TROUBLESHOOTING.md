@@ -165,6 +165,8 @@ An analysis uses `proto_paths` / `--proto-path`, else `SONIC_PROTO_PATH`, else t
 
 ## 🧪 Tests
 
+`test_grpc.py` has 41 tests and `test_tls_audit.py` has 29 that cover this path. The full reference, with per-file counts, is in [TESTING.md](TESTING.md). The TLS decryption sequence is in [ARCHITECTURE.md](ARCHITECTURE.md#2-sequence-grpc-and-tls-decryption).
+
 ```bash
 python3 -m unittest -q test_grpc
 SONIC_GRPC_CAPTURES=/path/to/captures python3 -m unittest -q test_grpc      # also the real captures (gnmi-plaintext.pcap,
