@@ -47,6 +47,7 @@ Examples:
   %(prog)s --file capture.pcapng --quality-only                                    # Quality metrics only (no AI)
   %(prog)s --file wan.pcap --network-only                                          # IPsec/GRE/NHRP/BGP/OSPF/EIGRP/ICMP detectors (no AI)
   %(prog)s --file wan.pcap --network-only --detectors ipsec,gre_nhrp --json        # VPN detectors only, JSON on stdout
+  %(prog)s --file wan.pcap --network-only --detectors cleartext_audit --allow crypto  # IPsec-only audit gate
   %(prog)s --file wan.pcap --network-only --save_file wan-report.json              # write the report as JSON
   %(prog)s --file gnmi.pcap --grpc                                                 # gRPC/gNMI/gNOI troubleshooting (no AI)
   %(prog)s --file srl.pcapng --grpc --tls-secrets-log keys.log --json              # decrypt TLS gRPC with a key log
@@ -127,6 +128,13 @@ API keys:
     parser.add_argument(
         "--peers",
         help="Comma-separated VPN endpoint IPs for the encrypted/cleartext verdict (--network-only)"
+    )
+
+    parser.add_argument(
+        "--allow",
+        help="With --network-only --detectors cleartext_audit, comma-separated allowlist tokens (default: "
+             "encrypted, which passes IPsec and SSH/TLS whose handshake shows real encryption; crypto for IPsec "
+             "only, the default before this release)"
     )
 
     parser.add_argument(
@@ -462,12 +470,20 @@ def run_network_only_analysis(args):
     from analyzers.network_orchestrator import analyze_network_capture
     from utils.network_reporting import print_network_summary, save_network_report
 
+    detectors = _split_csv(args.detectors)
+    options = None
+    if args.allow:
+        if "cleartext_audit" not in (detectors or []):
+            print("❌ --allow needs --detectors cleartext_audit")
+            sys.exit(1)
+        options = {"cleartext_audit": {"allow": _split_csv(args.allow)}}
     report = analyze_network_capture(
         args.file,
-        detectors=_split_csv(args.detectors),
+        detectors=detectors,
         peers=_split_csv(args.peers),
         display_filter=args.display_filter,
         max_packets=args.max_packets,
+        options=options,
     )
     if report.get("status") != "success":
         if args.json:

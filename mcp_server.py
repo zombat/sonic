@@ -662,37 +662,51 @@ def audit_cleartext_pcap(
     is checked against an allowlist and the audit passes or fails. Deterministic, no LLM,
     seconds for a typical capture.
 
-    Use it as a gate after capturing the WAN/transport link of an IPsec or DMVPN network:
-    one leaked GRE, BGP, OSPF, ICMP, ARP or other frame outside the allowlist fails the
-    audit and is reported by protocol and address pair with its frame numbers. To explain
-    an IPsec negotiation instead, use analyze_vpn_pcap.
+    Use it as a gate after capturing a link: one leaked GRE, BGP, OSPF, ICMP, ARP,
+    cleartext management session or other frame outside the allowlist fails the audit and
+    is reported by protocol and address pair with its frame numbers. To explain an IPsec
+    negotiation instead, use analyze_vpn_pcap.
 
-    Allowlist tokens (default ["crypto"]): crypto (= esp, ike, nat-t), esp (IP 50 and
-    ESP-in-UDP), ike (UDP 500/4500), nat-t (ESP-in-UDP, IKE on 4500, keepalives), ah,
-    arp, icmp, icmpv6, routing (= bgp, ospf, eigrp, rip, ldp, bfd, pim, vrrp, hsrp) or each
-    by name, gre, l2-control (= cdp, stp, lldp, lacp, loop: Cisco keepalives, EtherType
-    0x9000), dhcp, dns, ntp, ssh, snmp, syslog, tacacs, radius, tcp:N, udp:N, proto:N,
-    ethertype:0xNNNN. Scope a token to addresses with @: "icmp@203.0.113.1" (ICMP only to
-    or from the provider), "bgp@198.51.100.0/30". A Cisco router's transport link also
-    carries loopback keepalives and CDP: add "l2-control" to accept them.
+    The default allowlist is ["encrypted"]: IPsec, plus SSH and TLS sessions whose
+    handshake shows real encryption (the TLS suite in the ServerHello; the SSH cipher from
+    both KEXINITs). A NULL, anonymous, export or integrity-only TLS suite, or the SSH
+    cipher none, counts as cleartext and fails; TLS 1.1 and older, RC4/3DES, arcfour and
+    CBC pass with a WEAK_ENCRYPTION warning; a session whose handshake is not in the
+    capture passes only as encrypted, unverified (ENCRYPTION_UNVERIFIED), never clean. To
+    require the IPsec tunnel (the WAN of an IPsec or DMVPN network), pass allow=["crypto"]:
+    SSH and TLS then fail as ENCRYPTED_OUTSIDE_ALLOWLIST.
 
-    Returns a JSON object: status "success", passed (true or false), result ("pass" or
-    "fail"), verdict, allowlist, frames_audited, frames_allowed,
-    frames_outside_allowlist, first_violation_frame, by_protocol (protocol, category,
+    Allowlist tokens: encrypted (the default: crypto plus ssh and tls), crypto (IPsec
+    only: esp, ike, nat-t), esp (IP 50 and ESP-in-UDP), ike (UDP 500/4500), nat-t
+    (ESP-in-UDP, IKE on 4500, keepalives), ah, arp, icmp, icmpv6, routing (= bgp, ospf,
+    eigrp, rip, ldp, bfd, pim, vrrp, hsrp) or each by name, gre, l2-control (= cdp, stp,
+    lldp, lacp, loop: Cisco keepalives, EtherType 0x9000), dhcp, dns, ntp, ssh, netconf,
+    tls, http2, snmp, syslog, tacacs, radius, tcp:N, udp:N, proto:N, ethertype:0xNNNN.
+    Scope a token to addresses with @: "icmp@203.0.113.1" (ICMP only to or from the
+    provider), "bgp@198.51.100.0/30". A Cisco router's transport link also carries
+    loopback keepalives and CDP: add "l2-control" to accept them.
+
+    Returns a JSON object: status "success", passed (true or false), clean (a pass with no
+    weak or unverified session), result ("pass" or "fail"), verdict, allowlist,
+    frames_audited, frames_allowed, frames_outside_allowlist, cleartext_frames,
+    protection, encryption (SSH/TLS sessions by state: encrypted, weak, unverified,
+    cleartext, not_started), first_violation_frame, by_protocol (protocol, category,
     packets, bytes, pairs, first_frame), violations (protocol, category, src, dst,
-    packets, bytes, first_frame, first_t, last_frame, last_t, frames, hint),
-    allowed_by_rule, cannot_show and capture. Categories: crypto,
-    tunnel_without_encryption (GRE outside ESP), routing, icmp, layer2,
-    authenticated_only (AH), cleartext. An empty capture fails. On failure
-    {"status": "error", "error": "..."}, for example for an unknown allowlist token.
+    packets, bytes, first_frame, first_t, last_frame, last_t, frames, hint, reasons),
+    tcp_sessions (with encryption: state, cipher, version, reason), allowed_by_rule,
+    issues, cannot_show and capture. Categories: crypto, tunnel_without_encryption (GRE
+    outside ESP), routing, icmp, layer2, authenticated_only (AH), encrypted,
+    unencrypted_session (SSH/TLS that negotiated no encryption), cleartext_management,
+    cleartext. An empty capture fails. On failure {"status": "error", "error": "..."},
+    for example for an unknown allowlist token.
 
     Limits (also in cannot_show): only frames that crossed this capture point and that
     the capture kept are audited; ESP with NULL or weak encryption passes, because ESP
     payload is opaque; a non-first IP fragment follows its datagram's first fragment,
     and is reported as udp (fail-closed) when that first fragment was not captured.
 
-    For example, audit_cleartext_pcap(file_path="/captures/br1-wan.pcap") or
-    audit_cleartext_pcap(file_path="/captures/br1-wan.pcap",
+    For example, audit_cleartext_pcap(file_path="/captures/mgmt.pcap") or, for an IPsec
+    transport link, audit_cleartext_pcap(file_path="/captures/br1-wan.pcap",
     allow=["crypto", "l2-control", "icmp@172.16.11.1"]).
 
     Args:

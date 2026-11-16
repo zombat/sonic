@@ -64,7 +64,7 @@ TOOL_GUIDE: List[Dict[str, Any]] = [
     {"name": "analyze_grpc_pcap", "short": "gRPC/gNMI/gNOI: RPC status, creds", "title": "Troubleshoot gRPC, gNMI and gNOI from a capture", "llm": False,
      "question": "Why a gRPC, gNMI or gNOI client fails: each RPC's grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, credentials sent in cleartext metadata"},
     {"name": "audit_cleartext_pcap", "short": "pass/fail: only allowlisted traffic on a link", "title": "Assert a transport link carried no cleartext", "llm": False,
-     "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, ...) cross the link?"},
+     "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, SSH or TLS without real encryption, ...) cross the link?"},
     {"name": "correlate_pcaps", "short": "2+ capture points: NAT, lost replies, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
      "question": "With captures from two or more points: NAT translations, where a reply was dropped, asymmetric paths, probes an ACL stopped"},
     {"name": "analyze_convergence_pcap", "short": "failover timed from an event, DPD or hold timer", "title": "Time a failover and name what drove it", "llm": False,
@@ -120,8 +120,9 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "Report negotiation_verdict (IKE outcome per SA) and overlay_verdict (NHRP registrations).",
          "If the verdict is not_present or no_esp, check where the capture was taken: only the "
          "underlay (WAN) link proves encryption; a tunnel interface shows decrypted traffic.",
-         "To pass or fail on it, call audit_cleartext_pcap(file_path={file_path}); add \"l2-control\" to allow "
-         "to accept Cisco loopback keepalives and CDP. Report ike_diagnoses codes for failed SAs.",
+         "To pass or fail on it, call audit_cleartext_pcap(file_path={file_path}, allow=[\"crypto\"]) (IPsec "
+         "only; the default also passes SSH and TLS); add \"l2-control\" to accept Cisco loopback keepalives "
+         "and CDP. Report ike_diagnoses codes for failed SAs.",
      ]},
     {"name": "investigate_failover", "title": "Read a routing failover from a capture",
      "args": ["file_path"],
@@ -147,7 +148,8 @@ WORKFLOWS: List[Dict[str, Any]] = [
          "TLS_CERT_NO_IP_SAN. Without a key log the RPCs are encrypted: ask for one captured with "
          "SSLKEYLOGFILE on the client.",
          "Report every CLEARTEXT_CREDENTIAL by key and flow; never ask for or repeat a value. To gate on "
-         "encryption, call audit_cleartext_pcap with allow [\"encrypted\"].",
+         "encryption, call audit_cleartext_pcap: its default passes TLS only when the handshake shows real "
+         "encryption.",
      ]},
     {"name": "diagnose_sip_call", "title": "Diagnose SIP call quality",
      "args": ["file_path"],
@@ -630,6 +632,9 @@ def render_interpreting() -> str:
         "- A PSK mismatch is never visible as a hash: it shows as `auth_failed` (a small encrypted IKE_AUTH "
         "response, no ESP) or `auth_no_reply` (IKE_AUTH retransmitted, no reply) in `ike_diagnoses`.",
         "- DPD is recognised by size (an empty encrypted INFORMATIONAL); a stale ESP SPI is inferred from timing.",
+        "- `audit_cleartext_pcap`'s default (`encrypted`) passes SSH and TLS whose handshake shows real "
+        "encryption; pass `allow: [\"crypto\"]` to require IPsec. A session whose handshake is not in the "
+        "capture passes only as encrypted, unverified (`clean` false): start the capture before the session.",
         "- `audit_cleartext_pcap` fails on a Cisco transport link's loopback keepalives and CDP unless "
         "`l2-control` is allowed; an empty capture fails.",
         "- On a protected DMVPN, NHRP Phase 3 steps are inside ESP: pass `hubs` to check the encrypted "
