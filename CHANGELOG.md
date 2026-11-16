@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 📡 **gRPC troubleshooting** (`analyzers/grpc_inspect.py`, `extractors/http2.py`, `analyzers/gnmi_decode.py`; MCP `analyze_grpc_pcap`, prompt `troubleshoot_grpc`, CLI `--grpc`), deterministic, with Wireshark's HTTP/2, HPACK, gRPC, TLS and protobuf dissectors through tshark
+  - Finds gRPC by the HTTP/2 preface on any port, by ALPN h2, and on the well-known gRPC ports (9339, 9340, 9559, 57400, 6030, 50001, 50051, 50052, 32767), decoding each with decode-as; each flow is named by its service port
+  - Per RPC: method, authority, content-type, deadline, message counts and sizes, HTTP status, grpc-status by name and grpc-message, time to the first response and to the trailers, and a diagnosis
+  - Per connection: SETTINGS, RST_STREAM and GOAWAY with error codes and debug data (too_many_pings named), flow-control stalls, PING round trips, frames and header lists over the peer's limits, too many concurrent streams, messages over the 4 MiB default, an unanswered preface, undecodable HPACK blocks, TCP resets with RPCs open
+  - gNMI Capabilities, Get, Set and Subscribe decoded without .proto files (paths, encodings checked against the Capabilities answer, modes, notifications, sync_response, in-band errors; never values), gNOI system.Time against the capture clock, gRPC health
+  - Credentials in gRPC metadata (username, password, authorization, x-api-key, tokens, cookies) from the HPACK-decoded headers, one finding per key and flow (`CLEARTEXT_CREDENTIAL`); values masked at extraction and scrubbed by value
+  - TLS without keys: SNI, ALPN, version, certificate, alerts with their meaning; with a key log (`keylog_file`, CLI `--tls-secrets-log`, passed to tshark and never copied) the sessions are decrypted and the TLS 1.3 certificate read
+  - `python3 sonic.py --fetch-grpc-protos [DIR]` (`utils/grpc_protos.py`) downloads the gNMI and gNOI .proto files and the protobuf well-known types at pinned commits with SHA-256 checks, for Wireshark's protobuf view; they are not shipped (Apache-2.0 and BSD-3-Clause)
+  - `docs/GRPC_TROUBLESHOOTING.md`, the `grpc` guide topic and skill reference, `test_grpc.py` (real captures when present, synthetic fixtures from `tests/fixtures/generate_grpc_fixtures.py`, a TLS 1.3 session with its key log built at test time)
+- 🔐 **Cleartext audit by content**: SSH (banner, key exchange to NEWKEYS, then encrypted), TLS (handshake, then application data) and cleartext HTTP/2 (named `grpc` when its requests are gRPC) are recognised on any port; every frame is counted in `protection` (`encrypted`, `key_exchange`, `cleartext`, ...), `tcp_sessions` names each flow by its service port, `cleartext_frames` answers "is anything cleartext", and credentials in cleartext gRPC metadata are flagged. New allowlist tokens `ssh`, `netconf`, `tls`, `http2` and `encrypted`; new issue code `ENCRYPTED_OUTSIDE_ALLOWLIST`
+- 🔏 **TLS detector**: the certificate's IP SANs, who sent each alert and what it means, and `TLS_CERT_NO_IP_SAN` when a client that sent no SNI (so dialled an IP) meets a certificate without that IP as a SAN
+- `analyze_network_pcap` lists `http2`, `ssh` and `tls` in `protocols_present`
 - 🧭 **MCP guidance built into the server** (`utils/agent_guide.py`)
   - Instructions in the initialize result, under 2 KB: which tool answers which question, the order of a typical investigation, which tools call an LLM, result shape, size limits and what packets cannot show
   - Every tool has a title and annotations (read-only, not destructive; deterministic tools idempotent and closed world, LLM tools open world), and a description that says when to use it, what it needs, what it costs and what it returns
@@ -38,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nine synthetic fixtures and `test_control_plane.py` (both backends, plus the Pleiades lab captures when present)
 
 ### Changed
+- The `ssh` allowlist token means an SSH session recognised by its banner, not port 22; an encrypted session outside the allowlist is a warning (`ENCRYPTED_OUTSIDE_ALLOWLIST`), not a cleartext finding. The default allowlist is unchanged
+- Every TCP record carries `svc`, the listening side's port, once the connection's SYN, SYN-ACK, HTTP/2 preface or ClientHello shows it, and flow labels use it
+- `run_phase2_tests.sh` runs `test_grpc.py` and `test_control_plane.py`
 - Anthropic models: `claude-haiku-5-5` (fast), `claude-sonnet-5-5` (detailed, the default), `claude-opus-5-5` (new `deep` profile and `--model deep` analysis mode), called as `anthropic/<model>` through DSPy. Anthropic requests no longer send `temperature`, which current Claude models reject with a 400
 - Tool descriptions: the returns, limits and examples moved into the text an MCP client sees (fastmcp drops docstring sections such as `Returns:` from the description)
 - `analyzers/network_orchestrator.py` keeps its detectors in one registry, `DETECTOR_CLASSES`
@@ -50,6 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synthetic IKEv2 fixtures carry real NAT detection hashes
 
 ### Fixed
+- The TLS detector lost every TLS 1.3 handshake that began with a HelloRetryRequest: it took the middlebox-compatibility ChangeCipherSpec after it as the start of encryption and never read the ServerHello, reporting `TLS_NO_SERVER_HELLO` (all three RESTCONF sessions of a real Catalyst 8000V capture)
+- Flows were labelled by the client's ephemeral port when both ports were high (a gNMI session to tcp/50001 read as tcp/47814)
+- The cleartext audit reported SSH and TLS as cleartext
 - The MCP server's stdout carries only JSON-RPC (`utils/protocol_stdout.py`). Before serving it keeps the real stdout for the protocol and points descriptor 1 and `sys.stdout` at stderr, so the SIP, network, extractor and reporting prints (and child processes) no longer corrupt the stdio channel; the CLI's output is unchanged. `test_mcp_stdio.py` runs a real stdio session, calls the SIP and network tools on a sample capture and parses every byte written to stdout through the server's exit
 - Every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) and every LLM path behind them uses one provider: the call's `provider`, else `SONIC_LLM_PROVIDER`, else `ollama` (`llm_config.resolve_provider`). The batch and streaming tools used to default to `anthropic`, and `SONIC_LLM_PROVIDER` changed none of them; `list_llm_providers` reports the resolved provider as `current_config.provider`
 - `sonic.py --model-name NAME` now runs the LLM analysis on that model (one pass in the fast, detailed, deep and combined modes, and in batch and streaming); it was parsed and ignored. It is refused with `--model all`
