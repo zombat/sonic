@@ -1020,6 +1020,11 @@ def analyze_grpc_pcap(
     password, authorization, x-api-key, tokens) are found through HPACK and reported by key
     only: values are never returned. TLS without keys shows SNI, ALPN, version, the TLS 1.2
     certificate (subject, issuer, validity, DNS and IP SANs) and alerts with what they mean.
+    TLS is decrypted with a key log (keylog_file) or with the secrets a pcapng carries in a
+    Decryption Secrets Block (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng), with
+    no key log needed; tls_decryption then says, per TLS session, whether it was decrypted
+    and, when not, why (no secret for its ClientHello random, no ClientHello captured, only
+    the handshake secrets), with a total.
 
     Returns a JSON object: status "success", schema, overall_status, verdict, summary
     (connections, rpcs, rpc_status counts, cleartext_credentials), connections (flow,
@@ -1027,11 +1032,14 @@ def analyze_grpc_pcap(
     flow_control, credential_keys, metadata_keys, tls), rpcs (flow, stream_id, method,
     family, grpc_status, grpc_status_name, grpc_message, request, response, timing,
     decoded, diagnosis, frames), credentials (flow, key, cleartext, requests, frames,
-    value "masked"), issues (stable codes such as GRPC_UNAUTHENTICATED, GRPC_UNIMPLEMENTED,
-    CLEARTEXT_CREDENTIAL, HTTP2_RST_STREAM, HTTP2_GOAWAY, HTTP2_TOO_MANY_PINGS,
-    HTTP2_FLOW_CONTROL_STALL, TLS_ALERT, TLS_CERT_NO_IP_SAN, with frames), timeline,
-    capture (tshark version, decode_as, keylog_file_given, proto_paths) and limits. On
-    failure {"status": "error", "error": "..."}.
+    value "masked"), tls_decryption (verdict, decrypted, total, secrets_source, sessions:
+    flow, decrypted, secret_in, labels, reason), issues (stable codes such as
+    GRPC_UNAUTHENTICATED, GRPC_UNIMPLEMENTED, CLEARTEXT_CREDENTIAL, CREDENTIAL_IN_METADATA,
+    HTTP2_RST_STREAM, HTTP2_GOAWAY, HTTP2_TOO_MANY_PINGS, HTTP2_FLOW_CONTROL_STALL, TLS_ALERT,
+    TLS_CERT_NO_IP_SAN, TLS_SESSION_NOT_DECRYPTED, TLS_SECRETS_IN_CAPTURE, with frames),
+    timeline, capture (tshark version, decode_as, keylog_file_given, tls_secrets,
+    reread_without_out_of_order, proto_paths) and limits. On failure
+    {"status": "error", "error": "..."}.
 
     Limits (also in limits): TLS-wrapped gRPC without a key log shows only the handshake
     (TLS 1.3 encrypts the certificate too); a capture that starts mid-connection may leave
@@ -1043,8 +1051,9 @@ def analyze_grpc_pcap(
     Args:
         file_path: Absolute path to a pcap/pcapng file on the machine running this server.
         keylog_file: Optional TLS key log (SSLKEYLOGFILE format; gnmic writes one with
-            --log-tls-secret) to decrypt TLS; passed to tshark by path, never read into or
-            copied to the result.
+            --log-tls-secret) to decrypt TLS; passed to tshark by path, never copied to the
+            result (only its labels and ClientHello randoms are read, to say which sessions
+            it covers). Not needed for a pcapng that carries its own TLS secrets.
         proto_paths: Optional directories of .proto files for Wireshark's protobuf dissector
             (default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from
             `sonic.py --fetch-grpc-protos`). Without them gNMI is still decoded.

@@ -35,6 +35,12 @@ def print_grpc_summary(report: Dict[str, Any]) -> None:
           f"decode-as: {', '.join(cap.get('decode_as') or []) or 'none'}")
     print(f"Overall: {STATUS_MARK.get(report['overall_status'], report['overall_status'])}")
     print(f"Verdict: {report['verdict']}")
+    coverage = report.get("tls_decryption") or {}
+    if coverage.get("total"):
+        print(f"🔓 TLS decryption: {coverage['verdict']}")
+        for row in coverage.get("sessions", []):
+            if not row["decrypted"] and coverage.get("secrets_source"):
+                print(f"  not decrypted: {row['flow']}: {row['reason']}")
     for conn in report.get("connections", []):
         print()
         print(f"[{conn['transport']}] {conn['flow']} {conn['service']} ({conn['protocol']})"
@@ -81,12 +87,24 @@ def build_grpc_markdown(report: Dict[str, Any]) -> str:
     md.append(f"- File: `{report['file']}`")
     md.append(f"- tshark: {cap.get('tshark')}; HTTP/2 packets: {cap.get('http2_packets')}")
     md.append(f"- Decode-as: {', '.join(f'`{d}`' for d in cap.get('decode_as') or []) or 'none'}")
-    md.append(f"- Key log given: {'yes' if cap.get('keylog_file_given') else 'no'}; .proto paths: "
+    md.append(f"- Key log given: {'yes' if cap.get('keylog_file_given') else 'no'}; TLS secrets: "
+              f"{(cap.get('tls_secrets') or {}).get('source') or 'none'}; .proto paths: "
               f"{', '.join(cap.get('proto_paths') or []) or 'none'}")
     md.append(f"- Overall status: **{report['overall_status']}**")
     md.append("")
     md.append(f"**Verdict:** {report['verdict']}")
     md.append("")
+    coverage = report.get("tls_decryption") or {}
+    if coverage.get("total"):
+        md.append("## TLS decryption")
+        md.append("")
+        md.append(coverage["verdict"])
+        md.append("")
+        md.append(_md_table([{"flow": r["flow"], "service": r["service"], "version": _cell(r.get("version")),
+                              "decrypted": r["decrypted"], "secret in": ", ".join(r["secret_in"]) or "none",
+                              "why not": _cell(r.get("reason"))} for r in coverage.get("sessions", [])],
+                            ["flow", "service", "version", "decrypted", "secret in", "why not"]))
+        md.append("")
     md.append("## Connections")
     md.append("")
     md.append(_md_table([{"flow": c["flow"], "service": c["service"], "transport": c["transport"],
