@@ -69,6 +69,8 @@ TOOL_GUIDE: List[Dict[str, Any]] = [
      "question": "Which SNMP versions and v3 security levels are on the wire, which v1/v2c communities cross in cleartext (masked), and, with a USM users file, which SNMPv3 authPriv messages decrypt and why the others do not"},
     {"name": "analyze_aaa_pcap", "short": "TACACS+/RADIUS (shared key)", "title": "Read TACACS+ and RADIUS with the shared key", "llm": False,
      "question": "Who asked the AAA server and was it accepted or rejected; the authorization and accounting records; is TACACS+ sent unobfuscated; does the RADIUS shared secret verify the authenticators. De-obfuscates TACACS+ and RADIUS User-Password with the key, values masked"},
+    {"name": "analyze_esp_pcap", "short": "ESP decrypt (SA keys)", "title": "Decrypt IPsec ESP with SA keys and analyze the inner traffic", "llm": False,
+     "question": "With the SA keys of a Linux or strongSwan endpoint (an SA file or ip xfrm state output): which ESP packets decrypt per SA, why the others do not, and what the inner traffic shows to the network detectors. Cisco IOS does not expose ESP keys, so its tunnels cannot be decrypted this way"},
     {"name": "audit_cleartext_pcap", "short": "pass/fail cleartext gate", "title": "Assert a transport link carried no cleartext", "llm": False,
      "question": "Gate a run on encryption: did anything outside the allowlist (GRE, BGP, OSPF, ICMP, SSH or TLS without real encryption, ...) cross the link?"},
     {"name": "correlate_pcaps", "short": "2+ points: NAT, loss, asymmetry", "title": "Follow packets across two or more captures", "llm": False,
@@ -211,14 +213,14 @@ def build_instructions() -> str:
         "Order: analyze_network_pcap first, then the tool for the protocol found; audit_cleartext_pcap to gate a "
         "link; SIP: quick_quality_check before analyze_pcap. Quote codes and frames.",
         "",
-        "Decryption keys (keylog_file, users_file, keys_file, sa_file) are file paths, read on the server and "
-        "never returned; never paste a key into a call.",
+        "Decryption keys (keylog_file, users_file, keys_file, sa_file) are paths on the server, never returned; "
+        "never paste a key.",
         "",
         "[LLM] tools: provider SONIC_LLM_PROVIDER, else ollama; a cloud one sends SIP data (auth headers "
         "too) off this machine: ask first.",
         "",
-        "Every tool returns JSON; check status (errors are data). Lists stop at max_items (default 25), "
-        "*_omitted counts the rest; narrow: display_filter, max_packets.",
+        "Tools return JSON; check status (errors are data). Lists stop at max_items (default 25), *_omitted "
+        "counts the rest; narrow: display_filter, max_packets.",
         "",
         "Limits: only what crossed the capture point (capture the WAN to prove encryption); IKEv2 auth "
         "failure is a heuristic; NULL ESP looks encrypted.",
@@ -373,6 +375,7 @@ def render_skill_md() -> str:
         "analyze_restconf_pcap": "`--file F --restconf [--tls-secrets-log K]`",
         "analyze_snmp_pcap": "`--file F --snmp [--snmp-users U]`",
         "analyze_aaa_pcap": "`--file F --aaa [--aaa-secrets K]`",
+        "analyze_esp_pcap": "`--file F --esp-decrypt --esp-sa S`",
         "correlate_pcaps": "MCP only",
         "merge_pcap_timelines": "MCP only",
         "quick_quality_check": "`--file F --quality-only`",

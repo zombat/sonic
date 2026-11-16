@@ -237,6 +237,24 @@ API keys:
              "both); read by path, handed to tshark through a private temporary preferences file, never echoed"
     )
 
+    # IPsec ESP decryption from SA keys (deterministic, no LLM, needs tshark)
+    parser.add_argument(
+        "--esp-decrypt",
+        action="store_true",
+        help="Decrypt IPsec ESP with the SA keys in --esp-sa, say per SA which packets decrypted and why the others "
+             "did not, and run the network detectors over the inner traffic. Cisco IOS does not expose ESP keys, "
+             "so its tunnels cannot be decrypted this way. Writes --save_file (default: <capture>.esp.md; .json "
+             "writes JSON)."
+    )
+
+    parser.add_argument(
+        "--esp-sa",
+        metavar="PATH",
+        help="With --esp-decrypt, an SA file (src, dst, spi, encryption and its key, integrity and its key, one SA "
+             "per record) or the output of `ip -s xfrm state`; read by path, handed to tshark through a private "
+             "temporary esp_sa table, never echoed"
+    )
+
     parser.add_argument(
         "--fetch-grpc-protos",
         nargs="?",
@@ -361,6 +379,11 @@ def main():
     # Handle TACACS+/RADIUS mode (its default report path is next to the capture)
     if args.aaa:
         run_aaa_analysis(args)
+        return
+
+    # Handle ESP decryption mode (its default report path is next to the capture)
+    if args.esp_decrypt:
+        run_esp_analysis(args)
         return
 
     # Handle network-only mode (its default report path is next to the capture)
@@ -726,6 +749,44 @@ def run_aaa_analysis(args):
         print_aaa_summary(report)
         if save_path:
             print(f"\n💾 AAA report saved to: {save_path}")
+
+
+def run_esp_analysis(args):
+    """
+    Decrypt ESP with the SA keys and analyze the inner traffic (no LLM, needs tshark); write the report.
+
+    Exit status: 0 when the analysis ran (whatever it found), 1 when it could not run.
+    """
+    from analyzers.esp_decrypt import analyze_esp_capture
+    from utils.esp_reporting import print_esp_summary, save_esp_report
+
+    report = analyze_esp_capture(
+        args.file,
+        sa_file=args.esp_sa,
+        detectors=_split_csv(args.detectors),
+        display_filter=args.display_filter,
+        max_packets=args.max_packets,
+    )
+    if report.get("status") != "success":
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(f"❌ ESP decryption failed: {report.get('error')}")
+        sys.exit(1)
+
+    save_path = args.save_file or f"{args.file}.esp.md"
+    try:
+        save_esp_report(report, save_path)
+    except OSError as e:
+        print(f"⚠️ Failed to save report: {e}", file=sys.stderr)
+        save_path = None
+
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print_esp_summary(report)
+        if save_path:
+            print(f"\n💾 ESP decryption report saved to: {save_path}")
 
 
 def handle_batch_analysis(args):

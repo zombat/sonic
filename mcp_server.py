@@ -8,7 +8,8 @@ assistants. Works with Claude Desktop, Cline, and other MCP clients.
 
 Network tools (no LLM): analyze_network_pcap, analyze_vpn_pcap, analyze_routing_pcap,
 analyze_data_plane_pcap, audit_cleartext_pcap, correlate_pcaps, analyze_convergence_pcap,
-merge_pcap_timelines, analyze_grpc_pcap.
+merge_pcap_timelines, analyze_grpc_pcap, analyze_restconf_pcap, analyze_snmp_pcap,
+analyze_aaa_pcap, analyze_esp_pcap.
 
 The server teaches its client how to use it: the initialize result carries
 instructions (which tool for which question, cost, limits), every tool has a
@@ -1257,6 +1258,72 @@ def analyze_aaa_pcap(
     try:
         from analyzers.aaa_inspect import analyze_aaa_capture
         return analyze_aaa_capture(file_path, keys_file=keys_file, display_filter=display_filter,
+                                   max_packets=max_packets, max_items=max_items)
+    except Exception as e:
+        return {"status": "error", "error": str(e), "type": type(e).__name__}
+
+
+@mcp.tool(**tool_options("analyze_esp_pcap"))
+@redact_result
+def analyze_esp_pcap(
+    file_path: str,
+    sa_file: str,
+    detectors: Optional[List[str]] = None,
+    display_filter: Optional[str] = None,
+    max_packets: Optional[int] = None,
+    max_items: int = 25,
+) -> Dict[str, Any]:
+    """
+    Decrypt IPsec ESP with the Security Association keys and run the network detectors over
+    the inner traffic. Deterministic, no LLM, one tshark pass plus the detectors over the
+    decrypted packets: seconds for a typical capture. Needs tshark.
+
+    For each SA it reports the ESP packets seen and decrypted, tunnel or transport mode, and
+    tshark's integrity check (icv_good, icv_bad), and when packets did not decrypt, why: a bad
+    integrity check (wrong integrity key, or for AES-GCM the key and salt), a good integrity
+    check with no decryption (the integrity key is right, so the encryption key is wrong), or
+    no packet for that SA at all. A packet counts as decrypted only when its decrypted trailer
+    is real (RFC 4303 default padding, a real next header, and in tunnel mode an inner IP
+    packet of exactly the payload's length). The decrypted packets (tunnel mode as sent;
+    transport mode given back the outer addresses) are rebuilt into a temporary capture and
+    analysed by the same detectors as analyze_network_pcap; the summary is in inner_analysis.
+    ESP over UDP 4500 (NAT-T) is decrypted too. Cisco IOS and IOS XE do not expose ESP session
+    keys, so a Cisco IOS tunnel cannot be decrypted this way: use analyze_vpn_pcap for its
+    outside view.
+
+    The SA file is a path on the server (never paste a key into the call): records separated
+    by a blank line, lines src, dst, spi, encryption (aes-cbc, aes-gcm, aes-ctr, 3des-cbc,
+    des-cbc, null), encryption_key (0x hex; for AES-GCM the key followed by its 4-byte salt),
+    integrity (hmac-sha1-96, hmac-sha256-128, hmac-sha384-192, hmac-sha512-256, hmac-md5-96,
+    none) and integrity_key; or the output of `ip -s xfrm state`, read as it is. It reaches
+    tshark as its esp_sa table in a private temporary directory, never a command line, and no
+    key is ever returned.
+
+    Returns a JSON object: status "success", schema, overall_status, verdict, summary
+    (security_associations, esp_packets, esp_decrypted, sas_decrypting),
+    security_associations (src, dst, spi, encryption, integrity, packets, decrypted, tunnel,
+    transport, icv_good, icv_bad, reason), inner_analysis (protocols_present, overall_status,
+    verdicts per detector, issues), issues (ESP_SA_NOT_DECRYPTED, ESP_SA_PARTIAL,
+    ESP_SA_NO_PACKETS, ESP_SA_TABLE_REFUSED), capture (sa_count, esp_packets, esp_decrypted,
+    inner_packets_reconstructed) and limits. On failure {"status": "error", "error": "..."}.
+
+    Limits: only ESP matching an SA, with the right key and algorithm, decrypts; a sender
+    whose padding is not the RFC 4303 default is not recognised as decrypted.
+
+    For example, analyze_esp_pcap(file_path="/captures/tunnel.pcap",
+    sa_file="/secure/xfrm-state.txt").
+
+    Args:
+        file_path: Absolute path to a pcap/pcapng file on the machine running this server.
+        sa_file: Path to the SA file or `ip -s xfrm state` output (see above).
+        detectors: Optional subset of network detectors to run over the inner traffic.
+        display_filter: Optional Wireshark display filter applied first.
+        max_packets: Optional cap on frames read.
+        max_items: Cap on list lengths (default 25).
+    """
+    try:
+        from analyzers.esp_decrypt import analyze_esp_capture
+        return analyze_esp_capture(file_path, sa_file=sa_file, detectors=detectors, display_filter=display_filter,
                                    max_packets=max_packets, max_items=max_items)
     except Exception as e:
         return {"status": "error", "error": str(e), "type": type(e).__name__}
