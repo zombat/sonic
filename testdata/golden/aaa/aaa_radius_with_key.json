@@ -1,0 +1,240 @@
+{
+  "capture": {
+    "display_filter": null,
+    "end": "2026-01-01T00:00:00.400Z",
+    "max_packets": null,
+    "radius_secret_given": true,
+    "start": "2026-01-01T00:00:00.000Z",
+    "tacacs_key_given": true,
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)"
+  },
+  "credentials": [
+    {
+      "flow": "10.90.0.10:50010 -> 198.51.100.20:1812",
+      "kind": "User-Password",
+      "protocol": "radius",
+      "username": "alice",
+      "value": "masked"
+    },
+    {
+      "flow": "10.90.0.10:50010 -> 198.51.100.20:1812",
+      "kind": "User-Password",
+      "protocol": "radius",
+      "username": "mallory",
+      "value": "masked"
+    },
+    {
+      "flow": "10.90.0.10:50010 -> 198.51.100.20:1812",
+      "kind": "User-Password",
+      "protocol": "radius",
+      "username": "eve",
+      "value": "masked"
+    }
+  ],
+  "file": "tests/fixtures/aaa_radius.pcap",
+  "issues": [
+    {
+      "code": "RADIUS_BAD_MESSAGE_AUTHENTICATOR",
+      "frames": [
+        5
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 12: the Access-Request Message-Authenticator did not verify against the shared secret: the key is wrong, or the packet was altered",
+      "severity": "error"
+    },
+    {
+      "code": "AAA_ACCESS_REJECT",
+      "frames": [
+        3
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 11: mallory was rejected (Access-Reject)",
+      "severity": "warning",
+      "username": "mallory"
+    },
+    {
+      "code": "RADIUS_NO_MESSAGE_AUTHENTICATOR",
+      "frames": [
+        3
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 11: the Access-Reject carried no Message-Authenticator: such a response can be forged by Blast-RADIUS (CVE-2024-3596); have the server send it on every response and the client require it",
+      "severity": "warning"
+    },
+    {
+      "code": "AAA_NO_RESPONSE",
+      "frames": [
+        5
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 12: Access-Request for eve got no response",
+      "severity": "warning"
+    },
+    {
+      "code": "AAA_CREDENTIAL_RECOVERED",
+      "frames": [
+        1
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 10: the User-Password for alice was decrypted with the shared secret (value masked): anyone with the secret and the capture can read it",
+      "severity": "info",
+      "username": "alice"
+    },
+    {
+      "code": "AAA_CREDENTIAL_RECOVERED",
+      "frames": [
+        3
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 11: the User-Password for mallory was decrypted with the shared secret (value masked): anyone with the secret and the capture can read it",
+      "severity": "info",
+      "username": "mallory"
+    },
+    {
+      "code": "AAA_CREDENTIAL_RECOVERED",
+      "frames": [
+        5
+      ],
+      "message": "10.90.0.10:50010 -> 198.51.100.20:1812 id 12: the User-Password for eve was decrypted with the shared secret (value masked): anyone with the secret and the capture can read it",
+      "severity": "info",
+      "username": "eve"
+    }
+  ],
+  "limits": [
+    "Only what crossed the capture point is read; a key that is wrong for a session shows as a TACACS+ body that will not de-obfuscate or a RADIUS response whose authenticator does not validate.",
+    "TACACS+ runs over TCP: a session whose start is not in the capture may be missing its user name or action.",
+    "A RADIUS User-Password is decrypted only in the request that carries it; CHAP, EAP and MS-CHAP credentials are noted as present (an EAP exchange is not decrypted).",
+    "The shared key and every recovered password are secrets: they are read by path, masked at the source, and never written to a record, a log or a report.",
+    "Per-server keys are not distinguished: tshark takes one tacplus.key and one radius.shared_secret, so a capture mixing servers with different keys decrypts only the sessions that key fits."
+  ],
+  "overall_status": "problem",
+  "radius": [
+    {
+      "acct_status": null,
+      "authenticator_valid": true,
+      "calling_station": "00-11-22-33-44-55",
+      "client": "10.90.0.10:50010",
+      "credential": "masked",
+      "credential_recovered": true,
+      "frames": [
+        1,
+        2
+      ],
+      "id": 10,
+      "kind": "auth",
+      "message_authenticator": {
+        "request": "valid",
+        "response": "valid"
+      },
+      "nas": "203.0.113.9",
+      "request_code": "Access-Request",
+      "response_code": "Access-Accept",
+      "result": "accept",
+      "server": "198.51.100.20:1812",
+      "username": "alice"
+    },
+    {
+      "acct_status": null,
+      "authenticator_valid": true,
+      "calling_station": null,
+      "client": "10.90.0.10:50010",
+      "credential": "masked",
+      "credential_recovered": true,
+      "frames": [
+        3,
+        4
+      ],
+      "id": 11,
+      "kind": "auth",
+      "message_authenticator": {
+        "request": "absent",
+        "response": "absent"
+      },
+      "nas": "203.0.113.9",
+      "request_code": "Access-Request",
+      "response_code": "Access-Reject",
+      "result": "reject",
+      "server": "198.51.100.20:1812",
+      "username": "mallory"
+    },
+    {
+      "acct_status": null,
+      "authenticator_valid": null,
+      "calling_station": null,
+      "client": "10.90.0.10:50010",
+      "credential": "masked",
+      "credential_recovered": true,
+      "frames": [
+        5
+      ],
+      "id": 12,
+      "kind": "auth",
+      "message_authenticator": {
+        "request": "invalid",
+        "response": null
+      },
+      "nas": null,
+      "request_code": "Access-Request",
+      "response_code": null,
+      "result": "no_response",
+      "server": "198.51.100.20:1812",
+      "username": "eve"
+    },
+    {
+      "acct_status": "Start",
+      "authenticator_valid": true,
+      "calling_station": null,
+      "client": "10.90.0.10:50010",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        6,
+        7
+      ],
+      "id": 20,
+      "kind": "accounting",
+      "message_authenticator": {
+        "request": "absent",
+        "response": "absent"
+      },
+      "nas": "203.0.113.9",
+      "request_code": "Accounting-Request",
+      "response_code": "Accounting-Response",
+      "result": "accounted",
+      "server": "198.51.100.20:1813",
+      "username": "alice"
+    },
+    {
+      "acct_status": "Stop",
+      "authenticator_valid": true,
+      "calling_station": null,
+      "client": "10.90.0.10:50010",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        8,
+        9
+      ],
+      "id": 21,
+      "kind": "accounting",
+      "message_authenticator": {
+        "request": "absent",
+        "response": "absent"
+      },
+      "nas": "203.0.113.9",
+      "request_code": "Accounting-Request",
+      "response_code": "Accounting-Response",
+      "result": "accounted",
+      "server": "198.51.100.20:1813",
+      "username": "alice"
+    }
+  ],
+  "radius_omitted": 0,
+  "schema": "sonic.aaa_report/1",
+  "status": "success",
+  "summary": {
+    "accepts": 1,
+    "cleartext_tacacs_sessions": 0,
+    "credentials_recovered": 3,
+    "radius_transactions": 5,
+    "rejects": 1,
+    "tacacs_sessions": 0
+  },
+  "tacacs": [],
+  "tacacs_omitted": 0,
+  "verdict": "5 RADIUS transaction(s), 1 accept, 1 reject. 3 credential(s) recovered (masked)."
+}

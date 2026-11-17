@@ -10,6 +10,7 @@ tests/fixtures/ and writes normalized, sorted JSON outputs into testdata/golden/
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +18,12 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from analyzers.aaa_inspect import analyze_aaa_capture  # noqa: E402
 from analyzers.convergence import ConvergenceDetector  # noqa: E402
 from analyzers.dmvpn_phase3 import DmvpnPhase3Detector  # noqa: E402
 from analyzers.esp_overhead import EspOverheadDetector  # noqa: E402
 from analyzers.gre_nhrp import GreNhrpDetector  # noqa: E402
+from analyzers.http_inspect import analyze_http_capture  # noqa: E402
 from analyzers.ipsec_vpn import IPsecDetector  # noqa: E402
 from analyzers.network_common import Context  # noqa: E402
 from analyzers.network_orchestrator import audit_cleartext_capture  # noqa: E402
@@ -28,9 +31,11 @@ from analyzers.path_mtu import PathMtuDetector  # noqa: E402
 from analyzers.qos import QosDetector  # noqa: E402
 from analyzers.reachability import ConversationDetector, ReachabilityDetector  # noqa: E402
 from analyzers.routing_health import RoutingDetector  # noqa: E402
+from analyzers.snmp_inspect import analyze_snmp_capture  # noqa: E402
 from analyzers.tcp_health import TcpHealthDetector  # noqa: E402
 from analyzers.tls_inspect import TlsDetector  # noqa: E402
 from extractors.network import open_network_records  # noqa: E402
+from tests.fixtures.generate_aaa_fixtures import RADIUS_SECRET, TACACS_KEY  # noqa: E402
 
 RECORD_FIXTURES = [
     "audit_one_leak.pcap",
@@ -255,14 +260,50 @@ def generate_leaf_detectors() -> int:
     return count
 
 
+def generate_stage3b1() -> int:
+    """Generate golden baselines for SNMP, AAA, and HTTP/RESTCONF inspectors."""
+    count = 0
+    _write_json(
+        ROOT / "testdata" / "golden" / "snmp" / "snmp_v1v2c.json",
+        analyze_snmp_capture(os.path.join("tests", "fixtures", "snmp_v1v2c.pcap")),
+    )
+    count += 1
+
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8") as handle:
+        handle.write(f"tacacs_key: {TACACS_KEY}\nradius_secret: {RADIUS_SECRET}\n")
+        handle.flush()
+        aaa_cases = [
+            ("aaa_radius.pcap", "aaa_radius_no_key.json", None),
+            ("aaa_radius.pcap", "aaa_radius_with_key.json", handle.name),
+            ("aaa_tacacs.pcap", "aaa_tacacs_no_key.json", None),
+            ("aaa_tacacs.pcap", "aaa_tacacs_with_key.json", handle.name),
+        ]
+        for pcap_name, out_name, keys_path in aaa_cases:
+            rep = analyze_aaa_capture(os.path.join("tests", "fixtures", pcap_name), keys_file=keys_path)
+            _write_json(ROOT / "testdata" / "golden" / "aaa" / out_name, rep)
+            count += 1
+
+    for pcap_name, out_name in (
+        ("restconf_cleartext.pcap", "restconf_cleartext.json"),
+        ("dp_tls.pcap", "dp_tls.json"),
+        ("grpc_mgmt_mix.pcap", "grpc_mgmt_mix.json"),
+    ):
+        rep = analyze_http_capture(os.path.join("tests", "fixtures", pcap_name))
+        _write_json(ROOT / "testdata" / "golden" / "http_inspect" / out_name, rep)
+        count += 1
+    return count
+
+
 def main() -> int:
     os.chdir(ROOT)
     generate_records()
     generate_cleartext_audit()
     leaf_count = generate_leaf_detectors()
+    stage3b1_count = generate_stage3b1()
     print(
         f"Generated {len(RECORD_FIXTURES)} record golden files, "
-        f"{len(AUDIT_FIXTURES) + 2} audit golden files, and {leaf_count} leaf detector golden files."
+        f"{len(AUDIT_FIXTURES) + 2} audit golden files, "
+        f"{leaf_count} leaf detector golden files, and {stage3b1_count} stage 3b1 golden files."
     )
     return 0
 

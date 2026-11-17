@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,11 +26,8 @@ const (
 )
 
 var (
-	versionRe = regexp.MustCompile(`TShark \(Wireshark\) (\d+)`)
-
-	cacheMu      sync.Mutex
-	fieldCache   = map[string]map[string]string{}
-	versionCache = map[string]int{}
+	cacheMu    sync.Mutex
+	fieldCache = map[string]map[string]string{}
 )
 
 // SafeCapturePath neutralizes capture filenames starting with '-' so tshark
@@ -96,45 +92,6 @@ func ResolveFields(ctx context.Context, binary string) map[string]string {
 		cacheMu.Unlock()
 	}
 	return resolved
-}
-
-// VersionMajor returns the Wireshark/TShark major version number, or 0 if unknown.
-func VersionMajor(ctx context.Context, binary string) int {
-	if binary == "" {
-		binary = DefaultBinary
-	}
-	cacheMu.Lock()
-	if v, ok := versionCache[binary]; ok {
-		cacheMu.Unlock()
-		return v
-	}
-	cacheMu.Unlock()
-
-	cmd := exec.CommandContext(ctx, binary, "--version")
-	out, err := cmd.Output()
-	if err != nil {
-		return 0
-	}
-	m := versionRe.FindSubmatch(out)
-	if len(m) < 2 {
-		return 0
-	}
-	v, err := strconv.Atoi(string(m[1]))
-	if err != nil {
-		return 0
-	}
-	cacheMu.Lock()
-	versionCache[binary] = v
-	cacheMu.Unlock()
-	return v
-}
-
-// FragOffsetBytes normalizes ip.frag_offset into bytes across Wireshark 3.x and 4.x.
-func FragOffsetBytes(raw, versionMajor int) int {
-	if versionMajor >= 4 {
-		return raw * 8
-	}
-	return raw
 }
 
 // StreamOptions configures one tshark capture extraction run.

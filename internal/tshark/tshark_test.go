@@ -86,6 +86,17 @@ func TestRealTsharkStreamAndErrorPaths(t *testing.T) {
 	if maj := VersionMajor(ctx, DefaultBinary); maj < 3 {
 		t.Fatalf("VersionMajor = %d, want >= 3", maj)
 	}
+	if !Available(DefaultBinary) || !Available("") || Available("definitely-missing-tshark-bin") {
+		t.Fatal("Available check failed")
+	}
+	v1 := VersionString(ctx, "")
+	v2 := VersionString(ctx, DefaultBinary)
+	if v1 == nil || v2 == nil || *v1 != *v2 || !strings.Contains(*v1, "TShark") {
+		t.Fatalf("VersionString unexpected: %v, %v", v1, v2)
+	}
+	if got := VersionString(ctx, "definitely-missing-tshark-bin"); got != nil {
+		t.Fatalf("VersionString(missing) = %v, want nil", got)
+	}
 
 	// Bad capture path checks.
 	if _, err := StreamFields(ctx, StreamOptions{}, nil); err == nil {

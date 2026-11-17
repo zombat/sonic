@@ -176,6 +176,13 @@ type Issue struct {
 	Name           string          `json:"name,omitempty"`
 	ExpectedMSS    *int            `json:"expected_mss,omitempty"`
 	Values         json.RawMessage `json:"values,omitempty"`
+	Version        string          `json:"version,omitempty"`
+	Counter        string          `json:"counter,omitempty"`
+	User           *string         `json:"user,omitempty"`
+	Username       *string         `json:"username,omitempty"`
+	Status         *int            `json:"status,omitempty"`
+	ErrorTag       string          `json:"error_tag,omitempty"`
+	Header         string          `json:"header,omitempty"`
 }
 
 // Event represents one chronological timeline entry from a detector run.

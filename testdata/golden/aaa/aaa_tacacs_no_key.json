@@ -1,0 +1,159 @@
+{
+  "capture": {
+    "display_filter": null,
+    "end": "2026-01-01T00:00:00.810Z",
+    "max_packets": null,
+    "radius_secret_given": false,
+    "start": "2026-01-01T00:00:00.010Z",
+    "tacacs_key_given": false,
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)"
+  },
+  "credentials": [],
+  "file": "tests/fixtures/aaa_tacacs.pcap",
+  "issues": [
+    {
+      "code": "AAA_CLEARTEXT_TACACS",
+      "frames": [
+        26
+      ],
+      "message": "session 0x0e0e0e0e 10.90.0.11:40005 -> 198.51.100.21:49: the TACACS+ body is sent unobfuscated (the unencrypted flag is set): the user name, password and authorization cross the network readable",
+      "severity": "error",
+      "user": "plainuser"
+    }
+  ],
+  "limits": [
+    "Only what crossed the capture point is read; a key that is wrong for a session shows as a TACACS+ body that will not de-obfuscate or a RADIUS response whose authenticator does not validate.",
+    "TACACS+ runs over TCP: a session whose start is not in the capture may be missing its user name or action.",
+    "A RADIUS User-Password is decrypted only in the request that carries it; CHAP, EAP and MS-CHAP credentials are noted as present (an EAP exchange is not decrypted).",
+    "The shared key and every recovered password are secrets: they are read by path, masked at the source, and never written to a record, a log or a report.",
+    "Per-server keys are not distinguished: tshark takes one tacplus.key and one radius.shared_secret, so a capture mixing servers with different keys decrypts only the sessions that key fits."
+  ],
+  "overall_status": "problem",
+  "radius": [],
+  "radius_omitted": 0,
+  "schema": "sonic.aaa_report/1",
+  "status": "success",
+  "summary": {
+    "accepts": 0,
+    "cleartext_tacacs_sessions": 1,
+    "credentials_recovered": 0,
+    "radius_transactions": 0,
+    "rejects": 0,
+    "tacacs_sessions": 5
+  },
+  "tacacs": [
+    {
+      "accounting": null,
+      "action": null,
+      "authentication": null,
+      "authorization": null,
+      "cleartext": false,
+      "client": "10.90.0.11:40001",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "priv_lvl": null,
+      "server": "198.51.100.21:49",
+      "service": null,
+      "session_id": 168430090,
+      "types": [
+        "Authentication"
+      ],
+      "user": null
+    },
+    {
+      "accounting": null,
+      "action": null,
+      "authentication": null,
+      "authorization": null,
+      "cleartext": false,
+      "client": "10.90.0.11:40002",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        11,
+        12
+      ],
+      "priv_lvl": null,
+      "server": "198.51.100.21:49",
+      "service": null,
+      "session_id": 185273099,
+      "types": [
+        "Authorization"
+      ],
+      "user": null
+    },
+    {
+      "accounting": null,
+      "action": null,
+      "authentication": null,
+      "authorization": null,
+      "cleartext": false,
+      "client": "10.90.0.11:40003",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        16,
+        17
+      ],
+      "priv_lvl": null,
+      "server": "198.51.100.21:49",
+      "service": null,
+      "session_id": 202116108,
+      "types": [
+        "Accounting"
+      ],
+      "user": null
+    },
+    {
+      "accounting": null,
+      "action": null,
+      "authentication": null,
+      "authorization": null,
+      "cleartext": false,
+      "client": "10.90.0.11:40004",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        21,
+        22
+      ],
+      "priv_lvl": null,
+      "server": "198.51.100.21:49",
+      "service": null,
+      "session_id": 218959117,
+      "types": [
+        "Authentication"
+      ],
+      "user": null
+    },
+    {
+      "accounting": null,
+      "action": "login",
+      "authentication": null,
+      "authorization": null,
+      "cleartext": true,
+      "client": "10.90.0.11:40005",
+      "credential": null,
+      "credential_recovered": false,
+      "frames": [
+        26
+      ],
+      "priv_lvl": 1,
+      "server": "198.51.100.21:49",
+      "service": "login",
+      "session_id": 235802126,
+      "types": [
+        "Authentication"
+      ],
+      "user": "plainuser"
+    }
+  ],
+  "tacacs_omitted": 0,
+  "verdict": "5 TACACS+ session(s), 1 sent unobfuscated (no key given: the bodies stay obfuscated)."
+}

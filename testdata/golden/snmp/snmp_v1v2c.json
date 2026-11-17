@@ -1,0 +1,119 @@
+{
+  "capture": {
+    "display_filter": null,
+    "end": "2026-01-01T00:00:00.200Z",
+    "max_packets": null,
+    "start": "2026-01-01T00:00:00.000Z",
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "users_count": 0,
+    "users_file_given": false,
+    "warnings": []
+  },
+  "credentials": [
+    {
+      "flow": "198.51.100.30 -> 203.0.113.40",
+      "kind": "community string",
+      "protocol": "v1",
+      "value": "masked"
+    },
+    {
+      "flow": "198.51.100.30 -> 203.0.113.40",
+      "kind": "community string",
+      "protocol": "v2c",
+      "value": "masked"
+    }
+  ],
+  "file": "tests/fixtures/snmp_v1v2c.pcap",
+  "issues": [
+    {
+      "code": "SNMP_CLEARTEXT_COMMUNITY",
+      "frames": [
+        1
+      ],
+      "message": "198.51.100.30:40000 -> 203.0.113.40:161: an SNMP v1 community string crosses the network in cleartext (value masked): anyone on the path can read it and use it; move to SNMPv3 authPriv",
+      "severity": "error",
+      "version": "v1"
+    },
+    {
+      "code": "SNMP_CLEARTEXT_COMMUNITY",
+      "frames": [
+        3
+      ],
+      "message": "198.51.100.30:40001 -> 203.0.113.40:161: an SNMP v2c community string crosses the network in cleartext (value masked): anyone on the path can read it and use it; move to SNMPv3 authPriv",
+      "severity": "error",
+      "version": "v2c"
+    }
+  ],
+  "limits": [
+    "Only what crossed the capture point is read. A v3 message whose user is not in the users file, or is given for another engine id, is reported as not decrypted with that reason, never skipped silently.",
+    "SNMPv3 decryption needs the right USM passphrases; a wrong auth passphrase fails authentication and a wrong privacy passphrase leaves the scoped PDU unreadable.",
+    "TShark 3.6.2 offers auth MD5, SHA1, SHA2-224/256/384/512 and priv DES, AES-128, AES-192, AES-256. For AES-192/256 over an SHA1 or MD5 user it extends the key the Reeder (Cisco) way; an agent that extends it the Blumenthal-draft way, net-snmp among them, cannot be decrypted then (with SHA2-256 or SHA2-512 no extension is needed and it can).",
+    "A v1 or v2c community string is a cleartext credential: anyone on the path reads it. It is flagged and masked.",
+    "The USM passphrases are secrets: read by path, kept off the tshark command line (a temporary snmp_users table), and never written to a record, a log or a report. A decrypted PDU's contents are never emitted."
+  ],
+  "messages": [
+    {
+      "credential": "masked",
+      "dst": "203.0.113.40:161",
+      "frame": 1,
+      "pdu": "get-request",
+      "security_level": "community",
+      "src": "198.51.100.30:40000",
+      "version": "v1"
+    },
+    {
+      "credential": "masked",
+      "dst": "198.51.100.30:40000",
+      "frame": 2,
+      "pdu": "response",
+      "security_level": "community",
+      "src": "203.0.113.40:161",
+      "version": "v1"
+    },
+    {
+      "credential": "masked",
+      "dst": "203.0.113.40:161",
+      "frame": 3,
+      "pdu": "get-next-request",
+      "security_level": "community",
+      "src": "198.51.100.30:40001",
+      "version": "v2c"
+    },
+    {
+      "credential": "masked",
+      "dst": "198.51.100.30:40001",
+      "frame": 4,
+      "pdu": "response",
+      "security_level": "community",
+      "src": "203.0.113.40:161",
+      "version": "v2c"
+    },
+    {
+      "credential": "masked",
+      "dst": "198.51.100.30:162",
+      "frame": 5,
+      "pdu": "snmpV2-trap",
+      "security_level": "community",
+      "src": "203.0.113.40:40002",
+      "version": "v2c"
+    }
+  ],
+  "messages_omitted": 0,
+  "overall_status": "problem",
+  "schema": "sonic.snmp_report/1",
+  "status": "success",
+  "summary": {
+    "authpriv_decrypted": 0,
+    "authpriv_not_decrypted": 0,
+    "cleartext_communities": 2,
+    "messages": 5,
+    "v3_outcomes": {},
+    "v3_security_levels": {},
+    "versions": {
+      "v1": 2,
+      "v2c": 3
+    }
+  },
+  "v3_users": [],
+  "verdict": "2 v1, 3 v2c message(s). 2 cleartext community credential flow(s) (values masked)."
+}
