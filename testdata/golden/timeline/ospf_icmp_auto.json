@@ -1,0 +1,361 @@
+{
+  "auto_measurements": [
+    {
+      "capture": "lan",
+      "delta_s": 3.017,
+      "kind": "ping_outage",
+      "lost_requests": 3,
+      "max_s": null,
+      "name": "ping outage 10.1.1.1 -> 10.2.2.2 at lan",
+      "start_t_in_capture": 3.0,
+      "verdict": "measured"
+    },
+    {
+      "capture": "lan",
+      "delta_s": null,
+      "kind": "ping_outage",
+      "lost_requests": 1,
+      "max_s": null,
+      "name": "ping outage 10.1.1.1 -> 10.3.3.3 at lan",
+      "start_t_in_capture": 11.0,
+      "verdict": "not_recovered"
+    },
+    {
+      "delta_s": 59.5,
+      "from": {
+        "capture": "core",
+        "detail": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s), neighbors drop it after the dead interval",
+        "detector": "routing",
+        "event": "hello_gap",
+        "frame": 17,
+        "protocol": "ospf",
+        "t": 30.5,
+        "time": "2026-01-01T00:00:30.500Z"
+      },
+      "kind": "routing_convergence",
+      "max_s": null,
+      "name": "ospf hello_gap at core to next ospf up",
+      "to": {
+        "capture": "core",
+        "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+        "detector": "routing",
+        "event": "neighbor_up",
+        "frame": 18,
+        "protocol": "ospf",
+        "t": 90.0,
+        "time": "2026-01-01T00:01:30.000Z"
+      },
+      "verdict": "measured"
+    },
+    {
+      "delta_s": 10.0,
+      "from": {
+        "capture": "core",
+        "detail": "1.1.1.1 (10.0.13.1) dropped neighbor 3.3.3.3 from its hellos",
+        "detector": "routing",
+        "event": "neighbor_down",
+        "frame": 16,
+        "protocol": "ospf",
+        "t": 80.0,
+        "time": "2026-01-01T00:01:20.000Z"
+      },
+      "kind": "routing_convergence",
+      "max_s": null,
+      "name": "ospf neighbor_down at core to next ospf up",
+      "to": {
+        "capture": "core",
+        "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+        "detector": "routing",
+        "event": "neighbor_up",
+        "frame": 18,
+        "protocol": "ospf",
+        "t": 90.0,
+        "time": "2026-01-01T00:01:30.000Z"
+      },
+      "verdict": "measured"
+    },
+    {
+      "delta_s": 5.0,
+      "from": {
+        "capture": "core",
+        "detail": "3.3.3.3 (10.0.13.3) dropped neighbor 1.1.1.1 from its hellos",
+        "detector": "routing",
+        "event": "neighbor_down",
+        "frame": 17,
+        "protocol": "ospf",
+        "t": 85.0,
+        "time": "2026-01-01T00:01:25.000Z"
+      },
+      "kind": "routing_convergence",
+      "max_s": null,
+      "name": "ospf neighbor_down at core to next ospf up",
+      "to": {
+        "capture": "core",
+        "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+        "detector": "routing",
+        "event": "neighbor_up",
+        "frame": 18,
+        "protocol": "ospf",
+        "t": 90.0,
+        "time": "2026-01-01T00:01:30.000Z"
+      },
+      "verdict": "measured"
+    }
+  ],
+  "captures": [
+    {
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:01:35.000Z",
+      "events": 13,
+      "label": "core",
+      "overall_status": "warning",
+      "packets": 19,
+      "path": "tests/fixtures/ospf_failover.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "timeline_omitted": 0,
+      "verdicts": {
+        "conversations": "19 packets, 1514 bytes over 95.0 s; 3 address pair(s); most bytes: ospf",
+        "dmvpn_phase3": "No GRE/NHRP and no spoke-to-spoke IKE in this capture.",
+        "esp_overhead": "No ESP in this capture.",
+        "gre_nhrp": "No GRE traffic in this capture.",
+        "ipsec": "No IPsec (IKE/ESP) or GRE tunnel traffic in this capture.",
+        "path_mtu": "No large DF packets, no Fragmentation Needed and no fragments in this capture.",
+        "qos": "No DSCP marking, tunnel, ESP or RTP to judge.",
+        "reachability": "No ICMP or ARP in this capture.",
+        "routing": "OSPF: 2 router(s), 1 of 1 adjacency pair(s) reached 2-Way or better.",
+        "tcp": "No TCP in this capture.",
+        "tls": "No TLS handshake in this capture."
+      }
+    },
+    {
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:17.000Z",
+      "events": 5,
+      "label": "lan",
+      "overall_status": "problem",
+      "packets": 28,
+      "path": "tests/fixtures/icmp_loss.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "timeline_omitted": 0,
+      "verdicts": {
+        "conversations": "28 packets, 1833 bytes over 17.0 s; 3 address pair(s); most bytes: icmp",
+        "dmvpn_phase3": "No GRE/NHRP and no spoke-to-spoke IKE in this capture.",
+        "esp_overhead": "No ESP in this capture.",
+        "gre_nhrp": "No GRE traffic in this capture.",
+        "ipsec": "No IPsec (IKE/ESP) or GRE tunnel traffic in this capture.",
+        "path_mtu": "No large DF packets, no Fragmentation Needed and no fragments in this capture.",
+        "qos": "No DSCP marking, tunnel, ESP or RTP to judge.",
+        "reachability": "ping loss: 10.1.1.1->10.2.2.2 3/10 lost; 10.1.1.1->10.3.3.3 1/1 lost; 3 ICMP error(s): destination_unreachable (host unreachable) from 10.1.1.254; destination_unreachable (port unreachable) from 10.2.2.2; time_exceeded (TTL exceeded in transit) from 10.1.1.254; ARP unanswered for 10.1.1.99",
+        "routing": "No BGP, OSPF or EIGRP in this capture.",
+        "tcp": "No TCP in this capture.",
+        "tls": "No TLS handshake in this capture."
+      }
+    }
+  ],
+  "detectors": [
+    "ipsec",
+    "gre_nhrp",
+    "dmvpn_phase3",
+    "routing",
+    "reachability",
+    "path_mtu",
+    "esp_overhead",
+    "tcp",
+    "tls",
+    "qos",
+    "conversations"
+  ],
+  "limits": [
+    "Event times are packet timestamps at each capture point, to the millisecond; captures from different hosts are only as comparable as their clocks (use clock_offsets_s).",
+    "Each capture's timeline is capped by the detectors (max_items x 8 events per capture); a very busy capture can lose late events, reported as timeline_omitted per capture.",
+    "A measurement is the time between two packets as captured; protocol timers that run inside a router between packets are invisible."
+  ],
+  "measurements": [],
+  "origin": "2026-01-01T00:00:00.000Z",
+  "schema": "sonic.merged_timeline/1",
+  "status": "success",
+  "timeline": [
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) lists neighbor(s) 1.1.1.1",
+      "detector": "routing",
+      "event": "neighbor_up",
+      "frame": 2,
+      "protocol": "ospf",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "capture": "core",
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "detector": "routing",
+      "event": "neighbor_up",
+      "frame": 3,
+      "protocol": "ospf",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "capture": "lan",
+      "detail": "ping 10.1.1.1 -> 10.2.2.2: 3 consecutive request(s) unanswered, recovered after 3.017 s",
+      "detector": "reachability",
+      "event": "outage",
+      "frame": 7,
+      "protocol": "icmp",
+      "t": 3.0,
+      "time": "2026-01-01T00:00:03.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "detector": "routing",
+      "event": "dr_change",
+      "frame": 6,
+      "protocol": "ospf",
+      "t": 10.0,
+      "time": "2026-01-01T00:00:10.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "detector": "routing",
+      "event": "dr_change",
+      "frame": 7,
+      "protocol": "ospf",
+      "t": 10.5,
+      "time": "2026-01-01T00:00:10.500Z"
+    },
+    {
+      "capture": "lan",
+      "detail": "ping 10.1.1.1 -> 10.3.3.3: 1 consecutive request(s) unanswered, not recovered by capture end",
+      "detector": "reachability",
+      "event": "outage",
+      "frame": 18,
+      "protocol": "icmp",
+      "t": 11.0,
+      "time": "2026-01-01T00:00:11.000Z"
+    },
+    {
+      "capture": "lan",
+      "detail": "10.1.1.254 sent destination_unreachable (host unreachable) to 10.1.1.1 for icmp towards 10.3.3.3 (1x)",
+      "detector": "reachability",
+      "event": "destination_unreachable",
+      "frame": 19,
+      "protocol": "icmp",
+      "t": 11.002,
+      "time": "2026-01-01T00:00:11.002Z"
+    },
+    {
+      "capture": "lan",
+      "detail": "10.2.2.2 sent destination_unreachable (port unreachable) to 10.1.1.1 for udp/33435 towards 10.2.2.2 (1x)",
+      "detector": "reachability",
+      "event": "destination_unreachable",
+      "frame": 21,
+      "protocol": "icmp",
+      "t": 12.003,
+      "time": "2026-01-01T00:00:12.003Z"
+    },
+    {
+      "capture": "lan",
+      "detail": "10.1.1.254 sent time_exceeded (TTL exceeded in transit) to 10.1.1.1 for udp/33436 towards 10.2.2.2 (1x)",
+      "detector": "reachability",
+      "event": "time_exceeded",
+      "frame": 23,
+      "protocol": "icmp",
+      "t": 13.001,
+      "time": "2026-01-01T00:00:13.001Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s), neighbors drop it after the dead interval",
+      "detector": "routing",
+      "event": "hello_gap",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 30.5,
+      "time": "2026-01-01T00:00:30.500Z"
+    },
+    {
+      "capture": "core",
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "detector": "routing",
+      "event": "dr_change",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "1.1.1.1 (10.0.13.1) dropped neighbor 3.3.3.3 from its hellos",
+      "detector": "routing",
+      "event": "neighbor_down",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) hellos resumed",
+      "detector": "routing",
+      "event": "hellos_resumed",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 0.0.0.0, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "detector": "routing",
+      "event": "dr_change",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) dropped neighbor 1.1.1.1 from its hellos",
+      "detector": "routing",
+      "event": "neighbor_down",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "detector": "routing",
+      "event": "neighbor_up",
+      "frame": 18,
+      "protocol": "ospf",
+      "t": 90.0,
+      "time": "2026-01-01T00:01:30.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "detector": "routing",
+      "event": "dr_change",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    },
+    {
+      "capture": "core",
+      "detail": "3.3.3.3 (10.0.13.3) now lists neighbor 1.1.1.1",
+      "detector": "routing",
+      "event": "neighbor_up",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "verdict": "18 event(s) from 2 capture(s); 5 measurement(s), 1 outside the threshold or not found."
+}

@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from analyzers.aaa_inspect import analyze_aaa_capture  # noqa: E402
 from analyzers.convergence import ConvergenceDetector  # noqa: E402
+from analyzers.correlate import correlate_captures  # noqa: E402
 from analyzers.dmvpn_phase3 import DmvpnPhase3Detector  # noqa: E402
 from analyzers.esp_decrypt import analyze_esp_capture  # noqa: E402
 from analyzers.esp_overhead import EspOverheadDetector  # noqa: E402
@@ -42,6 +43,7 @@ from analyzers.reachability import ConversationDetector, ReachabilityDetector  #
 from analyzers.routing_health import RoutingDetector  # noqa: E402
 from analyzers.snmp_inspect import analyze_snmp_capture  # noqa: E402
 from analyzers.tcp_health import TcpHealthDetector  # noqa: E402
+from analyzers.timeline import merge_timelines  # noqa: E402
 from analyzers.tls_inspect import TlsDetector  # noqa: E402
 from extractors.network import open_network_records  # noqa: E402
 from tests.fixtures.generate_aaa_fixtures import RADIUS_SECRET, TACACS_KEY  # noqa: E402
@@ -351,6 +353,94 @@ def generate_stage3b2() -> int:
     return count
 
 
+def generate_phase4() -> int:
+    """Generate golden baselines for cross-capture correlation and merged timelines."""
+    count = 0
+    corr_cases = [
+        (
+            "nat_inside_outside.json",
+            correlate_captures(
+                [
+                    {"path": "tests/fixtures/dp_corr_inside.pcap", "label": "inside"},
+                    {"path": "tests/fixtures/dp_corr_outside.pcap", "label": "outside"},
+                ],
+                backend="tshark",
+            ),
+        ),
+        (
+            "asymmetric_lan_wan1_wan2.json",
+            correlate_captures(
+                [
+                    {"path": "tests/fixtures/dp_corr_lan.pcap", "label": "lan"},
+                    {"path": "tests/fixtures/dp_corr_wan1.pcap", "label": "wan1"},
+                    {"path": "tests/fixtures/dp_corr_wan2.pcap", "label": "wan2"},
+                ],
+                backend="tshark",
+            ),
+        ),
+        (
+            "clock_offset_unmatched.json",
+            correlate_captures(
+                [
+                    {"path": "tests/fixtures/dp_corr_inside.pcap", "label": "inside"},
+                    {"path": "tests/fixtures/dp_corr_outside.pcap", "label": "outside"},
+                ],
+                clock_offsets_s={"outside": 100.0},
+                backend="tshark",
+            ),
+        ),
+    ]
+    for out_name, rep in corr_cases:
+        _write_json(ROOT / "testdata" / "golden" / "correlate" / out_name, rep)
+        count += 1
+
+    tl_cases = [
+        (
+            "ospf_icmp_auto.json",
+            merge_timelines(
+                [
+                    {"path": "tests/fixtures/ospf_failover.pcap", "label": "core"},
+                    {"path": "tests/fixtures/icmp_loss.pcap", "label": "lan"},
+                ],
+                backend="tshark",
+            ),
+        ),
+        (
+            "ospf_icmp_measured.json",
+            merge_timelines(
+                [
+                    {"path": "tests/fixtures/ospf_failover.pcap", "label": "core"},
+                    {"path": "tests/fixtures/icmp_loss.pcap", "label": "lan"},
+                ],
+                measurements=[
+                    {
+                        "name": "ospf failover",
+                        "from": {"capture": "core", "event": "neighbor_down"},
+                        "to": {"event": "neighbor_up", "contains": "3.3.3.3"},
+                        "max_s": 15,
+                    }
+                ],
+                backend="tshark",
+            ),
+        ),
+        (
+            "ospf_icmp_threshold5.json",
+            merge_timelines(
+                [
+                    {"path": "tests/fixtures/ospf_failover.pcap", "label": "core"},
+                    {"path": "tests/fixtures/icmp_loss.pcap", "label": "lan"},
+                ],
+                failover_max_s=5,
+                backend="tshark",
+            ),
+        ),
+    ]
+    for out_name, rep in tl_cases:
+        _write_json(ROOT / "testdata" / "golden" / "timeline" / out_name, rep)
+        count += 1
+    return count
+
+
 def main() -> int:
     os.chdir(ROOT)
     generate_records()
@@ -358,12 +448,14 @@ def main() -> int:
     leaf_count = generate_leaf_detectors()
     stage3b1_count = generate_stage3b1()
     stage3b2_count = generate_stage3b2()
+    phase4_count = generate_phase4()
     print(
         f"Generated {len(RECORD_FIXTURES)} record golden files, "
         f"{len(AUDIT_FIXTURES) + 2} audit golden files, "
         f"{leaf_count} leaf detector golden files, "
-        f"{stage3b1_count} stage 3b1 golden files, and "
-        f"{stage3b2_count} stage 3b2 golden files."
+        f"{stage3b1_count} stage 3b1 golden files, "
+        f"{stage3b2_count} stage 3b2 golden files, and "
+        f"{phase4_count} phase 4 golden files."
     )
     return 0
 

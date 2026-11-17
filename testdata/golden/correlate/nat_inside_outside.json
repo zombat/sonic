@@ -1,0 +1,395 @@
+{
+  "captures": [
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:10.020Z",
+      "label": "inside",
+      "packets": 18,
+      "path": "tests/fixtures/dp_corr_inside.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "unmatched_packets": 3,
+      "warnings": []
+    },
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:10.020Z",
+      "label": "outside",
+      "packets": 18,
+      "path": "tests/fixtures/dp_corr_outside.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "unmatched_packets": 3,
+      "warnings": []
+    }
+  ],
+  "connections": [
+    {
+      "detail": "tcp 10.0.0.11:40001 -> 198.51.100.81:443: the SYN-ACK was last seen at outside and never reached inside (the request crossed inside, outside): dropped between outside and inside",
+      "endpoints_by_capture": {
+        "inside": "tcp 10.0.0.11:40001 -> 198.51.100.81:443",
+        "outside": "tcp 203.0.113.5:61001 -> 198.51.100.81:443"
+      },
+      "first_t": 1.0,
+      "flow": "tcp 10.0.0.11:40001 -> 198.51.100.81:443",
+      "frames": {
+        "inside": [
+          6
+        ],
+        "outside": [
+          6,
+          7
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "request": {
+        "seen_at": {
+          "inside": 3,
+          "outside": 3
+        }
+      },
+      "verdict": "reply_lost"
+    },
+    {
+      "detail": "udp 10.0.0.12:33434 -> 198.51.100.82:33434: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33434 -> 198.51.100.82:33434"
+      },
+      "first_t": 5.0,
+      "flow": "udp 10.0.0.12:33434 -> 198.51.100.82:33434",
+      "frames": {
+        "inside": [
+          10
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "seen_only_at"
+    },
+    {
+      "detail": "udp 10.0.0.12:33435 -> 198.51.100.82:33435: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33435 -> 198.51.100.82:33435"
+      },
+      "first_t": 6.0,
+      "flow": "udp 10.0.0.12:33435 -> 198.51.100.82:33435",
+      "frames": {
+        "inside": [
+          11
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "seen_only_at"
+    },
+    {
+      "detail": "udp 10.0.0.12:33436 -> 198.51.100.82:33436: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33436 -> 198.51.100.82:33436"
+      },
+      "first_t": 7.0,
+      "flow": "udp 10.0.0.12:33436 -> 198.51.100.82:33436",
+      "frames": {
+        "inside": [
+          12
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "seen_only_at"
+    },
+    {
+      "detail": "tcp 10.0.0.10:40000 -> 198.51.100.80:443: both directions crossed inside, outside",
+      "endpoints_by_capture": {
+        "inside": "tcp 10.0.0.10:40000 -> 198.51.100.80:443",
+        "outside": "tcp 203.0.113.5:61000 -> 198.51.100.80:443"
+      },
+      "first_t": 0.0,
+      "flow": "tcp 10.0.0.10:40000 -> 198.51.100.80:443",
+      "frames": {
+        "inside": [
+          1
+        ],
+        "outside": [
+          1
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "inside": 2,
+          "outside": 2
+        }
+      },
+      "request": {
+        "seen_at": {
+          "inside": 3,
+          "outside": 3
+        }
+      },
+      "verdict": "ok"
+    },
+    {
+      "detail": "icmp 10.0.0.12 -> 198.51.100.82 id 257: crossed inside, outside (no reply seen at any capture point)",
+      "endpoints_by_capture": {
+        "inside": "icmp 10.0.0.12 -> 198.51.100.82 id 257",
+        "outside": "icmp 203.0.113.5 -> 198.51.100.82 id 32770"
+      },
+      "first_t": 4.5,
+      "flow": "icmp 10.0.0.12 -> 198.51.100.82 id 257",
+      "frames": {
+        "inside": [
+          9
+        ],
+        "outside": [
+          12
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1,
+          "outside": 1
+        }
+      },
+      "verdict": "ok"
+    },
+    {
+      "detail": "icmp 10.0.0.13 -> 198.51.100.80 id 4660: both directions crossed inside, outside",
+      "endpoints_by_capture": {
+        "inside": "icmp 10.0.0.13 -> 198.51.100.80 id 4660",
+        "outside": "icmp 203.0.113.5 -> 198.51.100.80 id 32769"
+      },
+      "first_t": 8.0,
+      "flow": "icmp 10.0.0.13 -> 198.51.100.80 id 4660",
+      "frames": {
+        "inside": [
+          13
+        ],
+        "outside": [
+          13
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "inside": 3,
+          "outside": 3
+        }
+      },
+      "request": {
+        "seen_at": {
+          "inside": 3,
+          "outside": 3
+        }
+      },
+      "verdict": "ok"
+    }
+  ],
+  "connections_omitted": 0,
+  "dscp_changes": [
+    {
+      "dscp_after": "CS0/BE",
+      "dscp_before": "EF",
+      "flow": "tcp 10.0.0.10:40000 -> 198.51.100.80:443",
+      "frames": {
+        "inside": 4,
+        "outside": 4
+      },
+      "from": "inside",
+      "packets": 1,
+      "to": "outside"
+    }
+  ],
+  "issues": [
+    {
+      "code": "CORRELATE_REPLY_LOST",
+      "frames": {
+        "inside": [
+          6
+        ],
+        "outside": [
+          6,
+          7
+        ]
+      },
+      "message": "tcp 10.0.0.11:40001 -> 198.51.100.81:443: the SYN-ACK was last seen at outside and never reached inside (the request crossed inside, outside): dropped between outside and inside",
+      "severity": "error"
+    },
+    {
+      "code": "CORRELATE_SEEN_ONLY_AT",
+      "frames": {
+        "inside": [
+          10
+        ]
+      },
+      "message": "udp 10.0.0.12:33434 -> 198.51.100.82:33434: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "severity": "warning"
+    },
+    {
+      "code": "CORRELATE_SEEN_ONLY_AT",
+      "frames": {
+        "inside": [
+          11
+        ]
+      },
+      "message": "udp 10.0.0.12:33435 -> 198.51.100.82:33435: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "severity": "warning"
+    },
+    {
+      "code": "CORRELATE_SEEN_ONLY_AT",
+      "frames": {
+        "inside": [
+          12
+        ]
+      },
+      "message": "udp 10.0.0.12:33436 -> 198.51.100.82:33436: seen only at inside, no reply; never at outside, although other traffic between the same addresses crossed outside: it stopped after inside (an ACL, a route or a drop)",
+      "severity": "warning"
+    },
+    {
+      "code": "CORRELATE_DSCP_REWRITTEN",
+      "frames": {
+        "inside": 4,
+        "outside": 4
+      },
+      "message": "tcp 10.0.0.10:40000 -> 198.51.100.80:443: DSCP EF at inside became CS0/BE at outside (1 packet(s))",
+      "severity": "warning"
+    }
+  ],
+  "limits": [
+    "Only packets that reached at least one capture point are known; a packet dropped before the first capture point is invisible.",
+    "Matching relies on fields NAT normally keeps (TCP sequence numbers, ESP SPI/sequence, payload hashes, IP identification). A device that randomizes TCP sequence numbers or rewrites payloads (an ALG) breaks matching for those flows.",
+    "Times between capture points include the difference between the capturing clocks; captures written by one host (for example the CML controller) share a clock.",
+    "A packet is held for matching for window_s seconds and at most max_packets_held packets are held; a packet that reaches the next capture point later than that, or after an early eviction, counts as unmatched.",
+    "seen_only_at is an observation, not a verdict on intent: a flow that never needed to cross the other capture points looks the same as one that was dropped."
+  ],
+  "matching": {
+    "evicted_early": 0,
+    "flows_dropped_at_cap": 0,
+    "max_packets_held": 200000,
+    "packets_matched": 15,
+    "window_s": 2.0
+  },
+  "nat": [
+    {
+      "at_inside": "10.0.0.13:4660",
+      "at_outside": "203.0.113.5:32769",
+      "between": [
+        "inside",
+        "outside"
+      ],
+      "frames": {
+        "inside": 13,
+        "outside": 13
+      },
+      "kind": "source NAT with port/id translation",
+      "packets": 6,
+      "protocol": "icmp",
+      "remote": "198.51.100.80"
+    },
+    {
+      "at_inside": "10.0.0.10:40000",
+      "at_outside": "203.0.113.5:61000",
+      "between": [
+        "inside",
+        "outside"
+      ],
+      "frames": {
+        "inside": 1,
+        "outside": 1
+      },
+      "kind": "source NAT with port/id translation",
+      "packets": 5,
+      "protocol": "tcp",
+      "remote": "198.51.100.80:443"
+    },
+    {
+      "at_inside": "10.0.0.11:40001",
+      "at_outside": "203.0.113.5:61001",
+      "between": [
+        "inside",
+        "outside"
+      ],
+      "frames": {
+        "inside": 6,
+        "outside": 6
+      },
+      "kind": "source NAT with port/id translation",
+      "packets": 3,
+      "protocol": "tcp",
+      "remote": "198.51.100.81:443"
+    },
+    {
+      "at_inside": "10.0.0.12:257",
+      "at_outside": "203.0.113.5:32770",
+      "between": [
+        "inside",
+        "outside"
+      ],
+      "frames": {
+        "inside": 9,
+        "outside": 12
+      },
+      "kind": "source NAT with port/id translation",
+      "packets": 1,
+      "protocol": "icmp",
+      "remote": "198.51.100.82"
+    }
+  ],
+  "nat_omitted": 0,
+  "schema": "sonic.correlation_report/1",
+  "status": "success",
+  "summary": {
+    "by_verdict": {
+      "ok": 3,
+      "reply_lost": 1,
+      "seen_only_at": 3
+    },
+    "connections": 7,
+    "dscp_changes": 1,
+    "nat_translations": 4
+  },
+  "transit": [
+    {
+      "delta_ms": {
+        "max": 0.5,
+        "median": 0.5,
+        "min": -0.5
+      },
+      "from": "inside",
+      "note": "outside sees packets 0.5 ms after inside (median, both directions; includes any clock offset)",
+      "packets_matched": 15,
+      "to": "outside",
+      "ttl_decrement": 1
+    }
+  ],
+  "verdict": "15 packet(s) matched across 2 captures; 4 NAT translation(s); 1 reply lost; 3 seen only at; DSCP rewritten on 1 packet(s)."
+}
