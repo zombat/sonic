@@ -129,14 +129,13 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
           tshark --version | head -1
-      - name: Check formatting and vet
+      - name: Check formatting, vet, and cross-platform builds
         run: |
           test -z "$(gofmt -l .)"
           go vet ./...
-      - name: Build CLI and MCP binaries
-        run: |
-          mkdir -p build
-          go build -o build/sonic ./cmd/sonic
-          go build -o build/sonic-mcp ./cmd/sonic-mcp
+          GOOS=darwin GOARCH=arm64 go vet ./...
+          GOOS=windows GOARCH=amd64 go vet ./...
+      - name: Build CLI, MCP, and release binaries
+        run: make build release && ls -lh build/release/SHA256SUMS
       - name: Run Go race and coverage suite
         run: GOMAXPROCS=4 GOMEMLIMIT=2400MiB go test -race -p 1 -count=1 -cover ./...

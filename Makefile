@@ -5,12 +5,24 @@ PYTHON := python3
 endif
 GOENV := GOMAXPROCS=4 GOMEMLIMIT=2400MiB
 
-.PHONY: build clean golden fmt vet test fuzz parity mcp-parity
+.PHONY: build clean release golden fmt vet test fuzz parity mcp-parity
 
 build:
 	mkdir -p build
 	$(GOENV) go build -o build/sonic ./cmd/sonic
 	$(GOENV) go build -o build/sonic-mcp ./cmd/sonic-mcp
+
+release:
+	mkdir -p build/release
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-linux-amd64 ./cmd/sonic
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-mcp-linux-amd64 ./cmd/sonic-mcp
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-linux-arm64 ./cmd/sonic
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-mcp-linux-arm64 ./cmd/sonic-mcp
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-darwin-arm64 ./cmd/sonic
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-mcp-darwin-arm64 ./cmd/sonic-mcp
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-windows-amd64.exe ./cmd/sonic
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOENV) go build -trimpath -ldflags="-s -w" -o build/release/sonic-mcp-windows-amd64.exe ./cmd/sonic-mcp
+	cd build/release && sha256sum sonic-* > SHA256SUMS
 
 clean:
 	rm -rf build
