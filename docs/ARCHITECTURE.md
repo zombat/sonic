@@ -1,12 +1,51 @@
 # S.O.N.I.C. Architecture
 
-This page shows how S.O.N.I.C. is put together: the components, the three analysis paths, the main classes and the CI pipeline. The diagrams are Mermaid, so GitHub renders them in place.
-
-Every name here is a real module or function in the repository. Read the code for the details.
+This page shows how S.O.N.I.C. is structured across both the **native Go binaries** (`cmd/sonic`, `cmd/sonic-mcp`) and the **Python reference implementation** (`sonic.py`, `mcp_server.py`), including the analysis paths, core abstractions, and CI pipeline. The diagrams are Mermaid, so GitHub renders them in place.
 
 ## 1. Component view
 
-Two entry points, the CLI (`sonic.py`) and the MCP server (`mcp_server.py`), call the same orchestrators. The orchestrators drive the extractors, which are the only code that talks to tshark or scapy. Analyzers turn records into findings. The reporting layer writes what the user sees.
+### Go Architecture (Native Static Binaries)
+
+`cmd/sonic` and `cmd/sonic-mcp` are thin composition roots sharing identical extractors, 21 analyzer packages, direct-HTTP LLM clients, `ArtifactFactory`, guidance renderers, and secret redaction.
+
+```mermaid
+flowchart TB
+    subgraph Entry["Go Entry Points"]
+        CLI["cmd/sonic<br/>CLI Binary"]
+        MCP["cmd/sonic-mcp<br/>MCP JSON-RPC over stdio"]
+    end
+
+    subgraph Guide["Guidance and Registry"]
+        MCPSRV["internal/mcpserver<br/>18 tools, 5 prompts, 7 resources"]
+        GUIDE["internal/guide<br/>instructions, AST detector meta, --create-skill"]
+    end
+
+    subgraph AI["Direct-HTTP LLM Layer"]
+        ORCH["internal/ai<br/>ArtifactFactory + ResponseAdapters"]
+        LLM["internal/llm<br/>Provider / Completer over net/http<br/>ollama, anthropic, openai, azure"]
+    end
+
+    subgraph Core["Extractors and 21 Analyzers"]
+        EXT["internal/extract<br/>SIP, network, dataplane, http2, http_messages,<br/>tls_secrets, snmp, aaa, esp, auth_info"]
+        ANA["internal/analyze/*<br/>netorch, 20 protocol/VPN/SIP packages"]
+        SEC["internal/wsconfig + internal/redact<br/>/dev/shm tmpfs keys + secret scrubbing"]
+    end
+
+    subgraph Report["Reporting and Process Safety"]
+        REP["internal/report<br/>Markdown, JSON, console, stdio fd guard"]
+        TSH[("tshark")]
+    end
+
+    CLI --> ANA & ORCH & GUIDE & REP
+    MCP --> MCPSRV --> GUIDE & ANA & ORCH
+    ORCH --> EXT & ANA & LLM
+    ANA --> EXT --> SEC --> TSH
+    MCP --> REP
+```
+
+### Python Reference Components
+
+Two entry points, the CLI (`sonic.py`) and the MCP server (`mcp_server.py`), call the same Python orchestrators. The orchestrators drive the extractors (`tshark` or `scapy`), analyzers, optional DSPy LLM layer, and reporting helpers.
 
 ```mermaid
 flowchart TB
@@ -153,27 +192,29 @@ sequenceDiagram
 
 ## 4. Sequence: SIP analysis with an LLM
 
+In Go (`internal/ai` + `internal/llm`), SIP and RTP extraction feed deterministic scoring alongside direct-HTTP SSE/NDJSON calls through `llm.Completer`, normalized and redacted via `ArtifactFactory` before Markdown/JSON output.
+
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as CLI
-    participant O as analyzers/orchestrator.run_analysis_mode
-    participant X as extractors/tshark (scapy fallback)
-    participant C as call_tracking and call_quality_scoring
-    participant L as ai/* (DSPy)
-    participant V as llm_config provider
-    participant R as utils/reporting
+    participant U as CLI or MCP client
+    participant O as ai.RunAnalysisMode / orchestrator
+    participant X as internal/extract (tshark)
+    participant C as internal/analyze/sip (quality & MOS)
+    participant L as llm.Completer (direct net/http)
+    participant F as ai.ArtifactFactory (ResponseAdapters)
+    participant R as internal/report & redact
 
-    U->>O: --file, --model, --quality
-    O->>X: extract_sip_data(file)
-    X-->>O: SIP messages, RTP stats
-    O->>C: track calls, score quality, MOS
-    C-->>O: CallDiagnostic, AudioQualityDiagnostic
-    O->>L: analyze(fast / detailed / combined)
-    L->>V: prompt (fast model JSON, then detailed text)
-    V-->>L: completion
-    L-->>O: structured result and narrative
-    O->>R: markdown or console report
+    U->>O: --file, --model, --quality, --mos
+    O->>X: ExtractSIPData + ExtractAuthAndRegistrationInfo
+    X-->>O: SIP messages, SDP, RTP stats
+    O->>C: ScoreCallQuality + AnalyzeRTPStreamsFromSummary
+    C-->>O: CallQuality, MOSAnalysis
+    O->>L: Complete(fast / detailed / deep / combined)
+    L-->>O: raw completion (redacted)
+    O->>F: BuildDiagnostic (Validate + Redact)
+    F-->>O: DiagnosticArtifact
+    O->>R: Markdown, JSON, or console summary
 ```
 
 ## 5. Class view
@@ -297,16 +338,22 @@ classDiagram
 
 ## 6. CI pipeline
 
-This is the workflow in `.github/workflows/ci.yml`. The lint job reports but does not yet fail the build, because the existing code does not yet pass black or flake8.
+This is the workflow in `.github/workflows/ci.yml`. Both Go and Python suites run with `tshark` installed. The Python `lint` job reports without blocking while the Go `gofmt`, cross-OS `go vet`, release builds, and `-race` tests run as full gates.
 
 ```mermaid
 flowchart LR
-    PUSH["push or pull_request"] --> TEST
+    PUSH["push or pull_request"] --> GO
+    PUSH --> TEST
     PUSH --> LINT
     PUSH --> FIX
     PUSH --> SEC
 
-    subgraph TEST["test job (matrix 3.10 to 3.13)"]
+    subgraph GO["go job (linux, darwin, windows)"]
+        G1["gofmt + cross-OS go vet"] --> G2["make build release"]
+        G2 --> G3["go test -race -p 1 -count=1 -cover ./..."]
+    end
+
+    subgraph TEST["test job (Python 3.10 to 3.13)"]
         T1["apt install tshark"] --> T2["pip install -r requirements.txt -r requirements-dev.txt"]
         T2 --> T3["pytest -q --cov"]
         T3 --> T4["upload coverage.xml"]
