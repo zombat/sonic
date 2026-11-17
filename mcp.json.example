@@ -41,3 +41,16 @@
 //     }
 //   }
 // }
+
+// Optional: Run the compiled Go MCP server binary built with "make build":
+// {
+//   "mcpServers": {
+//     "sonic-voip-analyzer": {
+//       "command": "/absolute/path/to/sonic/build/sonic-mcp",
+//       "args": [],
+//       "env": {
+//         "SONIC_LLM_PROVIDER": "ollama"
+//       }
+//     }
+//   }
+// }

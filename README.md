@@ -1034,6 +1034,18 @@ python3 -m unittest -q test_grpc           # one file, with the standard library
 
 See [docs/TESTING.md](docs/TESTING.md) for the full reference.
 
+### Go Native Binaries and Test Suite
+
+S.O.N.I.C. also ships native Go CLI (`cmd/sonic`) and MCP stdio server (`cmd/sonic-mcp`) binaries with zero external LLM SDK dependencies:
+
+```bash
+make build       # compiles build/sonic and build/sonic-mcp
+make vet         # runs go vet ./...
+make test        # runs all 34 Go packages with -race and coverage
+make fuzz        # runs fuzz smoke tests on SSE, NDJSON, JSON recovery, and ArtifactFactory
+make mcp-parity  # verifies Go binaries against test_mcp_stdio.py, test_mcp_guidance.py, and test_network_mcp.py
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository

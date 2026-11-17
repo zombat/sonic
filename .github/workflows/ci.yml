@@ -115,3 +115,28 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r requirements.txt
+
+  go:
+    name: Go (build, vet, race tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install tshark
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+          tshark --version | head -1
+      - name: Check formatting and vet
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet ./...
+      - name: Build CLI and MCP binaries
+        run: |
+          mkdir -p build
+          go build -o build/sonic ./cmd/sonic
+          go build -o build/sonic-mcp ./cmd/sonic-mcp
+      - name: Run Go race and coverage suite
+        run: GOMAXPROCS=4 GOMEMLIMIT=2400MiB go test -race -p 1 -count=1 -cover ./...
