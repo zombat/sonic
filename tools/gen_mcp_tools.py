@@ -9,7 +9,7 @@ way an MCP client sees them on the wire, and writes internal/mcpserver/tools.jso
 which the Go server embeds. Rerun it after any change to a tool in mcp_server.py.
 
 The LLM tools (analyze_pcap, analyze_pcap_partial_streaming, analyze_batch_pcaps)
-and list_llm_providers are left out until the Phase 7 LLM decision.
+and list_llm_providers are included now that Phase 7 is implemented.
 
 Run with:  venv/bin/python tools/gen_mcp_tools.py
 """
@@ -23,17 +23,14 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 
 OUT = os.path.join(HERE, "internal", "mcpserver", "tools.json")
-DEFERRED = {"analyze_pcap", "analyze_pcap_partial_streaming", "analyze_batch_pcaps", "list_llm_providers"}
 
 
 def main() -> int:
-    """Write the deterministic tool definitions to OUT and report how many."""
+    """Write all tool definitions to OUT and report how many."""
     import mcp_server  # imported here so the path insert above applies
 
     tools = []
     for tool in asyncio.run(mcp_server.mcp.list_tools()):
-        if tool.name in DEFERRED:
-            continue
         wire = tool.to_mcp_tool().model_dump(by_alias=True, exclude_none=True, mode="json")
         wire.pop("_meta", None)  # fastmcp-only tags, not part of the tool contract
         tools.append(wire)

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zombat/sonic/internal/ai"
+	"github.com/zombat/sonic/internal/llm"
 	"github.com/zombat/sonic/internal/mcpserver"
 )
 
@@ -77,7 +79,10 @@ func TestRunMCPErrorPaths(t *testing.T) {
 
 	errOut.Reset()
 	badInit := runtimeDeps{
-		newServer:     func() (*mcpserver.Server, error) { return nil, errors.New("sk-ant-api03-1234567890abcdefghijklmnop") },
+		loadCreds: llm.NewCredentialStore,
+		newServer: func(ai.Deps) (*mcpserver.Server, error) {
+			return nil, errors.New("sk-ant-api03-1234567890abcdefghijklmnop")
+		},
 		reserveStdout: defaultDeps().reserveStdout,
 	}
 	if code := runWithArgs(context.Background(), nil, strings.NewReader(""), &out, &errOut, false, badInit); code != 1 || strings.Contains(errOut.String(), "sk-ant-") {
@@ -86,10 +91,47 @@ func TestRunMCPErrorPaths(t *testing.T) {
 
 	errOut.Reset()
 	badReserve := runtimeDeps{
+		loadCreds:     llm.NewCredentialStore,
 		newServer:     defaultDeps().newServer,
 		reserveStdout: func() (*os.File, func(), error) { return nil, nil, errors.New("dup failed") },
 	}
 	if code := runWithArgs(context.Background(), nil, strings.NewReader(""), &out, &errOut, true, badReserve); code != 1 || !strings.Contains(errOut.String(), "reserve protocol stdout:") {
 		t.Fatalf("expected reserve failure, got code=%d stderr=%q", code, errOut.String())
+	}
+
+	// Missing --env-file exits 2 without leaking values.
+	errOut.Reset()
+	if code := runWithArgs(context.Background(), []string{"--env-file", "/nonexistent/env.txt"}, strings.NewReader(""), &out, &errOut, false, defaultDeps()); code != 2 {
+		t.Fatalf("expected exit 2 on missing --env-file, got code=%d stderr=%q", code, errOut.String())
+	}
+
+	// Unexpected non-EnvFile loader failure exits 1.
+	errOut.Reset()
+	badCredLoader := runtimeDeps{
+		loadCreds: func(string) (*llm.CredentialStore, error) {
+			return nil, errors.New("io boom sk-ant-api03-1234567890abcdefghijklmnop")
+		},
+		newServer:     defaultDeps().newServer,
+		reserveStdout: defaultDeps().reserveStdout,
+	}
+	if code := runWithArgs(context.Background(), nil, strings.NewReader(""), &out, &errOut, false, badCredLoader); code != 1 || strings.Contains(errOut.String(), "sk-ant-") {
+		t.Fatalf("expected exit 1 redacted load failure, got code=%d stderr=%q", code, errOut.String())
+	}
+
+	// Valid --env-file wires configured status without leaking secret into list_llm_providers.
+	secret := "sk-ant-api03-testsecretvalue9876543210abcd"
+	envPath := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(envPath, []byte("ANTHROPIC_API_KEY="+secret+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	out.Reset()
+	errOut.Reset()
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_llm_providers","arguments":{}}}` + "\n"
+	if code := runWithArgs(context.Background(), []string{"--env-file", envPath}, strings.NewReader(req), &out, &errOut, false, defaultDeps()); code != 0 {
+		t.Fatalf("list_llm_providers with --env-file failed (%d): %s", code, errOut.String())
+	}
+	if strings.Contains(out.String(), secret) || !strings.Contains(out.String(), `"anthropic_key_set":true`) {
+		t.Fatalf("unexpected or leaky list_llm_providers output: %s", out.String())
 	}
 }

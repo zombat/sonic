@@ -11,7 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zombat/sonic/internal/ai"
 	"github.com/zombat/sonic/internal/guide"
+	"github.com/zombat/sonic/internal/llm"
 	"github.com/zombat/sonic/internal/parity"
 )
 
@@ -91,8 +93,8 @@ func TestServerRegistrationValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDefault error: %v", err)
 	}
-	if len(srv.tools) != 14 {
-		t.Fatalf("expected 14 tools, got %d", len(srv.tools))
+	if len(srv.tools) != 18 {
+		t.Fatalf("expected 18 tools, got %d", len(srv.tools))
 	}
 
 	full := make(map[string]Handler, len(srv.tools)+1)
@@ -174,12 +176,32 @@ func TestProtocolLifecycleAndErrors(t *testing.T) {
 	if err := json.Unmarshal(resps[7].Result, &listOut); err != nil {
 		t.Fatal(err)
 	}
-	if len(listOut.Tools) != 14 {
-		t.Fatalf("expected 14 listed tools, got %d", len(listOut.Tools))
+	if len(listOut.Tools) != 18 {
+		t.Fatalf("expected 18 listed tools, got %d", len(listOut.Tools))
+	}
+	if len(initPrev.Instructions) == 0 || len(initPrev.Instructions) >= 2048 {
+		t.Fatalf("instructions length %d outside bounds (1..2047)", len(initPrev.Instructions))
 	}
 	for _, td := range listOut.Tools {
 		if strings.ContainsRune(td.Description, '\u2014') || strings.ContainsRune(td.Title, '\u2014') {
 			t.Fatalf("em-dash found in tool %s", td.Name)
+		}
+		if !strings.Contains(initPrev.Instructions, td.Name) {
+			t.Fatalf("instructions missing registered tool %s", td.Name)
+		}
+		_, wantNotes, ok := guide.ToolOptions(td.Name)
+		if !ok {
+			t.Fatalf("guide.ToolOptions missing %s", td.Name)
+		}
+		var gotNotes guide.ToolAnnotations
+		if err := json.Unmarshal(td.Annotations, &gotNotes); err != nil {
+			t.Fatalf("invalid annotations JSON for %s: %v", td.Name, err)
+		}
+		if gotNotes.ReadOnlyHint != wantNotes.ReadOnlyHint ||
+			gotNotes.DestructiveHint != wantNotes.DestructiveHint ||
+			gotNotes.IdempotentHint != wantNotes.IdempotentHint ||
+			gotNotes.OpenWorldHint != wantNotes.OpenWorldHint {
+			t.Fatalf("annotation mismatch for %s: got %+v want %+v", td.Name, gotNotes, wantNotes)
 		}
 	}
 	if resps[8].Error == nil || resps[8].Error.Code != codeInvalidParams {
@@ -474,11 +496,15 @@ func TestToolHandlerValidationAndBadArgs(t *testing.T) {
 		"analyze_data_plane_pcap", "correlate_pcaps", "merge_pcap_timelines",
 		"analyze_grpc_pcap", "analyze_restconf_pcap", "analyze_snmp_pcap",
 		"analyze_aaa_pcap", "analyze_esp_pcap",
+		"analyze_pcap", "analyze_pcap_partial_streaming", "analyze_batch_pcaps",
 	} {
-		res := callToolRPC(t, srv, 100, tool, json.RawMessage(`{"file_path":123,"captures":123}`))
+		res := callToolRPC(t, srv, 100, tool, json.RawMessage(`{"file_path":123,"captures":123,"directory":123}`))
 		if !res.IsError {
 			t.Fatalf("%s accepted malformed arg types", tool)
 		}
+	}
+	if badList := callToolRPC(t, srv, 101, "list_llm_providers", json.RawMessage(`123`)); !badList.IsError {
+		t.Fatalf("list_llm_providers accepted non-object arg: %+v", badList)
 	}
 
 	// Tool-level validation errors return {"status":"error",...} with isError=false.
@@ -532,5 +558,99 @@ func TestToolHandlerValidationAndBadArgs(t *testing.T) {
 		if body.Driver.Mechanism != "dpd" || body.Measurements.Resumed == nil || *body.Measurements.Resumed != 12.0 {
 			t.Fatalf("unexpected convergence result for %s: %s", arg, conv.StructuredContent)
 		}
+	}
+}
+
+type stubMCPCompleter struct {
+	reportJSON string
+}
+
+func (s stubMCPCompleter) Complete(_ context.Context, provider, _, modelName string, _ []llm.Message, _ json.RawMessage, onToken func(string)) (llm.Response, llm.Usage, error) {
+	if onToken != nil {
+		onToken(s.reportJSON)
+	}
+	return llm.Response{Text: s.reportJSON, OutputTokens: 12, Reported: true, Model: modelName}, llm.Usage{Provider: provider, Model: modelName, OutputTokens: 12}, nil
+}
+
+func TestLLMToolsOverStdio(t *testing.T) {
+	chdirRepoRoot(t)
+	secret := "sk-ant-api03-secretvalueneverleak123456"
+	envPath := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(envPath, []byte("ANTHROPIC_API_KEY="+secret+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	t.Setenv("SONIC_ENV_FILE", envPath)
+
+	stub := stubMCPCompleter{
+		reportJSON: `{"totalCalls":1,"calls":[{"callId":"c1","callerIp":"10.0.0.1","calleeIp":"10.0.0.2","userAgents":["UA"],"audioQuality":{"codecUsed":"PCMU","payloadTypes":["0"],"rtpPort":"4000","potentialIssues":[]},"callFlow":{"callSetupMethod":"INVITE","callTermination":"BYE","responseCodes":["200"],"callDurationIndicators":"2s"},"diagnosticSummary":"Healthy call ` + secret + `"}],"overallAssessment":"Normal SIP setup","recommendations":["Keep monitoring"]}`,
+	}
+	srv, err := NewWithDeps(ai.Deps{Completer: stub})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. list_llm_providers reports env file without revealing secret value.
+	prov := callToolRPC(t, srv, 1, "list_llm_providers", json.RawMessage(`{}`))
+	if prov.IsError || strings.Contains(prov.Content[0].Text, secret) || !strings.Contains(prov.Content[0].Text, `"anthropic_key_set":true`) {
+		t.Fatalf("unexpected list_llm_providers response: %+v", prov)
+	}
+
+	// 2. analyze_pcap success on SIP capture with quality + MOS + redaction.
+	ap := callToolRPC(t, srv, 2, "analyze_pcap", json.RawMessage(`{"file_path":"tests/fixtures/sip_minimal.pcap","provider":"openai"}`))
+	if ap.IsError || strings.Contains(ap.Content[0].Text, secret) || !strings.Contains(ap.Content[0].Text, `"status":"success"`) || !strings.Contains(ap.Content[0].Text, `"call_quality"`) {
+		t.Fatalf("unexpected analyze_pcap response: %+v", ap)
+	}
+
+	// 3. analyze_pcap rejects missing capture and non-SIP capture cleanly.
+	miss := callToolRPC(t, srv, 3, "analyze_pcap", json.RawMessage(`{"file_path":"does-not-exist.pcap"}`))
+	if miss.IsError || !strings.Contains(miss.Content[0].Text, "File not found") {
+		t.Fatalf("unexpected missing file response: %+v", miss)
+	}
+	nonSIP := callToolRPC(t, srv, 4, "analyze_pcap", json.RawMessage(`{"file_path":"tests/fixtures/bgp_session.pcap"}`))
+	if nonSIP.IsError || !strings.Contains(nonSIP.Content[0].Text, "No SIP data found") {
+		t.Fatalf("unexpected non-SIP response: %+v", nonSIP)
+	}
+
+	// 4. analyze_pcap_partial_streaming produces timing + quality + llm_analysis.
+	ps := callToolRPC(t, srv, 5, "analyze_pcap_partial_streaming", json.RawMessage(`{"file_path":"tests/fixtures/sip_minimal.pcap","provider":"openai"}`))
+	if ps.IsError || !strings.Contains(ps.Content[0].Text, `"status":"success"`) || !strings.Contains(ps.Content[0].Text, `"timing"`) {
+		t.Fatalf("unexpected partial streaming response: %+v", ps)
+	}
+	if psMiss := callToolRPC(t, srv, 6, "analyze_pcap_partial_streaming", json.RawMessage(`{"file_path":"no.pcap"}`)); psMiss.IsError || !strings.Contains(psMiss.Content[0].Text, "File not found") {
+		t.Fatalf("unexpected partial missing file response: %+v", psMiss)
+	}
+
+	// 5. analyze_batch_pcaps handles parallel dir, detailed tier, bad mode, empty dir, missing dir.
+	batchDir := t.TempDir()
+	sipBytes, err := os.ReadFile("tests/fixtures/sip_minimal.pcap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(batchDir, "call1.pcap"), sipBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(batchDir, "call2.pcapng"), sipBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	batchArgs, _ := json.Marshal(map[string]string{"directory": batchDir, "provider": "openai", "model": "detailed", "mode": "parallel"})
+	br := callToolRPC(t, srv, 7, "analyze_batch_pcaps", batchArgs)
+	if br.IsError || !strings.Contains(br.Content[0].Text, `"successful":2`) {
+		t.Fatalf("unexpected batch response: %+v", br)
+	}
+	badModeArgs, _ := json.Marshal(map[string]string{"directory": batchDir, "mode": "bogus"})
+	if badMode := callToolRPC(t, srv, 8, "analyze_batch_pcaps", badModeArgs); badMode.IsError || !strings.Contains(badMode.Content[0].Text, "Invalid batch mode") {
+		t.Fatalf("unexpected invalid batch mode response: %+v", badMode)
+	}
+	emptyArgs, _ := json.Marshal(map[string]string{"directory": t.TempDir()})
+	if emptyRes := callToolRPC(t, srv, 9, "analyze_batch_pcaps", emptyArgs); emptyRes.IsError || !strings.Contains(emptyRes.Content[0].Text, "no pcap files found") {
+		t.Fatalf("unexpected empty batch response: %+v", emptyRes)
+	}
+	if missDir := callToolRPC(t, srv, 10, "analyze_batch_pcaps", json.RawMessage(`{"directory":""}`)); missDir.IsError || !strings.Contains(missDir.Content[0].Text, "directory not found") {
+		t.Fatalf("unexpected missing batch dir response: %+v", missDir)
+	}
+	t.Setenv("SONIC_ENV_FILE", "/nonexistent/sonic.env")
+	if _, err := NewDefault(); err == nil {
+		t.Fatal("expected NewDefault error on missing SONIC_ENV_FILE")
 	}
 }

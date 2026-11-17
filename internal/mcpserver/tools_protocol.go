@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/zombat/sonic/internal/ai"
 	"github.com/zombat/sonic/internal/analyze/aaainspect"
 	"github.com/zombat/sonic/internal/analyze/espdecrypt"
 	"github.com/zombat/sonic/internal/analyze/grpc"
@@ -15,23 +16,36 @@ import (
 	"github.com/zombat/sonic/internal/analyze/snmpinspect"
 )
 
-// NewDefault constructs the MCP Server wired to every deterministic tool in tools.json.
+// NewDefault constructs the MCP Server wired to every tool in tools.json using default credentials.
 func NewDefault() (*Server, error) {
+	return NewWithDeps(ai.Deps{})
+}
+
+// NewWithDeps constructs the MCP Server wired to all deterministic and LLM tools using deps.
+func NewWithDeps(deps ai.Deps) (*Server, error) {
+	llmHandlers, err := newLLMTools(deps)
+	if err != nil {
+		return nil, err
+	}
 	return New(map[string]Handler{
-		"quick_quality_check":      handleQuickQualityCheck,
-		"analyze_network_pcap":     handleAnalyzeNetworkPcap,
-		"analyze_vpn_pcap":         handleAnalyzeVPNPcap,
-		"analyze_routing_pcap":     handleAnalyzeRoutingPcap,
-		"audit_cleartext_pcap":     handleAuditCleartextPcap,
-		"analyze_convergence_pcap": handleAnalyzeConvergencePcap,
-		"analyze_data_plane_pcap":  handleAnalyzeDataPlanePcap,
-		"correlate_pcaps":          handleCorrelatePcaps,
-		"merge_pcap_timelines":     handleMergePcapTimelines,
-		"analyze_grpc_pcap":        handleAnalyzeGRPCPcap,
-		"analyze_restconf_pcap":    handleAnalyzeRestconfPcap,
-		"analyze_snmp_pcap":        handleAnalyzeSNMPPcap,
-		"analyze_aaa_pcap":         handleAnalyzeAAAPcap,
-		"analyze_esp_pcap":         handleAnalyzeESPPcap,
+		"analyze_pcap":                   llmHandlers.handleAnalyzePcap,
+		"analyze_pcap_partial_streaming": llmHandlers.handleAnalyzePcapPartialStreaming,
+		"analyze_batch_pcaps":            llmHandlers.handleAnalyzeBatchPcaps,
+		"list_llm_providers":             llmHandlers.handleListLLMProviders,
+		"quick_quality_check":            handleQuickQualityCheck,
+		"analyze_network_pcap":           handleAnalyzeNetworkPcap,
+		"analyze_vpn_pcap":               handleAnalyzeVPNPcap,
+		"analyze_routing_pcap":           handleAnalyzeRoutingPcap,
+		"audit_cleartext_pcap":           handleAuditCleartextPcap,
+		"analyze_convergence_pcap":       handleAnalyzeConvergencePcap,
+		"analyze_data_plane_pcap":        handleAnalyzeDataPlanePcap,
+		"correlate_pcaps":                handleCorrelatePcaps,
+		"merge_pcap_timelines":           handleMergePcapTimelines,
+		"analyze_grpc_pcap":              handleAnalyzeGRPCPcap,
+		"analyze_restconf_pcap":          handleAnalyzeRestconfPcap,
+		"analyze_snmp_pcap":              handleAnalyzeSNMPPcap,
+		"analyze_aaa_pcap":               handleAnalyzeAAAPcap,
+		"analyze_esp_pcap":               handleAnalyzeESPPcap,
 	})
 }
 

@@ -3,11 +3,16 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/zombat/sonic/internal/analyze/grpc"
 	"github.com/zombat/sonic/internal/parity"
 )
 
@@ -56,7 +61,7 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 
 	// 3. Human-readable verdict mode without --json.
 	var textOut, textErr bytes.Buffer
-	code = run(ctx, []string{"--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
+	code = run(ctx, []string{"--network-only", "--detectors", "cleartext_audit", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
 	if code != 0 || !strings.Contains(textOut.String(), "PASS:") {
 		t.Fatalf("text mode = (code=%d, out=%q, err=%q)", code, textOut.String(), textErr.String())
 	}
@@ -74,8 +79,14 @@ func TestCLIErrorPaths(t *testing.T) {
 		{"dump_no_file", []string{"dump"}, 1},
 		{"dump_bad_flag", []string{"dump", "--nope"}, 2},
 		{"dump_missing_pcap", []string{"dump", "--file", "/no/such/file.pcap"}, 1},
-		{"audit_no_file", []string{}, 1},
+		{"audit_no_file", []string{}, 2},
 		{"audit_bad_flag", []string{"--nope"}, 2},
+		{"bad_model_flag", []string{"--file", "x.pcap", "--model", "bogus"}, 2},
+		{"bad_provider_flag", []string{"--file", "x.pcap", "--provider", "bogus"}, 2},
+		{"model_all_with_override", []string{"--file", "x.pcap", "--model", "all", "--model-name", "qwen2.5:0.5b"}, 2},
+		{"bad_batch_mode", []string{"--batch-dir", "d", "--batch-mode", "bogus"}, 2},
+		{"bad_batch_workers", []string{"--batch-dir", "d", "--batch-workers", "0"}, 2},
+		{"bad_env_file", []string{"--env-file", "/definitely/missing/.env", "--file", "x.pcap"}, 2},
 		{"allow_without_detector", []string{"--file", "x.pcap", "--detectors", "routing", "--allow", "crypto"}, 1},
 		{"unsupported_detector", []string{"--file", "x.pcap", "--detectors", "routing"}, 1},
 		{"bad_allow_json", []string{"--file", "x.pcap", "--allow", "bogus_tok", "--json"}, 1},
@@ -166,5 +177,186 @@ func TestCLICreateSkillAndRefusal(t *testing.T) {
 	errOut.Reset()
 	if code := run(context.Background(), []string{"--create-skill", foreign}, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "not written by sonic --create-skill") {
 		t.Fatalf("expected refusal exit 1, got code=%d err=%s", code, errOut.String())
+	}
+}
+
+func TestPhase7LLMFetchProtosStreamPartialAndBatch(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(repoRoot)
+	ctx := context.Background()
+
+	// 1. --fetch-grpc-protos text and --json success + failure paths.
+	okDeps := llmRuntimeDeps{
+		fetchProtos: func(_ context.Context, dest string) grpc.FetchResult {
+			return grpc.FetchResult{Status: "success", Dir: dest, Files: []string{"gnmi.proto", "gnoi.proto"}}
+		},
+	}
+	var out, errOut bytes.Buffer
+	if code := runCommandWithDeps(ctx, []string{"--fetch-grpc-protos", "/tmp/protos"}, &out, &errOut, okDeps); code != 0 || !strings.Contains(out.String(), "Fetched 2 proto files into /tmp/protos") {
+		t.Fatalf("fetch-grpc-protos text failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := runCommandWithDeps(ctx, []string{"--fetch-grpc-protos=/tmp/protos", "--json"}, &out, &errOut, okDeps); code != 0 || !strings.Contains(out.String(), `"status": "success"`) {
+		t.Fatalf("fetch-grpc-protos json failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	failDeps := llmRuntimeDeps{
+		fetchProtos: func(_ context.Context, dest string) grpc.FetchResult {
+			return grpc.FetchResult{Status: "error", Dir: dest, Error: "network disabled"}
+		},
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := runCommandWithDeps(ctx, []string{"--fetch-grpc-protos"}, &out, &errOut, failDeps); code != 1 || !strings.Contains(errOut.String(), "network disabled") {
+		t.Fatalf("fetch-grpc-protos failure mismatch (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+
+	// 2. Local httptest OpenAI SSE server exercises full direct-HTTP path across standard, --stream, --partial, and --batch-dir.
+	secret := "sk-proj-testopenaisecret1234567890abcdef"
+	failMode := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if failMode {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprint(w, `{"error":{"message":"upstream down"}}`)
+			return
+		}
+		report := `{"totalCalls":1,"calls":[{"callId":"c-1","callerIp":"10.0.0.1","calleeIp":"10.0.0.2","userAgents":["UA"],"audioQuality":{"codecUsed":"PCMU","payloadTypes":["0"],"rtpPort":"4000","potentialIssues":[]},"callFlow":{"callSetupMethod":"INVITE","callTermination":"BYE","responseCodes":["200"],"callDurationIndicators":"2s"},"diagnosticSummary":"Clean call ` + secret + `"}],"overallAssessment":"Normal SIP call","recommendations":["Keep monitoring"]}`
+		w.Header().Set("Content-Type", "text/event-stream")
+		payload, _ := json.Marshal(struct {
+			Model   string `json:"model"`
+			Choices []struct {
+				Delta struct {
+					Content string `json:"content"`
+				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
+			} `json:"choices"`
+			Usage struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+			} `json:"usage"`
+		}{
+			Model: "gpt-4o",
+			Choices: []struct {
+				Delta struct {
+					Content string `json:"content"`
+				} `json:"delta"`
+				FinishReason string `json:"finish_reason"`
+			}{{
+				Delta: struct {
+					Content string `json:"content"`
+				}{Content: report},
+				FinishReason: "stop",
+			}},
+			Usage: struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+			}{PromptTokens: 20, CompletionTokens: 45},
+		})
+		_, _ = fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", payload)
+	}))
+	defer srv.Close()
+
+	envFile := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(envFile, []byte("OPENAI_API_KEY="+secret+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OPENAI_API_KEY", "")
+	t.Setenv("OPENAI_BASE_URL", srv.URL)
+
+	tmpOut := t.TempDir()
+	sipFix := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
+
+	// 2a. Standard --provider openai --model detailed --quality --mos saving markdown + redacted secret.
+	mdPath := filepath.Join(tmpOut, "diag.md")
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--model", "detailed", "--quality", "--mos", "--save_file", mdPath}, &out, &errOut); code != 0 {
+		t.Fatalf("standard openai run failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	savedMD, err := os.ReadFile(mdPath)
+	if err != nil || strings.Contains(string(savedMD), secret) || !strings.Contains(string(savedMD), "# S.O.N.I.C. SIP Diagnostic Report") {
+		t.Fatalf("unexpected or leaky saved markdown: err=%v body=%s", err, savedMD)
+	}
+
+	// 2b. --stream text mode + --verbose and --stream --json.
+	out.Reset()
+	errOut.Reset()
+	streamMD := filepath.Join(tmpOut, "stream.md")
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--stream", "--verbose", "--save_file", streamMD}, &out, &errOut); code != 0 {
+		t.Fatalf("--stream run failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	if strings.Contains(out.String(), secret) || !strings.Contains(errOut.String(), "Streaming analysis from LLM") {
+		t.Fatalf("unexpected --stream output/stderr: out=%q err=%q", out.String(), errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--stream", "--json"}, &out, &errOut); code != 0 || !json.Valid(out.Bytes()) {
+		t.Fatalf("--stream --json invalid (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+
+	// 2c. --partial text mode + --verbose + --save_file and --partial --json.
+	out.Reset()
+	errOut.Reset()
+	partialMD := filepath.Join(tmpOut, "partial.md")
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--partial", "--verbose", "--save_file", partialMD}, &out, &errOut); code != 0 {
+		t.Fatalf("--partial run failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	if !strings.Contains(out.String(), "[partial]") {
+		t.Fatalf("missing [partial] notification in --partial stdout: %q", out.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--partial", "--json"}, &out, &errOut); code != 0 || !json.Valid(out.Bytes()) {
+		t.Fatalf("--partial --json invalid (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+
+	// 2d. --batch-dir sequential/parallel, empty, missing, and total-failure error path.
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--batch-dir", filepath.Join(tmpOut, "missing")}, &out, &errOut); code != 1 {
+		t.Fatalf("expected exit 1 for missing --batch-dir, got %d", code)
+	}
+	emptyDir := t.TempDir()
+	if code := run(ctx, []string{"--batch-dir", emptyDir, "--json"}, &out, &errOut); code != 1 || !strings.Contains(out.String(), "no pcap files found") {
+		t.Fatalf("expected JSON error for empty --batch-dir, got %d out=%q", code, out.String())
+	}
+	batchDir := t.TempDir()
+	sipBytes, err := os.ReadFile(sipFix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fn := range []string{"c1.pcap", "c2.pcapng"} {
+		if err := os.WriteFile(filepath.Join(batchDir, fn), sipBytes, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	batchMD := filepath.Join(tmpOut, "batch.md")
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--batch-dir", batchDir, "--env-file", envFile, "--provider", "openai", "--model", "detailed", "--batch-mode", "parallel", "--batch-workers", "2", "--verbose", "--save_file", batchMD}, &out, &errOut); code != 0 {
+		t.Fatalf("--batch-dir parallel failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	if !strings.Contains(out.String(), "2/2 succeeded") {
+		t.Fatalf("unexpected batch stdout: %s", out.String())
+	}
+
+	failMode = true
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--batch-dir", batchDir, "--env-file", envFile, "--provider", "openai", "--save_file", filepath.Join(tmpOut, "failbatch.md")}, &out, &errOut); code != 1 {
+		t.Fatalf("expected exit 1 on failed batch, got %d", code)
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--partial"}, &out, &errOut); code != 1 {
+		t.Fatalf("expected exit 1 on failed --partial, got %d", code)
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run(ctx, []string{"--file", sipFix, "--env-file", envFile, "--provider", "openai", "--stream"}, &out, &errOut); code != 1 {
+		t.Fatalf("expected exit 1 on failed --stream, got %d", code)
 	}
 }

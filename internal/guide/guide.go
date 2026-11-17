@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/zombat/sonic/internal/llm"
 )
 
 //go:embed detector_meta.json
@@ -268,12 +270,18 @@ func DetectorMeta() ([]PackageMeta, error) {
 	return items, nil
 }
 
-// ProviderModels returns the supported provider profiles and model names.
+// ProviderModels returns the supported provider profiles and model names from internal/llm.
 func ProviderModels() []ProviderModelRow {
-	return []ProviderModelRow{
-		{Provider: "ollama", Fast: "qwen2.5:0.5b", Detailed: "mistral:7b"},
-		{Provider: "anthropic", Fast: "claude-haiku-5-5", Detailed: "claude-sonnet-5-5", Deep: "claude-opus-5-5"},
-		{Provider: "openai", Fast: "gpt-4o-mini", Detailed: "gpt-4o"},
-		{Provider: "azure", Fast: "gpt-4o-mini", Detailed: "gpt-4o"},
+	order := []string{"ollama", "anthropic", "openai", "azure"}
+	rows := make([]ProviderModelRow, 0, len(order))
+	for _, p := range order {
+		tiers := llm.ProviderModels[p]
+		rows = append(rows, ProviderModelRow{
+			Provider: p,
+			Fast:     tiers[llm.ProfileFast],
+			Detailed: tiers[llm.ProfileDetailed],
+			Deep:     tiers[llm.ProfileDeep],
+		})
 	}
+	return rows
 }

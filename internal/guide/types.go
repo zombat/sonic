@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+
+	"github.com/zombat/sonic/internal/llm"
 )
 
 const (
@@ -19,9 +21,9 @@ const (
 	// OverviewTopic is the MCP overview resource topic slug.
 	OverviewTopic = "overview"
 	// DefaultProvider is the default local LLM provider when SONIC_LLM_PROVIDER is unset.
-	DefaultProvider = "ollama"
+	DefaultProvider = llm.DefaultProvider
 	// ProviderVariable is the environment variable overriding DefaultProvider.
-	ProviderVariable = "SONIC_LLM_PROVIDER"
+	ProviderVariable = llm.ProviderVariable
 	// SkillDescription describes when agents should activate the S.O.N.I.C. skill.
 	SkillDescription = "Diagnose packet captures (pcap/pcapng) with S.O.N.I.C.: SIP/RTP call quality and MOS, " +
 		"IPsec/IKE/ESP encryption and DMVPN (GRE/NHRP) overlays, BGP/OSPF/EIGRP adjacencies and " +

@@ -143,8 +143,10 @@ class TestMcpStdioHandshake(unittest.TestCase):
         from fastmcp import Client
 
         async def session():
-            config = {"mcpServers": {"sonic": {"command": sys.executable, "args": [SERVER],
-                                               "env": {"SONIC_LLM_PROVIDER": "ollama"}}}}
+            mcp_bin = os.environ.get("SONIC_MCP_BINARY")
+            server_cfg = {"command": mcp_bin, "args": [], "env": {"SONIC_LLM_PROVIDER": "ollama"}} if mcp_bin else {
+                "command": sys.executable, "args": [SERVER], "env": {"SONIC_LLM_PROVIDER": "ollama"}}
+            config = {"mcpServers": {"sonic": server_cfg}}
             async with Client(config) as client:
                 tools = await client.list_tools()
                 call = await client.call_tool("analyze_vpn_pcap", {"file_path": fixture("ipsec_natt.pcap")})

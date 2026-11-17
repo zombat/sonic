@@ -26,6 +26,14 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER = os.path.join(HERE, "mcp_server.py")
 CLI = os.path.join(HERE, "sonic.py")
+
+
+def _bin_cmd(script, *args):
+    if script == CLI and os.environ.get("SONIC_CLI_BINARY"):
+        return [os.environ["SONIC_CLI_BINARY"], *args]
+    if script == SERVER and os.environ.get("SONIC_MCP_BINARY"):
+        return [os.environ["SONIC_MCP_BINARY"], *args]
+    return [sys.executable, script, *args]
 EM_DASH = chr(0x2014)
 
 import mcp_server  # noqa: E402
@@ -216,7 +224,7 @@ class TestEntryPoints(unittest.TestCase):
     """--create-skill through the real command lines."""
 
     def run_cli(self, script, target):
-        return subprocess.run([sys.executable, script, "--create-skill", target], cwd=HERE,
+        return subprocess.run(_bin_cmd(script, "--create-skill", target), cwd=HERE,
                               capture_output=True, text=True, timeout=300)
 
     def test_sonic_cli_writes_then_refuses_a_foreign_skill(self):
@@ -240,12 +248,21 @@ class TestEntryPoints(unittest.TestCase):
             done = self.run_cli(SERVER, target)
             self.assertEqual(done.returncode, 0, done.stderr)
             files = guide.render_skill(server_tools())
-            for rel, content in files.items():
-                with open(os.path.join(target, rel), encoding="utf-8") as handle:
-                    self.assertEqual(handle.read(), content, rel)
+            if os.environ.get("SONIC_MCP_BINARY") and os.environ.get("SONIC_CLI_BINARY"):
+                cli_target = os.path.join(tmp, "sonic-cli")
+                done_cli = self.run_cli(CLI, cli_target)
+                self.assertEqual(done_cli.returncode, 0, done_cli.stderr)
+                for rel in files:
+                    with open(os.path.join(target, rel), encoding="utf-8") as h_srv, \
+                         open(os.path.join(cli_target, rel), encoding="utf-8") as h_cli:
+                        self.assertEqual(h_srv.read(), h_cli.read(), rel)
+            else:
+                for rel, content in files.items():
+                    with open(os.path.join(target, rel), encoding="utf-8") as handle:
+                        self.assertEqual(handle.read(), content, rel)
 
     def test_sonic_cli_still_requires_file(self):
-        done = subprocess.run([sys.executable, CLI], cwd=HERE, capture_output=True, text=True, timeout=300)
+        done = subprocess.run(_bin_cmd(CLI), cwd=HERE, capture_output=True, text=True, timeout=300)
         self.assertEqual(done.returncode, 2)
         self.assertIn("--file", done.stderr)
 
@@ -257,7 +274,9 @@ class TestStdioGuidance(unittest.TestCase):
         from fastmcp import Client
 
         async def session():
-            config = {"mcpServers": {"sonic": {"command": sys.executable, "args": [SERVER]}}}
+            mcp_bin = os.environ.get("SONIC_MCP_BINARY")
+            server_cfg = {"command": mcp_bin, "args": []} if mcp_bin else {"command": sys.executable, "args": [SERVER]}
+            config = {"mcpServers": {"sonic": server_cfg}}
             async with Client(config) as client:
                 # fastmcp 4 exposes the negotiated instructions era-neutrally; older
                 # clients only through the initialize result.
@@ -357,10 +376,13 @@ class TestCliModelOptions(unittest.TestCase):
         import sonic
         options = [opt for action in sonic.build_parser()._actions for opt in action.option_strings]
         self.assertFalse([opt for opt in options if "key" in opt], options)
-        done = subprocess.run([sys.executable, CLI, "--file", "x.pcap", "--api-key", "abc"], cwd=HERE,
+        done = subprocess.run(_bin_cmd(CLI, "--file", "x.pcap", "--api-key", "abc"), cwd=HERE,
                               capture_output=True, text=True, timeout=300)
         self.assertEqual(done.returncode, 2)
-        self.assertIn("unrecognized arguments", done.stderr)
+        if os.environ.get("SONIC_CLI_BINARY"):
+            self.assertIn("not defined", done.stderr)
+        else:
+            self.assertIn("unrecognized arguments", done.stderr)
 
     def test_model_name_reaches_get_llm(self):
         from unittest import mock
@@ -381,8 +403,8 @@ class TestCliModelOptions(unittest.TestCase):
         self.assertEqual(names, ["llama3:8b"] * 4)
 
     def test_model_name_refused_with_all(self):
-        done = subprocess.run([sys.executable, CLI, "--file", "x.pcap", "--model", "all",
-                               "--model-name", "llama3:8b"], cwd=HERE, capture_output=True, text=True, timeout=300)
+        done = subprocess.run(_bin_cmd(CLI, "--file", "x.pcap", "--model", "all",
+                                       "--model-name", "llama3:8b"), cwd=HERE, capture_output=True, text=True, timeout=300)
         self.assertEqual(done.returncode, 2)
         self.assertIn("--model-name cannot be used with --model all", done.stderr)
 

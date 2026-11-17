@@ -299,12 +299,28 @@ func TestExtractCreateSkillFlagVariants(t *testing.T) {
 		{[]string{"--create-skill"}, guide.DefaultSkillDir(), true, 0},
 		{[]string{"--create-skill", "/tmp/out", "--json"}, "/tmp/out", true, 1},
 		{[]string{"--create-skill=/tmp/eq"}, "/tmp/eq", true, 0},
+		{[]string{"--create-skill="}, guide.DefaultSkillDir(), true, 0},
 		{[]string{"--create-skill", "--env-file", "/tmp/e"}, guide.DefaultSkillDir(), true, 2},
 		{[]string{"--file", "a.pcap", "--", "--create-skill"}, "", false, 4},
 	} {
 		dir, en, rem := guide.ExtractCreateSkillFlag(tc.args)
 		if dir != tc.wantDir || en != tc.wantEn || len(rem) != tc.wantRem {
 			t.Fatalf("ExtractCreateSkillFlag(%v) = (%q, %v, %v)", tc.args, dir, en, rem)
+		}
+	}
+
+	protoDir, protoEn, rem := guide.ExtractOptionalFlag([]string{"--fetch-grpc-protos", "/tmp/p", "--verbose"}, "--fetch-grpc-protos", "/default/p")
+	if protoDir != "/tmp/p" || !protoEn || len(rem) != 1 || rem[0] != "--verbose" {
+		t.Fatalf("unexpected ExtractOptionalFlag: dir=%q en=%v rem=%v", protoDir, protoEn, rem)
+	}
+	flags := guide.DefaultCLIFlags()
+	seenFlags := make(map[string]bool, len(flags))
+	for _, f := range flags {
+		seenFlags[f.Flags] = true
+	}
+	for _, want := range []string{"--model", "--provider", "--model-name", "--quality", "--mos", "--stream", "--partial", "--batch-dir", "--batch-mode", "--batch-workers", "--fetch-grpc-protos", "--verbose"} {
+		if !seenFlags[want] {
+			t.Fatalf("DefaultCLIFlags missing %s", want)
 		}
 	}
 }

@@ -39,6 +39,8 @@ class StdioSession:
         cmd = [sys.executable, script]
         if script == SERVER and os.environ.get("SONIC_MCP_BINARY"):
             cmd = [os.environ["SONIC_MCP_BINARY"]]
+        elif script == STUB_SERVER and os.environ.get("SONIC_MCP_STUB_BINARY"):
+            cmd = [os.environ["SONIC_MCP_STUB_BINARY"]]
         self.proc = subprocess.Popen(cmd, cwd=HERE, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         self.stdout = bytearray()

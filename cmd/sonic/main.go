@@ -98,8 +98,14 @@ func runDump(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 }
 
 func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	return runCommandWithDeps(ctx, args, stdout, stderr, defaultLLMRuntimeDeps())
+}
+
+func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Writer, deps llmRuntimeDeps) int {
 	skillDir, createSkill, cleanArgs := guide.ExtractCreateSkillFlag(args)
+	protoDir, fetchProtos, cleanArgs := extractFetchProtosFlag(cleanArgs)
 	var o cliOptions
+	var lo llmCLIOptions
 	fs := flag.NewFlagSet("sonic", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&o.file, "file", "", "pcap/pcapng file path")
@@ -125,6 +131,7 @@ func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) in
 	fs.StringVar(&o.aaaSecrets, "aaa-secrets", "", "AAA shared secret file path")
 	fs.StringVar(&o.espSA, "esp-sa", "", "IPsec SA file path for ESP decryption")
 	fs.StringVar(&o.envFile, "env-file", "", "dotenv file to read API keys from when unset in process env ($SONIC_ENV_FILE)")
+	registerLLMFlags(fs, &lo)
 
 	if err := fs.Parse(cleanArgs); err != nil {
 		return 2
@@ -137,9 +144,31 @@ func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		}
 		return guide.CreateSkillCommand(skillDir, specs, "sonic", guide.DefaultCLIFlags(), stdout, stderr)
 	}
+	if !validateLLMOptions(lo, stderr) {
+		return 2
+	}
+	creds, credCode := loadCredentialsForCLI(o.envFile, stderr)
+	if credCode != 0 {
+		return credCode
+	}
+	if fetchProtos {
+		return runFetchProtos(ctx, protoDir, o.asJSON, deps, stdout, stderr)
+	}
+	if lo.batchDir != "" {
+		return runBatchLLM(ctx, o, lo, creds, deps, stdout, stderr)
+	}
 	if o.file == "" {
 		fmt.Fprintln(stderr, "missing required --file flag")
-		return 1
+		return 2
+	}
+	o.networkOnly = *netOnlyFlag
+	o.detectorsCSV = *detectorsSet
+
+	if !isDeterministicMode(o, fs) {
+		if lo.stream || lo.partial {
+			return runStreamLLM(ctx, o, lo, creds, deps, stdout, stderr)
+		}
+		return runSIPAnalysisLLM(ctx, o, lo, creds, deps, stdout, stderr)
 	}
 
 	detectorsExplicit := false
@@ -148,8 +177,6 @@ func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) in
 			detectorsExplicit = true
 		}
 	})
-	o.networkOnly = *netOnlyFlag
-	o.detectorsCSV = *detectorsSet
 
 	switch {
 	case o.grpcMode:

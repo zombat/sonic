@@ -1,5 +1,61 @@
 [
   {
+    "name": "analyze_pcap",
+    "title": "Diagnose SIP calls with an LLM",
+    "description": "Diagnose the SIP calls in a capture with an LLM: a written explanation of each call\n(why it failed, dropped, rang out, or had one-way or choppy audio) plus the\ndeterministic quality score and MOS.\n\nCalls an LLM: tens of seconds to minutes, and with a cloud provider (anthropic,\nopenai, azure) the extracted SIP/SDP data (addresses, users, authentication\nheaders with their credentials masked) leaves this machine, so ask the user first. For numbers only, quick_quality_check\nanswers in seconds without an LLM. Needs SIP in the capture; for anything else use\nanalyze_network_pcap. Without provider it uses the server's SONIC_LLM_PROVIDER, else\nollama; list_llm_providers says which.\n\nReturns a JSON object with status, output.diagnostic_report (per-call findings,\noverall assessment, recommendations), quality_analysis (call_quality and\nmos_analysis when enabled), sip_data and auth_data; on failure\n{\"status\": \"error\", \"error\": \"...\"}, for example \"No SIP data found\".\nFor example, analyze_pcap(file_path=\"/captures/call.pcapng\", provider=\"ollama\", model=\"fast\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM provider: \"ollama\" (local), \"anthropic\", \"openai\" or \"azure\".\nDefault: the server's SONIC_LLM_PROVIDER, else \"ollama\". Cloud providers need\ntheir API key in the server's environment or in the env file named by\n--env-file or SONIC_ENV_FILE."
+        },
+        "model": {
+          "default": "combined",
+          "type": "string",
+          "description": "\"fast\" (small model, quickest), \"detailed\" (the provider's default model),\n\"deep\" (its most capable model, for example claude-opus-5-5) or \"combined\"\n(fast and detailed, recommended)."
+        },
+        "enable_quality": {
+          "default": true,
+          "type": "boolean",
+          "description": "Also run the deterministic call quality scoring (default true)."
+        },
+        "enable_mos": {
+          "default": true,
+          "type": "boolean",
+          "description": "Also run the RTP MOS analysis per stream (default true)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Diagnose SIP calls with an LLM",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
     "name": "quick_quality_check",
     "title": "Score SIP/RTP call quality without an LLM",
     "description": "Score SIP/RTP call quality without an LLM: the first tool for \"how good were the\ncalls in this capture\". Deterministic, a few seconds.\n\nRuns the weighted call quality scoring (network, protocol, codec and completion\nscores, an overall score and a grade A+ to F) and the RTP MOS analysis per stream\n(ITU-T G.107 E-model: average, worst and best MOS, a category, and what degraded\nit). Needs SIP in the capture; for other traffic use analyze_network_pcap. For a\nwritten diagnosis of why a call failed, follow with analyze_pcap (LLM).\n\nReturns a JSON object with status, file, quality_analysis (overall_score, grade,\nthe four component scores and their details, quality_factors,\ndegradation_factors) and mos_analysis (streams, average_mos, worst_mos, best_mos,\noverall_category, recommendations). A part that failed is reported as\nquality_error or mos_error instead. On failure {\"status\": \"error\", \"error\": \"...\"}.\nFor example, quick_quality_check(file_path=\"/captures/call.pcapng\").",
@@ -26,6 +82,119 @@
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_llm_providers",
+    "title": "List LLM providers and configuration",
+    "description": "List the LLM providers and models the LLM tools (analyze_pcap,\nanalyze_pcap_partial_streaming, analyze_batch_pcaps) can use, and whether each\ncloud API key is set. No LLM is called; instant. Call it before choosing a\nprovider other than ollama, or to see which provider an LLM tool uses when a call\ndoes not pass one.\n\nReturns a JSON object with providers (names), models (provider to its \"fast\",\n\"detailed\" and, for anthropic, \"deep\" model names), default (used when\nSONIC_LLM_PROVIDER is unset), and current_config: provider (what every LLM tool\nuses when a call does not pass one) and credentials, which says for each API key only\nwhether it is configured and where it came from (\"environment\" or the env file's\npath), never any part of the key. For example, list_llm_providers().",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "List LLM providers and configuration",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_batch_pcaps",
+    "title": "Diagnose every SIP capture in a directory with an LLM",
+    "description": "Diagnose every SIP capture in one directory with an LLM, one analyze_pcap run per\nfile, plus aggregate counts.\n\nCalls an LLM once per file: minutes for a directory. Without provider it uses the\nserver's SONIC_LLM_PROVIDER, else ollama; a cloud provider receives the SIP data, so\nask the user before choosing one. Reads files matching *.pcap* directly\nin the directory (not subdirectories). For one capture use analyze_pcap; for\nnon-SIP captures call analyze_network_pcap per file.\n\nReturns a JSON object with files (one result per capture) and aggregate\n(successful, failed, total_tokens, total_duration); on failure {\"status\": \"error\", \"error\": \"...\"},\nfor example when the directory has no pcap files.\nFor example, analyze_batch_pcaps(directory=\"/captures/branch-a\", provider=\"ollama\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "directory": {
+          "type": "string",
+          "description": "Absolute path to a directory of pcap/pcapng files on the machine\nrunning this server."
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM provider: \"ollama\", \"anthropic\", \"openai\" or \"azure\". Default: the\nserver's SONIC_LLM_PROVIDER, else \"ollama\"."
+        },
+        "model": {
+          "default": "fast",
+          "type": "string",
+          "description": "\"fast\" (default) or \"detailed\"."
+        },
+        "mode": {
+          "default": "sequential",
+          "type": "string",
+          "description": "\"sequential\" (one file at a time, default) or \"parallel\" (up to 3 at once)."
+        }
+      },
+      "required": [
+        "directory"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Diagnose every SIP capture in a directory with an LLM",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "analyze_pcap_partial_streaming",
+    "title": "SIP quality first, then the LLM diagnosis",
+    "description": "Run the deterministic SIP quality and MOS analysis, then the LLM diagnosis, on one\ncapture, and report how long each part took.\n\nCalls an LLM: tens of seconds to minutes. Without provider it uses the server's\nSONIC_LLM_PROVIDER, else ollama; a cloud provider receives the SIP data, so ask the\nuser before choosing one. The MCP result arrives once, after the LLM finishes;\nto get the numbers sooner, call quick_quality_check first and analyze_pcap after.\n\nReturns a JSON object with status, quality_analysis, mos_analysis, llm_analysis\n(the diagnostic report), timing (partial_result_ms, llm_streaming_ms, total_ms)\nand streaming_metadata (provider, tokens); on failure\n{\"status\": \"error\", \"error\": \"...\"}.\nFor example, analyze_pcap_partial_streaming(file_path=\"/captures/call.pcapng\", provider=\"openai\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "LLM provider: \"anthropic\", \"openai\" or \"azure\" stream; \"ollama\" runs\nthe same diagnosis without streaming. Default: the server's\nSONIC_LLM_PROVIDER, else \"ollama\"."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "SIP quality first, then the LLM diagnosis",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
     }
   },
   {

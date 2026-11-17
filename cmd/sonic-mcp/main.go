@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,20 +12,24 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/zombat/sonic/internal/ai"
 	"github.com/zombat/sonic/internal/guide"
+	"github.com/zombat/sonic/internal/llm"
 	"github.com/zombat/sonic/internal/mcpserver"
 	"github.com/zombat/sonic/internal/redact"
 	"github.com/zombat/sonic/internal/report"
 )
 
 type runtimeDeps struct {
-	newServer     func() (*mcpserver.Server, error)
+	loadCreds     func(envFile string) (*llm.CredentialStore, error)
+	newServer     func(deps ai.Deps) (*mcpserver.Server, error)
 	reserveStdout func() (*os.File, func(), error)
 }
 
 func defaultDeps() runtimeDeps {
 	return runtimeDeps{
-		newServer:     mcpserver.NewDefault,
+		loadCreds:     llm.NewCredentialStore,
+		newServer:     mcpserver.NewWithDeps,
 		reserveStdout: report.ReserveStdoutForProtocol,
 	}
 }
@@ -43,7 +48,17 @@ func runWithArgs(ctx context.Context, args []string, in io.Reader, out io.Writer
 		return 2
 	}
 
-	srv, err := deps.newServer()
+	creds, cerr := deps.loadCreds(envFile)
+	if cerr != nil {
+		fmt.Fprintf(errOut, "load env file: %s\n", redact.RedactText(cerr.Error()))
+		var envErr *llm.EnvFileError
+		if errors.As(cerr, &envErr) {
+			return 2
+		}
+		return 1
+	}
+
+	srv, err := deps.newServer(ai.Deps{Creds: creds})
 	if err != nil {
 		fmt.Fprintf(errOut, "initialize mcp server: %s\n", redact.RedactText(err.Error()))
 		return 1
