@@ -1,0 +1,1164 @@
+[
+  {
+    "name": "quick_quality_check",
+    "title": "Score SIP/RTP call quality without an LLM",
+    "description": "Score SIP/RTP call quality without an LLM: the first tool for \"how good were the\ncalls in this capture\". Deterministic, a few seconds.\n\nRuns the weighted call quality scoring (network, protocol, codec and completion\nscores, an overall score and a grade A+ to F) and the RTP MOS analysis per stream\n(ITU-T G.107 E-model: average, worst and best MOS, a category, and what degraded\nit). Needs SIP in the capture; for other traffic use analyze_network_pcap. For a\nwritten diagnosis of why a call failed, follow with analyze_pcap (LLM).\n\nReturns a JSON object with status, file, quality_analysis (overall_score, grade,\nthe four component scores and their details, quality_factors,\ndegradation_factors) and mos_analysis (streams, average_mos, worst_mos, best_mos,\noverall_category, recommendations). A part that failed is reported as\nquality_error or mos_error instead. On failure {\"status\": \"error\", \"error\": \"...\"}.\nFor example, quick_quality_check(file_path=\"/captures/call.pcapng\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Score SIP/RTP call quality without an LLM",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_network_pcap",
+    "title": "Analyze any capture with the network detectors",
+    "description": "Analyze any packet capture (not only VoIP) and return deterministic findings as JSON.\nThe first tool on an unknown capture.\n\nNo LLM is used: every verdict comes from decoding the packets (tshark, with scapy as\nthe fallback), in seconds for a typical capture. It reports which protocols are\npresent and runs every detector that applies. For a focused answer use\nanalyze_vpn_pcap (encryption, IPsec, DMVPN) or analyze_routing_pcap (adjacencies,\nfailover); for SIP call quality, quick_quality_check.\n\nDetectors (pass a subset in `detectors`; the default runs all but the last two):\n  - \"ipsec\": IKEv1/IKEv2 negotiation per IKE SA (outcome: established, failed,\n    no_response, auth_likely_failed, ...), the IKEv2 proposals offered and chosen\n    (encryption, PRF, integrity, DH group, weak algorithms), KE groups and\n    INVALID_KE_PAYLOAD retries, NAT detection hashes checked against the wire and\n    the move to UDP 4500, DPD liveness checks, a \"diagnosis\" per SA (ok,\n    proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing,\n    no_reply, liveness_lost, peer_lost_sa), NOTIFY errors, IKE SA collisions, rekeys,\n    ESP flows per SPI (sequence gaps, duplicates, an old SPI still used after a newer\n    one took over), NAT-T, and the encryption verdict: \"encrypted\" or\n    \"cleartext_seen\" for traffic between the same two endpoints.\n  - \"gre_nhrp\": GRE tunnels (keys, inner protocols, key mismatch), NHRP registrations\n    (spoke -> hub, result registered/refused/unanswered), hub and spoke roles,\n    resolution requests/replies, redirects (DMVPN Phase 3), error indications,\n    and spoke-to-spoke tunnels.\n  - \"dmvpn_phase3\": per redirected flow the ordered Phase 3 steps (via_hub, redirect,\n    resolution_request, resolution_reply, direct) with frames and times, the first\n    missing step and why; hub-relayed spoke traffic with no redirect; resolution\n    thrashing; and, with `hubs`, encrypted spoke-to-spoke shortcuts (IKE then direct\n    ESP) when NHRP is hidden inside ESP.\n  - \"routing\": BGP sessions (state, OPEN AS/hold time/router ID/capabilities,\n    keepalive cadence, UPDATE timing, NOTIFICATION code/subcode decoded with a hint,\n    the cause of each drop, the MSS of each SYN and SYN-ACK checked against\n    `expected_mss`, refused TCP 179), OSPF per link (hello/dead/mask/area/auth/MTU\n    mismatches, one-way neighbors, DR/BDR, hello gaps, adjacencies stuck in EXSTART\n    or EXCHANGE), EIGRP (K-value and AS mismatches, goodbyes, hold time expiry, INIT\n    restarts, queries/SIA), plus a failover_timeline.\n  - \"reachability\": ICMP echo loss/RTT per source->destination pair with outage\n    windows, ICMP unreachable/TTL-exceeded with decoded codes, ARP with no reply,\n    duplicate IPs.\n  - \"path_mtu\": ICMP Fragmentation Needed / Packet Too Big (router, next-hop MTU,\n    the probe frame it refers to), PMTUD black holes (large DF probes or TCP\n    segments that vanished with no ICMP while smaller ones got through), IP\n    fragments (complete, incomplete, overlapping), reassembly timeouts.\n  - \"esp_overhead\": per ESP SA, packet sizes against cipher families (AES-GCM,\n    AES-CBC with SHA1/SHA2, 3DES, NULL), inner size bounds, overhead in tunnel and\n    transport-over-GRE mode, tunnel MTU fit, ESP fragmented after encryption.\n    Estimates from sizes only; ESP is encrypted.\n  - \"tcp\": per connection: SYN without SYN-ACK, refused, retransmissions (fast or\n    timeout), gaps, duplicate ACKs, zero window, window full, RSTs, MSS/window\n    scale, RTT and RFC 6298 RTO, and a verdict (no_answer, refused,\n    receiver_buffer_exhausted, loss_on_path, receive_window_limited, reset, healthy).\n  - \"tls\": ClientHello SNI, versions, suites, ALPN, groups; ServerHello choice;\n    TLS 1.2 certificate (subject, issuer, validity at capture time); cleartext\n    alerts; an optional baseline (see options).\n  - \"qos\": DSCP per flow, GRE inner vs outer DSCP, ESP outer DSCP per SA, RTP\n    streams with loss, RFC 3550 jitter, DSCP and an E-model MOS estimate, ECN CE.\n  - \"conversations\": protocol mix by packets and bytes, top conversations, top talkers.\n  - Run only when named: \"cleartext_audit\" (audit_cleartext_pcap) and \"convergence\"\n    (analyze_convergence_pcap).\n\nReturns a JSON object: status \"success\", schema, overall_status (\"ok\", \"warning\",\n\"problem\" or \"not_present\"; the worst detector status, conversations and SIP\nexcluded), protocols_present, detectors_run, verdicts (detector to one sentence),\nissues (severity, stable code, message, Wireshark frame numbers, detector; errors\nfirst), timeline (t in seconds from the first frame, time, protocol, event, detail,\nframe), capture (backend, packets, duration, missing tshark fields, warnings), one\nsection per detector, each with status, verdict and issues, and sip. Lists are cut\nat max_items; issues_omitted and timeline_omitted count the rest. On failure\n{\"status\": \"error\", \"error\": \"...\"}, plus valid_detectors for an unknown detector.\n\nLimits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is\nencrypted, so the child SA proposal, identities and AUTH are never visible: a PSK\nmismatch shows only as a small encrypted IKE_AUTH response or as retransmissions with\nno reply (a labelled heuristic). DPD is recognised by message size; INVALID_SPI\nnormally travels encrypted. ESP with NULL encryption cannot be told apart from real\nencryption without keys. With tunnel protection, GRE, NHRP and BGP are inside ESP on\nthe transport link. OSPFv3 and IS-IS are not decoded.\n\nFor example, analyze_network_pcap(file_path=\"/captures/hub-wan.pcap\") or\nanalyze_network_pcap(file_path=\"/captures/r1-r2.pcap\", detectors=[\"routing\"]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "detectors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional list from [\"ipsec\", \"gre_nhrp\", \"dmvpn_phase3\", \"routing\",\n\"reachability\", \"path_mtu\", \"esp_overhead\", \"tcp\", \"tls\", \"qos\", \"conversations\"]\n(the default), plus \"cleartext_audit\" and \"convergence\", which run only when\nnamed. Unknown names return an error listing the valid ones."
+        },
+        "peers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional list of IP addresses (for example the WAN addresses of the hub\nand spokes). The encryption verdict then judges all traffic between any two\nof them. Without it, the verdict judges every pair that exchanged IKE/ESP,\nplus GRE tunnel endpoints."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied before detection,\nfor example \"ip.addr==192.0.2.1\" or \"not arp\". Needs tshark."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read (for very large captures)."
+        },
+        "include_sip": {
+          "default": true,
+          "type": "boolean",
+          "description": "When SIP is present, also run the existing SIP quality scoring\n(no LLM) and attach it under \"sip\". For full SIP call analysis use analyze_pcap."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on the length of each list in the result (default 25)."
+        },
+        "options": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional per-detector settings: {\"esp_overhead\": {\"transport_mtu\": 1500,\n\"tunnel_mtu\": 1400, \"gre_header_bytes\": 8}, \"tls\": {\"baseline\": {...}}}, the baseline\nkeys being those of analyze_data_plane_pcap's tls_baseline; also {\"dmvpn_phase3\":\n{\"hubs\": [hub NBMA IPs]}, \"routing\": {\"expected_mss\": 1360}, \"cleartext_audit\":\n{\"allow\": [tokens]}, \"convergence\": {\"event_time\", \"failed_peer\", \"hold_time\",\n\"silence_s\"}}. Unknown keys are refused."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Analyze any capture with the network detectors",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_vpn_pcap",
+    "title": "Prove VPN encryption and IPsec/DMVPN setup",
+    "description": "Prove from packets whether VPN traffic between sites is encrypted and whether the\nIPsec and DMVPN overlay formed. Deterministic, no LLM.\n\nUse it on a capture of a WAN/underlay link (between hub and spoke routers). It runs\nthe \"ipsec\", \"gre_nhrp\" and \"dmvpn_phase3\" detectors of analyze_network_pcap and puts\nthe answers first:\n\n  - encryption_verdict: \"encrypted\" (only ESP/IKE/NAT-T keepalives between the\n    peers), \"cleartext_seen\" (some ICMP, GRE without ESP, TCP/UDP payload or routing\n    protocol between the same endpoints), \"no_esp\" (IKE seen but no ESP: the\n    tunnel never carried traffic or failed), or \"not_present\".\n  - verdict: one sentence, for example \"all inter-site traffic encrypted: 2 peer\n    pair(s), 480 ESP packets, no cleartext between the same endpoints\" or\n    \"cleartext seen: icmp 198.51.100.2->192.0.2.1 4 packets\".\n  - negotiation_verdict: IKE SA outcomes (established, failed with the NOTIFY name,\n    no_response, auth_likely_failed).\n  - overlay_verdict: NHRP registrations per hub (who registered, who was refused).\n  - phase3_verdict: the DMVPN Phase 3 sequence per redirected flow (which step is\n    missing when one is), or, with `hubs`, the encrypted spoke-to-spoke shortcuts.\n  - ike_diagnoses: one line per IKE SA with a stable code: ok, proposal_mismatch,\n    dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing, udp_4500_blocked,\n    no_reply, no_esp_after_auth, liveness_lost, peer_lost_sa. Each SA in\n    ipsec.ike_sas also has \"negotiation\": proposals_offered and proposal_chosen\n    (encryption, prf, integrity, dh_group, weak), ke_groups_offered,\n    invalid_ke_payload, nat_detection (nat_detected, translated, moved_to_udp_4500)\n    and liveness (DPD checks, interval_s_by_sender, unanswered_checks).\n\nWhere to capture: on the physical/underlay link, ESP proves encryption. If you\ncapture on the tunnel interface itself you see decrypted traffic, and GRE without\nESP on the underlay means the tunnel has no IPsec protection. Seconds for a typical\ncapture.\n\nReturns a JSON object with status, encryption_verdict, verdict, negotiation_verdict,\noverlay_verdict, phase3_verdict and ike_diagnoses first, then ipsec (peer_pairs,\ncleartext, ike_sas, esp_flows, nat_traversal, issues), gre_nhrp (hubs, spokes,\nregistrations, resolutions, redirects, error_indications, tunnels,\nspoke_to_spoke_tunnels, issues), dmvpn_phase3 (flows, hub_relayed_without_redirect,\nresolution_thrashing, encrypted_shortcuts, cannot_show, issues), issues, timeline\nand capture. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: IKE_AUTH and everything after it is encrypted. A PSK mismatch is never\nvisible as a hash: it shows as auth_failed (a small encrypted IKE_AUTH response) or\nauth_no_reply (retransmissions, no reply). On a protected DMVPN the NHRP steps are\ninside ESP; only the IKE and ESP between spokes can be checked, given `hubs`.\n\nFor example, analyze_vpn_pcap(file_path=\"/captures/hub-wan.pcap\",\npeers=[\"192.0.2.1\", \"198.51.100.2\"]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "peers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional list of the VPN endpoints' WAN IP addresses. All traffic between\nany two of them is judged. Without it, pairs that spoke IKE/ESP and GRE\nendpoints are judged."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first (needs tshark)."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        },
+        "hubs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional hub NBMA (WAN) addresses. With them, an IKE SA between two other\naddresses is checked as a spoke-to-spoke shortcut (IKE_SA_INIT, IKE_AUTH,\ndirect ESP)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Prove VPN encryption and IPsec/DMVPN setup",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_routing_pcap",
+    "title": "Check routing adjacencies, reachability and failover",
+    "description": "Check routing protocol health (BGP, OSPF, EIGRP) and reachability from a capture,\nand read a failover in order. Deterministic, no LLM.\n\nUse it to prove that adjacencies formed, to find why they did not (mismatched\ntimers, AS, K-values, MTU, refused TCP 179, NOTIFICATION codes), or to show how\nrouting reconverged after a router or link failed. It runs the \"routing\" and\n\"reachability\" detectors of analyze_network_pcap and puts first:\n\n  - verdict: per protocol, for example \"BGP: 1 of 3 session(s) established at\n    capture end, 1 session reset(s); problems: BGP_NOTIFICATION.\"\n  - reachability_verdict: ping loss per pair, ICMP errors, ARP without replies.\n  - failover_timeline: ordered events with \"t\" (seconds from the first frame):\n    BGP established/notification/down/End-of-RIB/withdraw, OSPF hello_gap,\n    neighbor_down/neighbor_up, dr_change, router_silent, EIGRP goodbye,\n    hold_expired, adjacency_init, query.\n  - ping_outages: runs of consecutive unanswered pings with start, recovery time\n    and duration. Compare them with the timeline to measure convergence time.\n\nCapture both sides of an adjacency when you can: a link capture shows hellos from\nevery router on that link. Issue codes are stable strings, for example\nOSPF_HELLO_INTERVAL_MISMATCH, OSPF_MTU_MISMATCH, OSPF_EXSTART_STUCK,\nOSPF_EXCHANGE_STUCK, OSPF_ONE_WAY, BGP_TCP_REFUSED, BGP_PEER_SILENT,\nBGP_MSS_NOT_CLAMPED, EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT, ICMP_LOSS.\nEach BGP session lists \"downs\" with a cause (hold_timer_expired, notification,\nbfd_down, tcp_rst, tcp_fin, hold_timer_expired_inferred) and \"tcp_mss\" per\nconnection; each OSPF adjacency has \"database_exchange\" (stuck: exstart or\nexchange, and the cause, for example the DBD MTU mismatch). To time a failover\nfrom an event, analyze_convergence_pcap measures it directly.\nSeconds for a typical capture.\n\nReturns a JSON object with status, verdict, reachability_verdict,\nfailover_timeline and ping_outages first, then routing (bgp sessions, ospf links,\neigrp links, issues), reachability (echo, icmp_errors, arp_unanswered), issues,\ntimeline and capture. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nFor example, analyze_routing_pcap(file_path=\"/captures/r1-r2-failover.pcap\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first (needs tshark),\nfor example \"ospf or icmp\"."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        },
+        "expected_mss": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional MSS the BGP SYN and SYN-ACK should carry (for example 1360\nfor \"ip tcp adjust-mss 1360\"). The value is what crossed the capture point;\nadjust-mss rewrites SYNs only where they cross the interface it is on."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Check routing adjacencies, reachability and failover",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "audit_cleartext_pcap",
+    "title": "Assert a transport link carried no cleartext",
+    "description": "Assert that a crypto transport link carried nothing but allowed traffic: every frame\nis checked against an allowlist and the audit passes or fails. Deterministic, no LLM,\nseconds for a typical capture.\n\nUse it as a gate after capturing a link: one leaked GRE, BGP, OSPF, ICMP, ARP,\ncleartext management session or other frame outside the allowlist fails the audit and\nis reported by protocol and address pair with its frame numbers. To explain an IPsec\nnegotiation instead, use analyze_vpn_pcap.\n\nThe default allowlist is [\"encrypted\"]: IPsec, plus SSH and TLS sessions whose\nhandshake shows real encryption (the TLS suite in the ServerHello; the SSH cipher from\nboth KEXINITs). A NULL, anonymous, export or integrity-only TLS suite, or the SSH\ncipher none, counts as cleartext and fails; TLS 1.1 and older, RC4/3DES, arcfour and\nCBC pass with a WEAK_ENCRYPTION warning; a session whose handshake is not in the\ncapture passes only as encrypted, unverified (ENCRYPTION_UNVERIFIED), never clean. To\nrequire the IPsec tunnel (the WAN of an IPsec or DMVPN network), pass allow=[\"crypto\"]:\nSSH and TLS then fail as ENCRYPTED_OUTSIDE_ALLOWLIST.\n\nAllowlist tokens: encrypted (the default: crypto plus ssh and tls), crypto (IPsec\nonly: esp, ike, nat-t), esp (IP 50 and ESP-in-UDP), ike (UDP 500/4500), nat-t\n(ESP-in-UDP, IKE on 4500, keepalives), ah, arp, icmp, icmpv6, routing (= bgp, ospf,\neigrp, rip, ldp, bfd, pim, vrrp, hsrp) or each by name, gre, l2-control (= cdp, stp,\nlldp, lacp, loop: Cisco keepalives, EtherType 0x9000), dhcp, dns, ntp, ssh, netconf,\ntls, http2, snmp, syslog, tacacs, radius, tcp:N, udp:N, proto:N, ethertype:0xNNNN.\nScope a token to addresses with @: \"icmp@203.0.113.1\" (ICMP only to or from the\nprovider), \"bgp@198.51.100.0/30\". A Cisco router's transport link also carries\nloopback keepalives and CDP: add \"l2-control\" to accept them.\n\nReturns a JSON object: status \"success\", passed (true or false), clean (a pass with no\nweak or unverified session), result (\"pass\" or \"fail\"), verdict, allowlist,\nframes_audited, frames_allowed, frames_outside_allowlist, cleartext_frames,\nprotection, encryption (SSH/TLS sessions by state: encrypted, weak, unverified,\ncleartext, not_started), first_violation_frame, by_protocol (protocol, category,\npackets, bytes, pairs, first_frame), violations (protocol, category, src, dst,\npackets, bytes, first_frame, first_t, last_frame, last_t, frames, hint, reasons),\ntcp_sessions (with encryption: state, cipher, version, reason), allowed_by_rule,\nissues, cannot_show and capture. Categories: crypto, tunnel_without_encryption (GRE\noutside ESP), routing, icmp, layer2, authenticated_only (AH), encrypted,\nunencrypted_session (SSH/TLS that negotiated no encryption), cleartext_management,\ncleartext. An empty capture fails. On failure {\"status\": \"error\", \"error\": \"...\"},\nfor example for an unknown allowlist token.\n\nLimits (also in cannot_show): only frames that crossed this capture point and that\nthe capture kept are audited; ESP with NULL or weak encryption passes, because ESP\npayload is opaque; a non-first IP fragment follows its datagram's first fragment,\nand is reported as udp (fail-closed) when that first fragment was not captured.\n\nFor example, audit_cleartext_pcap(file_path=\"/captures/mgmt.pcap\") or, for an IPsec\ntransport link, audit_cleartext_pcap(file_path=\"/captures/br1-wan.pcap\",\nallow=[\"crypto\", \"l2-control\", \"icmp@172.16.11.1\"]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "allow": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional allowlist tokens (see above). An unknown token is an error."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first (needs tshark).\nNarrowing the capture also narrows what the audit proves."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read (the audit then covers only those)."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on the violations list (default 25; the counts stay complete)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Assert a transport link carried no cleartext",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_convergence_pcap",
+    "title": "Time a failover and name what drove it",
+    "description": "Measure a failover from one capture and say what drove it. Deterministic, no LLM,\nseconds for a typical capture.\n\nFrom an event (for example the moment a runbook stopped a link or a router) or,\nwithout one, from the first sign of failure, it measures the time to detection, to\nthe first BGP UPDATE or withdrawal on the surviving path, and to traffic resuming.\nSignals: the last ESP/IKE from a peer before it went quiet; IKEv2 DPD checks left\nunanswered and the last retransmission (DPD giving up); BGP NOTIFICATIONs (Hold Timer\nExpired, Cease/BFD Down), RST or FIN, and a hold expiry inferred from silence; BGP\nUPDATEs on sessions not involving the failed peer; ping outages and their recovery;\nand on encrypted transport captures the surviving tunnels' ESP rate taking over the\nfailed tunnel's. For adjacency health without an event, use analyze_routing_pcap.\n\nReturns a JSON object: status \"success\", verdict, driver (mechanism \"bfd\",\n\"bgp_hold_timer\", \"dpd\", \"explicit_close\" or \"undetermined\", and reason),\nfailed_peer and failed_peer_source, event_time, measurements (origin, origin_t,\nfirst_failure_sign, detection, first_update_on_surviving_path, traffic_resumed, and\nevent_to_first_failure_sign_s, event_to_detection_s, event_to_first_update_s,\nevent_to_traffic_resumed_s), timeline (t, time, delta_s, phase: event, failure,\nteardown, detection, reaction or recovery, signal, peer, detail, frame),\ntraffic_shift, issues, cannot_show and capture. Deltas are seconds from the event (or\nthe first failure sign); a negative first-sign delta means the failure showed before\nthe given event time. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits (also in cannot_show): on a protected tunnel BGP and user traffic are inside\nESP, so the reaction is inferred from ESP rates and the driver from timing against\nhold_time; DPD is recognised by size; the event time comes from another clock than\nthe capture, so a skew shifts every delta; only this capture point is seen.\n\nFor example, analyze_convergence_pcap(file_path=\"/captures/br1-wan.pcap\",\nevent_time=\"+30\") or analyze_convergence_pcap(file_path=\"/captures/core1-wan.pcap\",\nevent_time=\"2026-10-27T19:49:30Z\", failed_peer=\"172.16.1.2\", hold_time=30).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "event_time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional time of the event: epoch seconds, seconds from the first frame\n(\"30\" or \"+30\"), or ISO-8601 with a zone (\"2026-10-27T19:49:30Z\"). Without it\nthe earliest failure sign is the start, and a quiet period counts only when the\nother side kept sending into it."
+        },
+        "failed_peer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional address of the peer that failed (a hub's WAN address or a BGP\nneighbor). Without it, it is inferred and failed_peer_source says how."
+        },
+        "hold_time": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional BGP hold time in seconds, to infer a hold-timer driven failover\nfrom timing when BGP is inside ESP."
+        },
+        "silence_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional seconds of silence that count as a peer stopping. Default:\ntwice the direction's usual longest gap, at least 3 s, and at least 1.5 DPD\nintervals when DPD is periodic."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first (needs tshark)."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Caps the timeline at four times this (default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Time a failover and name what drove it",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_data_plane_pcap",
+    "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS",
+    "description": "Look into the data plane of one capture: path MTU and fragmentation, ESP overhead,\nTCP health per connection, TLS handshakes against a baseline, and QoS markings with\nRTP quality. Use it after analyze_network_pcap when the question is about packets\ngetting through (MTU, drops, retransmissions, TLS policy, DSCP, voice quality).\n\nDeterministic, no LLM, one read of the capture: seconds for a typical capture. Needs\nonly file_path; pass tunnel_mtu (the tunnel's ip mtu, for example 1400) to check that\na full-size packet still fits transport_mtu once encrypted, and tls_baseline (for\nexample {\"versions\": [\"TLS1.3\"]}) to judge TLS against a policy. Runs the path_mtu,\nesp_overhead, tcp, tls and qos detectors of analyze_network_pcap.\n\nReturns a JSON object with status, overall_status and one verdict per detector first\n(path_mtu_verdict, esp_overhead_verdict, tcp_verdict, tls_verdict, qos_verdict), then\nthe sections: path_mtu (frag_needed with the advertised MTU and probe frame,\nblack_holes with the range the path MTU lies in, fragments), esp_overhead (flows with\nthe cipher families their sizes fit, overhead per mode, outer_fragmentation), tcp\n(connections, each with a verdict: no_answer, refused, receiver_buffer_exhausted,\nloss_on_path, receive_window_limited, reset, healthy), tls (sessions: SNI, offered and\nchosen version and suite, certificate, alerts, baseline_pass) and qos (marked flows,\nGRE and ESP marking, rtp_streams with loss, jitter, DSCP and a MOS estimate). Each\nsection has issues with stable codes (PMTU_BLACK_HOLE, ESP_OUTER_FRAGMENTED,\nTCP_ZERO_WINDOW, TLS_BASELINE_VERSION, QOS_RTP_NOT_EF, ...), Wireshark frames, and\nlimits. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: only what crossed this capture point (a black hole means no ICMP was seen\nhere); the ESP cipher and mode are estimates from sizes, since ESP is encrypted; the\nTLS 1.3 certificate is encrypted; QUIC, DTLS and STARTTLS are not decoded; RTP\nlatency needs two capture points (correlate_pcaps).\n\nFor example, analyze_data_plane_pcap(file_path=\"/captures/br1-wan.pcap\", tunnel_mtu=1400)\nor analyze_data_plane_pcap(file_path=\"/captures/dmz.pcap\", tls_baseline={\"versions\": [\"TLS1.3\"]}).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "tls_baseline": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional TLS policy: {\"versions\": [\"TLS1.3\"]}, or {\"min_version\": \"TLS1.2\",\n\"cipher_suites\": [\"TLS_AES_128_GCM_SHA256\", \"0x1302\"], \"require_sni\": true,\n\"alpn\": [\"h2\"], \"require_forward_secrecy\": true, \"forbid_weak_offers\": true}.\nWithout it, versions below TLS 1.2 and weak chosen suites are still flagged."
+        },
+        "transport_mtu": {
+          "default": 1500,
+          "type": "integer",
+          "description": "MTU of the link that carries ESP (default 1500)."
+        },
+        "tunnel_mtu": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional ip mtu of the tunnel (for example 1400), the largest inner packet."
+        },
+        "gre_header_bytes": {
+          "default": 8,
+          "type": "integer",
+          "description": "GRE header inside ESP in transport mode: 8 with a tunnel key\n(default, usual for DMVPN), 4 without."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first (needs tshark)."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Inspect the data plane: MTU, ESP, TCP, TLS, QoS",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "correlate_pcaps",
+    "title": "Follow packets across two or more captures",
+    "description": "Follow the same packets through two or more captures taken at different points\n(inside and outside of a NAT router, WAN1 and WAN2, before and after a firewall) and\nsay what happened between them. Use it whenever you have two capture points: it shows\nNAT translations, where a reply was dropped, asymmetric paths and probes an ACL stopped,\nwhich one capture cannot.\n\nDeterministic, no LLM. Needs two or more {\"path\", \"label\"} entries with unique labels,\ntaken at the same time (clock_offsets_s corrects clocks that differ). Each capture is\nread once and the captures are merged by timestamp as a stream: a packet waits at most\nwindow_s for its copy and at most max_packets_held packets wait at once (the oldest are\nevicted early and counted), so memory depends on the window, not the capture size;\nseconds for typical lab captures. Packets are recognised by fields NAT leaves alone:\nESP SPI and sequence, TCP sequence/acknowledgement numbers with flags, length and a\npayload hash, UDP length and payload hash, ICMP echo sequence with IP identification.\nGRE carrying IPv4 is matched on the inner packet.\n\nReturns a JSON object with status, verdict, captures (label, packets, unmatched_packets,\nstart, end), matching (window_s, max_packets_held, evicted_early, packets_matched), nat\n(each translation: at_<label> endpoints, remote, kind, packets, frames), connections\n(per conversation, linked through NAT, a verdict: reply_lost such as \"the SYN-ACK was\nlast seen at outside and never reached inside\", partial_loss, asymmetric such as \"out\nthrough wan1, back through wan2\", seen_only_at for a probe stopped after a device while\nother traffic between the same addresses crossed it, not_on_other_paths, ok), transit\n(time between sightings and TTL decrement per capture pair), dscp_changes, issues and\nlimits. Frames are given per capture label. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: a device that randomizes TCP sequence numbers or rewrites payloads breaks\nmatching for those flows; times include clock differences between capturing hosts; a\ncapture point that was not recording at the time is not counted as missing a packet.\n\nFor example, correlate_pcaps(captures=[{\"path\": \"/captures/edge-inside.pcap\", \"label\": \"inside\"},\n{\"path\": \"/captures/edge-outside.pcap\", \"label\": \"outside\"}]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "captures": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "Two or more {\"path\": \"/abs/file.pcap\", \"label\": \"inside\"}; labels unique. List\nthem in path order when they lie on one path."
+        },
+        "window_s": {
+          "default": 2.0,
+          "type": "number",
+          "description": "Seconds a packet waits for its copy in another capture (default 2.0, at most 60)."
+        },
+        "max_packets_held": {
+          "default": 200000,
+          "type": "integer",
+          "description": "Cap on packets held for matching at once (default 200000, at least 100)."
+        },
+        "clock_offsets_s": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional {label: seconds} added to that capture's timestamps."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read from each capture."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        }
+      },
+      "required": [
+        "captures"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Follow packets across two or more captures",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "merge_pcap_timelines",
+    "title": "Merge capture timelines and time a failover",
+    "description": "Merge the captures of one chaos or failover run into a single event timeline and\nmeasure the time between chosen events against design thresholds. Use it for a\nfailover run: how long from a link or router going down to routing reconverging and\npings recovering, and whether that is within the threshold.\n\nDeterministic, no LLM. Needs one or more {\"path\", \"label\"} entries; each capture is\nanalyzed once by every analyze_network_pcap detector (seconds per capture), and their\nevents (BGP down/established, OSPF neighbor_down/up, EIGRP goodbye, ping outages, ICMP\nerrors, Fragmentation Needed, TCP no_answer/RST/zero window, TLS alerts, ESP\nfragmentation, ...) are merged by absolute timestamp, each tagged with its capture\nlabel and detector. A measurement picks two events with selectors, for example\n{\"name\": \"wan1 failover\", \"from\": {\"capture\": \"wan1\", \"event\": \"down\"}, \"to\": {\"event\":\n\"established\", \"contains\": \"10.255.0.2\"}, \"max_s\": 30}; selector keys are capture,\ndetector, protocol, event, contains (substring of the detail) and occurrence (\"first\",\n\"last\" or a 1-based number), and \"to\" is searched after \"from\". Without measurements,\nevery ping outage and each routing down event paired with the next up event of the same\nprotocol is measured against failover_max_s. output_path writes the result as JSON so\nthe run keeps it; it is the only tool that writes a file, and only there.\n\nReturns a JSON object with status, verdict, origin (time of t=0, the earliest capture\nstart), captures (label, packets, start, end, overall_status, events, verdicts),\nmeasurements (name, from, to, delta_s, max_s, verdict within, exceeded, below_min or\nnot_found, detail), auto_measurements, timeline (t, time, capture, detector, protocol,\nevent, detail, frame), timeline_omitted, limits and written_to. On failure\n{\"status\": \"error\", \"error\": \"...\"}, for example for an unknown selector key or an\nexisting output_path without overwrite.\n\nLimits: events are packet timestamps at each capture point (millisecond precision),\nonly as comparable as the capturing clocks; timers inside a router between packets are\ninvisible.\n\nFor example, merge_pcap_timelines(captures=[{\"path\": \"/run/wan1.pcap\", \"label\": \"wan1\"},\n{\"path\": \"/run/lan.pcap\", \"label\": \"lan\"}], failover_max_s=30, output_path=\"/run/failover.json\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "captures": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array",
+          "description": "One or more {\"path\": \"/abs/file.pcap\", \"label\": \"wan1\"}; labels unique."
+        },
+        "measurements": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional list of {\"name\", \"from\", \"to\", \"max_s\", \"min_s\"} with selectors."
+        },
+        "detectors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional subset of analyze_network_pcap detectors (default all)."
+        },
+        "failover_max_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional threshold in seconds for the automatic measurements."
+        },
+        "clock_offsets_s": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional {label: seconds} added to that capture's timestamps."
+        },
+        "max_events": {
+          "default": 500,
+          "type": "integer",
+          "description": "Cap on timeline events returned (default 500)."
+        },
+        "output_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional absolute path ending in .json to write the result to; refused if\nthe file exists (unless overwrite) or its directory does not."
+        },
+        "overwrite": {
+          "default": false,
+          "type": "boolean",
+          "description": "Replace an existing output_path (default false)."
+        }
+      },
+      "required": [
+        "captures"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Merge capture timelines and time a failover",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_grpc_pcap",
+    "title": "Troubleshoot gRPC, gNMI and gNOI from a capture",
+    "description": "Troubleshoot gRPC from a capture: gNMI, gNOI, gRIBI, P4Runtime or any gRPC service.\nDeterministic, no LLM, a few tshark passes: seconds for a typical capture. Needs\ntshark (Wireshark's HTTP/2, HPACK, gRPC, TLS and protobuf dissectors do the decoding).\n\nFinds gRPC wherever it runs: cleartext HTTP/2 by its connection preface on any port,\nTLS offering ALPN h2, and the well-known gRPC ports (9339 gNMI/gNOI, 9340 gRIBI, 9559\nP4Runtime, 57400 SR Linux and IOS XR, 6030 Arista, 50001 Stratum, 50051, 50052, 32767).\nEach flow is named by its service port (the SYN's destination). Per RPC: method, the\ngrpc-status by name and grpc-message, request and response message counts and sizes,\ntime to the first response and to the trailers, and a diagnosis. Per connection:\nSETTINGS, RST_STREAM and GOAWAY with their error codes (too_many_pings named),\nflow-control stalls, PING round trips, frames or header lists over the peer's limits,\nTCP resets with RPCs open. gNMI requests and responses are decoded (paths, encoding\nagainst the Capabilities answer, Subscribe mode, notifications, in-band errors) and\ngNOI system.Time gives the target's clock. Credentials in gRPC metadata (username,\npassword, authorization, x-api-key, tokens) are found through HPACK and reported by key\nonly: values are never returned. TLS without keys shows SNI, ALPN, version, the TLS 1.2\ncertificate (subject, issuer, validity, DNS and IP SANs) and alerts with what they mean.\nTLS is decrypted with a key log (keylog_file) or with the secrets a pcapng carries in a\nDecryption Secrets Block (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng), with\nno key log needed; tls_decryption then says, per TLS session, whether it was decrypted\nand, when not, why (no secret for its ClientHello random, no ClientHello captured, only\nthe handshake secrets), with a total.\n\nReturns a JSON object: status \"success\", schema, overall_status, verdict, summary\n(connections, rpcs, rpc_status counts, cleartext_credentials), connections (flow,\nservice, transport, protocol, services, settings, pings, goaways, rst_streams,\nflow_control, credential_keys, metadata_keys, tls), rpcs (flow, stream_id, method,\nfamily, grpc_status, grpc_status_name, grpc_message, request, response, timing,\ndecoded, diagnosis, frames), credentials (flow, key, cleartext, requests, frames,\nvalue \"masked\"), tls_decryption (verdict, decrypted, total, secrets_source, sessions:\nflow, decrypted, secret_in, labels, reason), issues (stable codes such as\nGRPC_UNAUTHENTICATED, GRPC_UNIMPLEMENTED, CLEARTEXT_CREDENTIAL, CREDENTIAL_IN_METADATA,\nHTTP2_RST_STREAM, HTTP2_GOAWAY, HTTP2_TOO_MANY_PINGS, HTTP2_FLOW_CONTROL_STALL, TLS_ALERT,\nTLS_CERT_NO_IP_SAN, TLS_SESSION_NOT_DECRYPTED, TLS_SECRETS_IN_CAPTURE, with frames),\ntimeline, capture (tshark version, decode_as, keylog_file_given, tls_secrets,\nreread_without_out_of_order, proto_paths) and limits. On failure\n{\"status\": \"error\", \"error\": \"...\"}.\n\nLimits (also in limits): TLS-wrapped gRPC without a key log shows only the handshake\n(TLS 1.3 encrypts the certificate too); a capture that starts mid-connection may leave\nHPACK headers undecodable; message values are never decoded.\n\nFor example, analyze_grpc_pcap(file_path=\"/captures/gnmi.pcap\") or\nanalyze_grpc_pcap(file_path=\"/captures/srl.pcapng\", keylog_file=\"/tmp/keys.log\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "keylog_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional TLS key log (SSLKEYLOGFILE format; gnmic writes one with\n--log-tls-secret) to decrypt TLS; passed to tshark by path, never copied to the\nresult (only its labels and ClientHello randoms are read, to say which sessions\nit covers). Not needed for a pcapng that carries its own TLS secrets."
+        },
+        "proto_paths": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional directories of .proto files for Wireshark's protobuf dissector\n(default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from\n`sonic.py --fetch-grpc-protos`). Without them gNMI is still decoded."
+        },
+        "ports": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional extra TCP ports to decode as HTTP/2."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (connections; RPCs at four times this; default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Troubleshoot gRPC, gNMI and gNOI from a capture",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_restconf_pcap",
+    "title": "Troubleshoot RESTCONF and REST from a capture",
+    "description": "Troubleshoot RESTCONF (RFC 8040) and REST over HTTP/1.1 and HTTP/2 from a capture.\nDeterministic, no LLM, a few tshark passes: seconds for a typical capture. Needs tshark\n(Wireshark's HTTP, HTTP/2, HPACK and TLS dissectors do the decoding).\n\nReads HTTP on the well-known HTTP(S) ports (80, 443, 8080, 8443, ...), on a TLS session\noffering ALPN h2 or http/1.1, and on a cleartext HTTP/2 preface on any port. TLS is\ndecrypted with a key log (keylog_file) or the secrets a pcapng carries in a Decryption\nSecrets Block (editcap --inject-secrets tls,KEYLOG in.pcap out.pcapng), with no key log\nneeded; without one, a TLS session shows only its handshake.\n\nPer request (paired to its response): method, path, HTTP status and phrase, the time\nfrom request to response, request and response Content-Type, response body size, a\nLocation on a 201 Created, whether it is RESTCONF, and for a RESTCONF error the\nietf-restconf:errors fields (error-type, error-tag, error-app-tag, error-path,\nerror-message) parsed from the body (JSON or XML). Credentials present are flagged, never\nshown: an Authorization scheme (Basic, Bearer) is kept and its credential masked; Cookie,\nSet-Cookie and token headers are flagged by name. Over cleartext each is a\nCLEARTEXT_CREDENTIAL; over TLS a CREDENTIAL_IN_REQUEST (seen only because the secrets\ndecrypted it). Message bodies are never decoded except RESTCONF error documents.\n\nReturns a JSON object: status \"success\", schema, overall_status, verdict, summary\n(connections, requests, restconf_requests, status_counts, restconf_errors,\ncleartext_credentials), connections (flow, service, transport, http_versions, restconf,\nrequests, sni, alpn_offered, decrypted), requests (method, path, status, phrase,\nrequest_content_type, response_content_type, request_body_bytes, response_body_bytes,\ntiming_ms, location, restconf, restconf_errors, credentials, frames), credentials\n(flow, header, scheme, kind, cleartext, requests, value \"masked\"), tls_decryption\n(verdict, decrypted, total, secrets_source, sessions), issues (stable codes such as\nRESTCONF_ERROR, HTTP_CLIENT_ERROR, HTTP_SERVER_ERROR, HTTP_NO_RESPONSE,\nCLEARTEXT_CREDENTIAL, CREDENTIAL_IN_REQUEST, TLS_SESSION_NOT_DECRYPTED,\nTLS_SECRETS_IN_CAPTURE, with frames), capture (tshark, decode_as, keylog_file_given,\ntls_secrets) and limits. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: TLS-wrapped RESTCONF without a key log shows only the handshake; a capture that\nstarts mid-connection may leave an HTTP/2 request without its method or path; only\nRESTCONF error documents are parsed from a body, never configuration.\n\nFor example, analyze_restconf_pcap(file_path=\"/captures/restconf.pcap\") or\nanalyze_restconf_pcap(file_path=\"/captures/restconf-tls.pcapng\", keylog_file=\"/tmp/keys.log\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "keylog_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional TLS key log (SSLKEYLOGFILE format) to decrypt TLS; passed to\ntshark by path, never copied to the result. Not needed for a pcapng that carries\nits own TLS secrets."
+        },
+        "ports": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional extra TCP ports to decode as HTTP(S)."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (connections; requests at four times this; default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Troubleshoot RESTCONF and REST from a capture",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_snmp_pcap",
+    "title": "Name SNMP versions and decrypt SNMPv3",
+    "description": "Name every SNMP message's version and decrypt SNMPv3 with a USM users file.\nDeterministic, no LLM, one tshark pass: seconds for a typical capture. Needs tshark.\n\nEvery message is named v1, v2c or v3, and a v3 message by its security level\n(noAuthNoPriv, authNoPriv, authPriv); engine discovery is named as such. A v1 or v2c\ncommunity string is a cleartext credential (SNMP_CLEARTEXT_COMMUNITY, value masked).\nWith users_file, each authenticated v3 message says whether it authenticated and each\nauthPriv message whether it decrypted, and when not, why: unknown_user, unknown_engine\n(the user is given for another engine id), auth_failed (wrong auth passphrase),\ndecrypt_failed (wrong privacy passphrase, or AES-192/256 over an SHA1 or MD5 user, whose\nkey tshark 3.6.2 extends the Reeder (Cisco) way while net-snmp and other Blumenthal-draft\nagents extend it otherwise). An SNMPv3 Report is named by the usmStats counter the agent\nreturned (usmStatsUnknownUserNames, usmStatsWrongDigests, usmStatsDecryptionErrors, ...).\nA decrypted PDU's contents are never returned, only its type and that it decrypted.\n\nThe users file is a path on the server (never paste passphrases into the call): block\nformat, one user per record separated by a blank line, lines user, engine_id (optional),\nauth (MD5, SHA, SHA-224, SHA-256, SHA-384, SHA-512), auth_pass, priv (DES, AES, AES-192,\nAES-256), priv_pass; or CSV user,auth,auth_pass,priv,priv_pass[,engine_id]. It is handed to\ntshark through a private temporary snmp_users table, never on a command line, and no\npassphrase is ever returned.\n\nReturns a JSON object: status \"success\", schema, overall_status, verdict, summary\n(messages, versions, v3_security_levels, v3_outcomes, authpriv_decrypted,\nauthpriv_not_decrypted, cleartext_communities), v3_users (per user: messages, outcomes),\nmessages (frame, version, security_level, src, dst, pdu, user, engine_id, role, outcome,\nreason, report, credential), credentials (protocol, flow, kind, value \"masked\"), issues\n(SNMP_CLEARTEXT_COMMUNITY, SNMP_AUTH_FAILED, SNMP_DECRYPT_FAILED, SNMP_UNKNOWN_USER,\nSNMP_UNKNOWN_ENGINE, SNMP_NOT_DECRYPTED, SNMP_AGENT_REPORT, SNMP_USERS_TABLE_REFUSED,\nSNMP_USER_NOT_SEEN, with frames), capture and limits. On failure\n{\"status\": \"error\", \"error\": \"...\"}, for example an algorithm tshark 3.6.2 does not offer.\n\nLimits: tshark 3.6.2 offers auth MD5, SHA1, SHA2-224/256/384/512 and priv DES, AES-128,\nAES-192, AES-256; a v3 message is decrypted only with the right passphrases.\n\nFor example, analyze_snmp_pcap(file_path=\"/captures/snmp.pcap\") or\nanalyze_snmp_pcap(file_path=\"/captures/snmpv3.pcap\", users_file=\"/secure/snmp-users.txt\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "users_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional path to a USM users file (see above) to decrypt SNMPv3."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (messages at four times this; default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Name SNMP versions and decrypt SNMPv3",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_aaa_pcap",
+    "title": "Read TACACS+ and RADIUS with the shared key",
+    "description": "Read the TACACS+ and RADIUS exchanges in a capture, de-obfuscated with the shared key.\nDeterministic, no LLM, two tshark passes: seconds for a typical capture. Needs tshark.\n\nRADIUS: one row per transaction (Access-Request with Accept, Reject or Challenge;\nAccounting Start, Stop, Interim): who asked (User-Name, NAS, Calling-Station), the result,\nwhether the shared secret validated the Response Authenticator, and the\nMessage-Authenticator of each side checked as RFC 3579 defines (valid, invalid, absent;\ntshark 3.6 does not check it itself). TACACS+: one row per session id with the\nauthentication result (PASS, FAIL, GETPASS, ...), authorization and accounting status, the\nuser, action, service and privilege level, and whether the session was sent with the\nunencrypted flag (its body in cleartext). With keys_file the TACACS+ bodies are\nde-obfuscated and the RADIUS User-Password decrypted; any recovered password is masked\n(credential \"masked\") and never returned, and the shared key is never returned.\n\nThe key file is a path on the server (never paste a key into the call): lines\ntacacs_key: <key> and/or radius_secret: <key>, or one bare line used for both. It reaches\ntshark through a private temporary preferences file, never a command line.\n\nReturns a JSON object: status \"success\", schema, overall_status, verdict, summary\n(radius_transactions, tacacs_sessions, accepts, rejects, cleartext_tacacs_sessions,\ncredentials_recovered), radius (client, server, id, kind, request_code, response_code,\nresult, username, nas, calling_station, acct_status, authenticator_valid,\nmessage_authenticator {request, response}, credential, frames), tacacs (session_id,\nclient, server, user, action, service, priv_lvl, types, authentication, authorization,\naccounting, cleartext, credential, frames), credentials (protocol, flow, username, kind,\nvalue \"masked\"), issues (AAA_ACCESS_REJECT, AAA_NO_RESPONSE, AAA_AUTH_FAIL,\nAAA_AUTHORIZATION_FAIL, AAA_CLEARTEXT_TACACS, AAA_CREDENTIAL_RECOVERED,\nRADIUS_BAD_AUTHENTICATOR, RADIUS_BAD_MESSAGE_AUTHENTICATOR, RADIUS_NO_MESSAGE_AUTHENTICATOR,\nwith frames), capture and limits. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: tshark takes one tacplus.key and one radius.shared_secret, so servers with\ndifferent keys decrypt only where the key fits; EAP and MS-CHAP are noted, not decrypted.\n\nFor example, analyze_aaa_pcap(file_path=\"/captures/aaa.pcap\") or\nanalyze_aaa_pcap(file_path=\"/captures/aaa.pcap\", keys_file=\"/secure/aaa-keys.txt\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "keys_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional path to the shared-key file (see above)."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Read TACACS+ and RADIUS with the shared key",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "analyze_esp_pcap",
+    "title": "Decrypt IPsec ESP with SA keys and analyze the inner traffic",
+    "description": "Decrypt IPsec ESP with the Security Association keys and run the network detectors over\nthe inner traffic. Deterministic, no LLM, one tshark pass plus the detectors over the\ndecrypted packets: seconds for a typical capture. Needs tshark.\n\nFor each SA it reports the ESP packets seen and decrypted, tunnel or transport mode, and\ntshark's integrity check (icv_good, icv_bad), and when packets did not decrypt, why: a bad\nintegrity check (wrong integrity key, or for AES-GCM the key and salt), a good integrity\ncheck with no decryption (the integrity key is right, so the encryption key is wrong), or\nno packet for that SA at all. A packet counts as decrypted only when its decrypted trailer\nis real (RFC 4303 default padding, a real next header, and in tunnel mode an inner IP\npacket of exactly the payload's length). The decrypted packets (tunnel mode as sent;\ntransport mode given back the outer addresses) are rebuilt into a temporary capture and\nanalysed by the same detectors as analyze_network_pcap; the summary is in inner_analysis.\nESP over UDP 4500 (NAT-T) is decrypted too. Cisco IOS and IOS XE do not expose ESP session\nkeys, so a Cisco IOS tunnel cannot be decrypted this way: use analyze_vpn_pcap for its\noutside view.\n\nThe SA file is a path on the server (never paste a key into the call): records separated\nby a blank line, lines src, dst, spi, encryption (aes-cbc, aes-gcm, aes-ctr, 3des-cbc,\ndes-cbc, null), encryption_key (0x hex; for AES-GCM the key followed by its 4-byte salt),\nintegrity (hmac-sha1-96, hmac-sha256-128, hmac-sha384-192, hmac-sha512-256, hmac-md5-96,\nnone) and integrity_key; or the output of `ip -s xfrm state`, read as it is. It reaches\ntshark as its esp_sa table in a private temporary directory, never a command line, and no\nkey is ever returned.\n\nReturns a JSON object: status \"success\", schema, overall_status, verdict, summary\n(security_associations, esp_packets, esp_decrypted, sas_decrypting),\nsecurity_associations (src, dst, spi, encryption, integrity, packets, decrypted, tunnel,\ntransport, icv_good, icv_bad, reason), inner_analysis (protocols_present, overall_status,\nverdicts per detector, issues), issues (ESP_SA_NOT_DECRYPTED, ESP_SA_PARTIAL,\nESP_SA_NO_PACKETS, ESP_SA_TABLE_REFUSED), capture (sa_count, esp_packets, esp_decrypted,\ninner_packets_reconstructed) and limits. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: only ESP matching an SA, with the right key and algorithm, decrypts; a sender\nwhose padding is not the RFC 4303 default is not recognised as decrypted.\n\nFor example, analyze_esp_pcap(file_path=\"/captures/tunnel.pcap\",\nsa_file=\"/secure/xfrm-state.txt\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "sa_file": {
+          "type": "string",
+          "description": "Path to the SA file or `ip -s xfrm state` output (see above)."
+        },
+        "detectors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional subset of network detectors to run over the inner traffic."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter applied first."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "max_items": {
+          "default": 25,
+          "type": "integer",
+          "description": "Cap on list lengths (default 25)."
+        }
+      },
+      "required": [
+        "file_path",
+        "sa_file"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Decrypt IPsec ESP with SA keys and analyze the inner traffic",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  }
+]

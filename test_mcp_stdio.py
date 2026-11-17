@@ -36,7 +36,10 @@ class StdioSession:
     """A raw JSON-RPC session with the server: every stdout byte is kept for the assertions."""
 
     def __init__(self, script=SERVER, env=None):
-        self.proc = subprocess.Popen([sys.executable, script], cwd=HERE, stdin=subprocess.PIPE,
+        cmd = [sys.executable, script]
+        if script == SERVER and os.environ.get("SONIC_MCP_BINARY"):
+            cmd = [os.environ["SONIC_MCP_BINARY"]]
+        self.proc = subprocess.Popen(cmd, cwd=HERE, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         self.stdout = bytearray()
         self.stderr = bytearray()
