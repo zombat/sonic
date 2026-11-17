@@ -374,3 +374,53 @@ func TestMathAndICMPDescribe(t *testing.T) {
 		}
 	}
 }
+
+func TestCodesAndProposalHelpers(t *testing.T) {
+	t.Parallel()
+
+	kl := 256
+	prop := IKEProposal{
+		Num:      1,
+		Protocol: 1,
+		Transforms: []IKETransform{
+			{Type: 1, ID: 20, KeyLength: &kl},
+			{Type: 1, ID: 3}, // 3DES (weak)
+			{Type: 2, ID: 5}, // HMAC-SHA2-256
+			{Type: 4, ID: 14},
+			{Type: 5, ID: 0},
+		},
+	}
+	sum := SummarizeIKEv2Proposal(prop)
+	if len(sum.Integrity) != 1 || sum.Integrity[0] != "(AEAD: integrity is part of the cipher)" {
+		t.Fatalf("AEAD integrity fallback mismatch: %v", sum.Integrity)
+	}
+	if len(sum.Weak) != 1 || sum.Weak[0] != "3DES" {
+		t.Fatalf("Weak mismatch: %v", sum.Weak)
+	}
+	if IKEv2TransformName(1, 999, nil) != "id 999" {
+		t.Fatal("unknown transform fallback mismatch")
+	}
+
+	b, err := json.Marshal(ProposalProtocol{Code: 99})
+	if err != nil || string(b) != "99" {
+		t.Fatalf("unknown ProposalProtocol = (%s, %v)", b, err)
+	}
+
+	if IKENotifyName(2, 14) != "NO_PROPOSAL_CHOSEN" || IKENotifyName(1, 999) != "NOTIFY_999" {
+		t.Fatal("IKENotifyName mismatch")
+	}
+	if !IKENotifyIsError(2, 14) || IKENotifyIsError(2, 16388) || !IKENotifyIsError(1, 14) || IKENotifyIsError(1, 24576) {
+		t.Fatal("IKENotifyIsError mismatch")
+	}
+
+	intp := func(v int) *int { return &v }
+	if BGPErrorName(nil, nil) != "unknown" ||
+		BGPErrorName(intp(99), intp(1)) != "error 99" ||
+		BGPErrorName(intp(2), intp(99)) != "OPEN Message Error / subcode 99" ||
+		BGPErrorName(intp(4), nil) != "Hold Timer Expired" {
+		t.Fatal("BGPErrorName mismatch")
+	}
+	if BGPErrorHint(nil, nil) != nil || BGPErrorHint(intp(2), intp(2)) == nil || BGPErrorHint(intp(4), intp(0)) == nil || BGPErrorHint(intp(99), nil) != nil {
+		t.Fatal("BGPErrorHint mismatch")
+	}
+}

@@ -1,0 +1,279 @@
+{
+  "bgp": {
+    "established_sessions": 1,
+    "expected_mss": null,
+    "issues": [],
+    "messages": 5,
+    "present": true,
+    "sessions": [
+      {
+        "downs": [],
+        "expected_keepalive_interval_s": 60.0,
+        "first_t": 1.0,
+        "frames": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "ibgp": true,
+        "last_t": 1.1,
+        "negotiated_hold_time": 180,
+        "notifications": [],
+        "over_gre": true,
+        "peers": [
+          "10.0.0.1",
+          "10.0.0.2"
+        ],
+        "speakers": {
+          "10.0.0.1": {
+            "as": 65000,
+            "capabilities": [
+              "multiprotocol",
+              "4-byte-as"
+            ],
+            "end_of_rib_t": null,
+            "first_update_t": 1.1,
+            "hold_time_offered": 180,
+            "keepalive_interval_max_s": null,
+            "keepalive_interval_min_s": null,
+            "keepalive_interval_s": null,
+            "last_update_t": 1.1,
+            "messages": {
+              "KEEPALIVE": 1,
+              "OPEN": 1,
+              "UPDATE": 1
+            },
+            "prefixes_announced": 1,
+            "prefixes_withdrawn": 0,
+            "router_id": "10.0.0.1",
+            "updates": [
+              {
+                "announced": 1,
+                "frame": 12,
+                "t": 1.1,
+                "withdrawn": 0
+              }
+            ]
+          },
+          "10.0.0.2": {
+            "as": 65000,
+            "capabilities": [
+              "multiprotocol",
+              "4-byte-as"
+            ],
+            "end_of_rib_t": null,
+            "first_update_t": null,
+            "hold_time_offered": 180,
+            "keepalive_interval_max_s": null,
+            "keepalive_interval_min_s": null,
+            "keepalive_interval_s": null,
+            "last_update_t": null,
+            "messages": {
+              "KEEPALIVE": 1,
+              "OPEN": 1
+            },
+            "prefixes_announced": 0,
+            "prefixes_withdrawn": 0,
+            "router_id": "10.0.0.2",
+            "updates": []
+          }
+        },
+        "state": "established",
+        "tcp_connections": 1,
+        "tcp_mss": [
+          {
+            "connection": 1,
+            "frames": {
+              "10.0.0.1": 6,
+              "10.0.0.2": 5
+            },
+            "mss": {
+              "10.0.0.1": null,
+              "10.0.0.2": null
+            },
+            "syn_from": "10.0.0.2"
+          }
+        ],
+        "times_down": 0,
+        "times_established": 1
+      }
+    ],
+    "sessions_omitted": 0,
+    "status": "ok",
+    "verdict": "BGP: 1 of 1 session(s) established at capture end."
+  },
+  "detector": "routing",
+  "eigrp": {
+    "issues": [],
+    "links": [
+      {
+        "adjacencies": [
+          {
+            "init_exchanged": true,
+            "restarts": 0,
+            "speakers": [
+              "10.0.0.1",
+              "10.0.0.2"
+            ],
+            "unicast_seen": true
+          }
+        ],
+        "mismatches": [],
+        "speakers": [
+          {
+            "address": "10.0.0.1",
+            "as": 100,
+            "first_t": 0.0,
+            "goodbyes": 0,
+            "hellos": 4,
+            "hold_time": 15,
+            "init_updates_to": {
+              "10.0.0.2": 1
+            },
+            "k_values": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "last_t": 15.0,
+            "max_gap_s": 5.0,
+            "messages": {
+              "Hello": 4,
+              "Update": 1
+            },
+            "over_gre": true,
+            "route_tlvs": 0
+          },
+          {
+            "address": "10.0.0.2",
+            "as": 100,
+            "first_t": 0.3,
+            "goodbyes": 0,
+            "hellos": 4,
+            "hold_time": 15,
+            "init_updates_to": {
+              "10.0.0.1": 1
+            },
+            "k_values": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "last_t": 15.3,
+            "max_gap_s": 5.0,
+            "messages": {
+              "Hello": 4,
+              "Update": 1
+            },
+            "over_gre": true,
+            "route_tlvs": 0
+          }
+        ]
+      }
+    ],
+    "links_omitted": 0,
+    "packets": 10,
+    "present": true,
+    "speakers": 2,
+    "status": "ok",
+    "verdict": "EIGRP: 2 speaker(s), 1 adjacency(ies) formed in the capture."
+  },
+  "events": [
+    {
+      "detail": "10.0.0.1 sent INIT update to 10.0.0.2 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 3,
+      "protocol": "eigrp",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "10.0.0.2 sent INIT update to 10.0.0.1 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 4,
+      "protocol": "eigrp",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: OPEN from 10.0.0.2: AS 65000, hold 180 s, router ID 10.0.0.2",
+      "event": "open",
+      "frame": 8,
+      "protocol": "bgp",
+      "t": 1.01,
+      "time": "2026-01-01T00:00:01.010Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: OPEN from 10.0.0.1: AS 65000, hold 180 s, router ID 10.0.0.1",
+      "event": "open",
+      "frame": 9,
+      "protocol": "bgp",
+      "t": 1.012,
+      "time": "2026-01-01T00:00:01.012Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: session established (hold time 180 s)",
+      "event": "established",
+      "frame": 11,
+      "protocol": "bgp",
+      "t": 1.022,
+      "time": "2026-01-01T00:00:01.022Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: 10.0.0.1 announced 1 prefix(es)",
+      "event": "update",
+      "frame": 12,
+      "protocol": "bgp",
+      "t": 1.1,
+      "time": "2026-01-01T00:00:01.100Z"
+    }
+  ],
+  "failover_timeline": [
+    {
+      "detail": "10.0.0.1 sent INIT update to 10.0.0.2 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 3,
+      "protocol": "eigrp",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "10.0.0.2 sent INIT update to 10.0.0.1 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 4,
+      "protocol": "eigrp",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: session established (hold time 180 s)",
+      "event": "established",
+      "frame": 11,
+      "protocol": "bgp",
+      "t": 1.022,
+      "time": "2026-01-01T00:00:01.022Z"
+    },
+    {
+      "detail": "10.0.0.1 <-> 10.0.0.2: 10.0.0.1 announced 1 prefix(es)",
+      "event": "update",
+      "frame": 12,
+      "protocol": "bgp",
+      "t": 1.1,
+      "time": "2026-01-01T00:00:01.100Z"
+    }
+  ],
+  "issues": [],
+  "ospf": {
+    "present": false
+  },
+  "status": "ok",
+  "verdict": "BGP: 1 of 1 session(s) established at capture end. EIGRP: 2 speaker(s), 1 adjacency(ies) formed in the capture."
+}

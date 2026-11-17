@@ -1,0 +1,431 @@
+{
+  "bgp": {
+    "present": false
+  },
+  "detector": "routing",
+  "eigrp": {
+    "present": false
+  },
+  "events": [
+    {
+      "detail": "5.5.5.5 (10.0.45.2) lists neighbor(s) 4.4.4.4",
+      "event": "neighbor_up",
+      "frame": 2,
+      "protocol": "ospf",
+      "t": 0.2,
+      "time": "2026-01-01T00:00:00.200Z"
+    },
+    {
+      "detail": "7.7.7.7 (10.0.67.2) lists neighbor(s) 6.6.6.6",
+      "event": "neighbor_up",
+      "frame": 4,
+      "protocol": "ospf",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "4.4.4.4 (10.0.45.1) now lists neighbor 5.5.5.5",
+      "event": "neighbor_up",
+      "frame": 14,
+      "protocol": "ospf",
+      "t": 10.0,
+      "time": "2026-01-01T00:00:10.000Z"
+    },
+    {
+      "detail": "6.6.6.6 (10.0.67.1) now lists neighbor 7.7.7.7",
+      "event": "neighbor_up",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 10.4,
+      "time": "2026-01-01T00:00:10.400Z"
+    },
+    {
+      "detail": "OSPF 6.6.6.6 <-> 7.7.7.7 stuck in EXCHANGE",
+      "event": "dbd_stuck",
+      "frame": 23,
+      "protocol": "ospf",
+      "t": 16.2,
+      "time": "2026-01-01T00:00:16.200Z"
+    },
+    {
+      "detail": "OSPF 4.4.4.4 <-> 5.5.5.5 stuck in EXSTART",
+      "event": "dbd_stuck",
+      "frame": 29,
+      "protocol": "ospf",
+      "t": 21.1,
+      "time": "2026-01-01T00:00:21.100Z"
+    }
+  ],
+  "failover_timeline": [
+    {
+      "detail": "5.5.5.5 (10.0.45.2) lists neighbor(s) 4.4.4.4",
+      "event": "neighbor_up",
+      "frame": 2,
+      "protocol": "ospf",
+      "t": 0.2,
+      "time": "2026-01-01T00:00:00.200Z"
+    },
+    {
+      "detail": "7.7.7.7 (10.0.67.2) lists neighbor(s) 6.6.6.6",
+      "event": "neighbor_up",
+      "frame": 4,
+      "protocol": "ospf",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "4.4.4.4 (10.0.45.1) now lists neighbor 5.5.5.5",
+      "event": "neighbor_up",
+      "frame": 14,
+      "protocol": "ospf",
+      "t": 10.0,
+      "time": "2026-01-01T00:00:10.000Z"
+    },
+    {
+      "detail": "6.6.6.6 (10.0.67.1) now lists neighbor 7.7.7.7",
+      "event": "neighbor_up",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 10.4,
+      "time": "2026-01-01T00:00:10.400Z"
+    },
+    {
+      "detail": "OSPF 6.6.6.6 <-> 7.7.7.7 stuck in EXCHANGE",
+      "event": "dbd_stuck",
+      "frame": 23,
+      "protocol": "ospf",
+      "t": 16.2,
+      "time": "2026-01-01T00:00:16.200Z"
+    },
+    {
+      "detail": "OSPF 4.4.4.4 <-> 5.5.5.5 stuck in EXSTART",
+      "event": "dbd_stuck",
+      "frame": 29,
+      "protocol": "ospf",
+      "t": 21.1,
+      "time": "2026-01-01T00:00:21.100Z"
+    }
+  ],
+  "issues": [
+    {
+      "code": "OSPF_MTU_MISMATCH",
+      "frames": [
+        5,
+        8
+      ],
+      "message": "OSPF DB Description MTU differs on 10.0.45.0/24: 4.4.4.4=1500, 5.5.5.5=1400; the router with the smaller MTU rejects the other's DBD and the adjacency sticks in EXSTART/EXCHANGE (fix the IP MTU, or 'ip ospf mtu-ignore')",
+      "protocol": "ospf",
+      "severity": "error",
+      "values": {
+        "4.4.4.4": 1500,
+        "5.5.5.5": 1400
+      }
+    },
+    {
+      "code": "OSPF_EXSTART_STUCK",
+      "frames": [
+        18,
+        21,
+        28,
+        19,
+        22,
+        29
+      ],
+      "message": "OSPF adjacency 4.4.4.4 <-> 5.5.5.5 is stuck in EXSTART: 4.4.4.4 sent 5 DBD(s), 5.5.5.5 sent 5, and the exchange never progressed; cause: interface MTU mismatch in the DBDs (4.4.4.4=1500, 5.5.5.5=1400): the router with the smaller MTU drops the larger router's DBDs",
+      "protocol": "ospf",
+      "severity": "error"
+    },
+    {
+      "code": "OSPF_EXCHANGE_STUCK",
+      "frames": [
+        6,
+        9,
+        13,
+        20,
+        23
+      ],
+      "message": "OSPF adjacency 6.6.6.6 <-> 7.7.7.7 is stuck in EXCHANGE: 6.6.6.6 sent 2 DBD(s), 7.7.7.7 sent 5, and the exchange never progressed; cause: DBDs are not acknowledged with the same MTU on both sides: unicast between the neighbors lost or filtered, duplicate router IDs, or one side cannot send large packets",
+      "protocol": "ospf",
+      "severity": "error"
+    }
+  ],
+  "ospf": {
+    "issues": [
+      {
+        "code": "OSPF_MTU_MISMATCH",
+        "frames": [
+          5,
+          8
+        ],
+        "message": "OSPF DB Description MTU differs on 10.0.45.0/24: 4.4.4.4=1500, 5.5.5.5=1400; the router with the smaller MTU rejects the other's DBD and the adjacency sticks in EXSTART/EXCHANGE (fix the IP MTU, or 'ip ospf mtu-ignore')",
+        "severity": "error",
+        "values": {
+          "4.4.4.4": 1500,
+          "5.5.5.5": 1400
+        }
+      },
+      {
+        "code": "OSPF_EXSTART_STUCK",
+        "frames": [
+          18,
+          21,
+          28,
+          19,
+          22,
+          29
+        ],
+        "message": "OSPF adjacency 4.4.4.4 <-> 5.5.5.5 is stuck in EXSTART: 4.4.4.4 sent 5 DBD(s), 5.5.5.5 sent 5, and the exchange never progressed; cause: interface MTU mismatch in the DBDs (4.4.4.4=1500, 5.5.5.5=1400): the router with the smaller MTU drops the larger router's DBDs",
+        "severity": "error"
+      },
+      {
+        "code": "OSPF_EXCHANGE_STUCK",
+        "frames": [
+          6,
+          9,
+          13,
+          20,
+          23
+        ],
+        "message": "OSPF adjacency 6.6.6.6 <-> 7.7.7.7 is stuck in EXCHANGE: 6.6.6.6 sent 2 DBD(s), 7.7.7.7 sent 5, and the exchange never progressed; cause: DBDs are not acknowledged with the same MTU on both sides: unicast between the neighbors lost or filtered, duplicate router IDs, or one side cannot send large packets",
+        "severity": "error"
+      }
+    ],
+    "links": [
+      {
+        "adjacencies": [
+          {
+            "database_exchange": {
+              "cause": "interface MTU mismatch in the DBDs (4.4.4.4=1500, 5.5.5.5=1400): the router with the smaller MTU drops the larger router's DBDs",
+              "lsa_exchange_seen": false,
+              "sides": [
+                {
+                  "dbd_sent": 5,
+                  "first_t": 1.0,
+                  "frames": [
+                    5,
+                    11,
+                    18,
+                    21,
+                    28
+                  ],
+                  "initial_dbd_sent": 5,
+                  "last_t": 21.0,
+                  "mtu": 1500,
+                  "non_initial_dbd_sent": 0,
+                  "router": "4.4.4.4",
+                  "unacknowledged_sequences": {}
+                },
+                {
+                  "dbd_sent": 5,
+                  "first_t": 1.1,
+                  "frames": [
+                    8,
+                    12,
+                    19,
+                    22,
+                    29
+                  ],
+                  "initial_dbd_sent": 5,
+                  "last_t": 21.1,
+                  "mtu": 1400,
+                  "non_initial_dbd_sent": 0,
+                  "router": "5.5.5.5",
+                  "unacknowledged_sequences": {}
+                }
+              ],
+              "state_hint": "exstart",
+              "stuck": "exstart"
+            },
+            "dbd_exchanged": true,
+            "lsa_exchange_seen": false,
+            "routers": [
+              "4.4.4.4",
+              "5.5.5.5"
+            ],
+            "state_hint": "2-way_or_better"
+          }
+        ],
+        "dr": null,
+        "mismatches": [
+          {
+            "parameter": "interface_mtu",
+            "values": {
+              "4.4.4.4": 1500,
+              "5.5.5.5": 1400
+            }
+          }
+        ],
+        "network": "10.0.45.0/24",
+        "routers": [
+          {
+            "address": "10.0.45.1",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1500,
+            "dead_interval": 40,
+            "dr": "0.0.0.0",
+            "first_t": 0.0,
+            "hello_interval": 10,
+            "hellos": 4,
+            "last_hello_t": 30.0,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [
+              "5.5.5.5"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 4,
+              "2": 5
+            },
+            "priority": 1,
+            "router_id": "4.4.4.4"
+          },
+          {
+            "address": "10.0.45.2",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1400,
+            "dead_interval": 40,
+            "dr": "0.0.0.0",
+            "first_t": 0.2,
+            "hello_interval": 10,
+            "hellos": 4,
+            "last_hello_t": 30.2,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [
+              "4.4.4.4"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 4,
+              "2": 5
+            },
+            "priority": 1,
+            "router_id": "5.5.5.5"
+          }
+        ]
+      },
+      {
+        "adjacencies": [
+          {
+            "database_exchange": {
+              "cause": "DBDs are not acknowledged with the same MTU on both sides: unicast between the neighbors lost or filtered, duplicate router IDs, or one side cannot send large packets",
+              "lsa_exchange_seen": false,
+              "sides": [
+                {
+                  "dbd_sent": 2,
+                  "first_t": 1.0,
+                  "frames": [
+                    6,
+                    9
+                  ],
+                  "initial_dbd_sent": 1,
+                  "last_t": 1.1,
+                  "mtu": 1500,
+                  "non_initial_dbd_sent": 1,
+                  "router": "6.6.6.6",
+                  "unacknowledged_sequences": {}
+                },
+                {
+                  "dbd_sent": 5,
+                  "first_t": 1.05,
+                  "frames": [
+                    7,
+                    10,
+                    13,
+                    20,
+                    23
+                  ],
+                  "initial_dbd_sent": 1,
+                  "last_t": 16.2,
+                  "mtu": 1500,
+                  "non_initial_dbd_sent": 4,
+                  "router": "7.7.7.7",
+                  "unacknowledged_sequences": {
+                    "7001": 4
+                  }
+                }
+              ],
+              "state_hint": "exchange_or_later",
+              "stuck": "exchange"
+            },
+            "dbd_exchanged": true,
+            "lsa_exchange_seen": false,
+            "routers": [
+              "6.6.6.6",
+              "7.7.7.7"
+            ],
+            "state_hint": "2-way_or_better"
+          }
+        ],
+        "dr": null,
+        "mismatches": [],
+        "network": "10.0.67.0/24",
+        "routers": [
+          {
+            "address": "10.0.67.1",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1500,
+            "dead_interval": 40,
+            "dr": "0.0.0.0",
+            "first_t": 0.4,
+            "hello_interval": 10,
+            "hellos": 4,
+            "last_hello_t": 30.4,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [
+              "7.7.7.7"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 4,
+              "2": 2
+            },
+            "priority": 1,
+            "router_id": "6.6.6.6"
+          },
+          {
+            "address": "10.0.67.2",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1500,
+            "dead_interval": 40,
+            "dr": "0.0.0.0",
+            "first_t": 0.6,
+            "hello_interval": 10,
+            "hellos": 4,
+            "last_hello_t": 30.6,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [
+              "6.6.6.6"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 4,
+              "2": 5
+            },
+            "priority": 1,
+            "router_id": "7.7.7.7"
+          }
+        ]
+      }
+    ],
+    "links_omitted": 0,
+    "packets": 33,
+    "present": true,
+    "routers": 4,
+    "status": "problem",
+    "verdict": "OSPF: 4 router(s), 2 of 2 adjacency pair(s) reached 2-Way or better; problems: OSPF_EXCHANGE_STUCK, OSPF_EXSTART_STUCK, OSPF_MTU_MISMATCH."
+  },
+  "status": "problem",
+  "verdict": "OSPF: 4 router(s), 2 of 2 adjacency pair(s) reached 2-Way or better; problems: OSPF_EXCHANGE_STUCK, OSPF_EXSTART_STUCK, OSPF_MTU_MISMATCH."
+}

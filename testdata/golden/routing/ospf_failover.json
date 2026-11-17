@@ -1,0 +1,356 @@
+{
+  "bgp": {
+    "present": false
+  },
+  "detector": "routing",
+  "eigrp": {
+    "present": false
+  },
+  "events": [
+    {
+      "detail": "3.3.3.3 (10.0.13.3) lists neighbor(s) 1.1.1.1",
+      "event": "neighbor_up",
+      "frame": 2,
+      "protocol": "ospf",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "event": "neighbor_up",
+      "frame": 3,
+      "protocol": "ospf",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 6,
+      "protocol": "ospf",
+      "t": 10.0,
+      "time": "2026-01-01T00:00:10.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 7,
+      "protocol": "ospf",
+      "t": 10.5,
+      "time": "2026-01-01T00:00:10.500Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s), neighbors drop it after the dead interval",
+      "event": "hello_gap",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 30.5,
+      "time": "2026-01-01T00:00:30.500Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "event": "dr_change",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) dropped neighbor 3.3.3.3 from its hellos",
+      "event": "neighbor_down",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) hellos resumed",
+      "event": "hellos_resumed",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 0.0.0.0, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "event": "dr_change",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) dropped neighbor 1.1.1.1 from its hellos",
+      "event": "neighbor_down",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "event": "neighbor_up",
+      "frame": 18,
+      "protocol": "ospf",
+      "t": 90.0,
+      "time": "2026-01-01T00:01:30.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now lists neighbor 1.1.1.1",
+      "event": "neighbor_up",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    }
+  ],
+  "failover_timeline": [
+    {
+      "detail": "3.3.3.3 (10.0.13.3) lists neighbor(s) 1.1.1.1",
+      "event": "neighbor_up",
+      "frame": 2,
+      "protocol": "ospf",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "event": "neighbor_up",
+      "frame": 3,
+      "protocol": "ospf",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 6,
+      "protocol": "ospf",
+      "t": 10.0,
+      "time": "2026-01-01T00:00:10.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.3, BDR 10.0.13.1 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 7,
+      "protocol": "ospf",
+      "t": 10.5,
+      "time": "2026-01-01T00:00:10.500Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s), neighbors drop it after the dead interval",
+      "event": "hello_gap",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 30.5,
+      "time": "2026-01-01T00:00:30.500Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "event": "dr_change",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) dropped neighbor 3.3.3.3 from its hellos",
+      "event": "neighbor_down",
+      "frame": 16,
+      "protocol": "ospf",
+      "t": 80.0,
+      "time": "2026-01-01T00:01:20.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) hellos resumed",
+      "event": "hellos_resumed",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 0.0.0.0, BDR 0.0.0.0 (was DR 10.0.13.3, BDR 10.0.13.1)",
+      "event": "dr_change",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) dropped neighbor 1.1.1.1 from its hellos",
+      "event": "neighbor_down",
+      "frame": 17,
+      "protocol": "ospf",
+      "t": 85.0,
+      "time": "2026-01-01T00:01:25.000Z"
+    },
+    {
+      "detail": "1.1.1.1 (10.0.13.1) now lists neighbor 3.3.3.3",
+      "event": "neighbor_up",
+      "frame": 18,
+      "protocol": "ospf",
+      "t": 90.0,
+      "time": "2026-01-01T00:01:30.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now reports DR 10.0.13.1, BDR 0.0.0.0 (was DR 0.0.0.0, BDR 0.0.0.0)",
+      "event": "dr_change",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    },
+    {
+      "detail": "3.3.3.3 (10.0.13.3) now lists neighbor 1.1.1.1",
+      "event": "neighbor_up",
+      "frame": 19,
+      "protocol": "ospf",
+      "t": 95.0,
+      "time": "2026-01-01T00:01:35.000Z"
+    }
+  ],
+  "issues": [
+    {
+      "code": "OSPF_HELLO_GAP",
+      "frames": [
+        17
+      ],
+      "message": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s): its neighbors declared it down, then it returned",
+      "protocol": "ospf",
+      "severity": "warning"
+    }
+  ],
+  "ospf": {
+    "issues": [
+      {
+        "code": "OSPF_HELLO_GAP",
+        "frames": [
+          17
+        ],
+        "message": "3.3.3.3 (10.0.13.3) sent no hello for 54.5 s (dead interval 40 s): its neighbors declared it down, then it returned",
+        "severity": "warning"
+      }
+    ],
+    "links": [
+      {
+        "adjacencies": [
+          {
+            "database_exchange": {
+              "cause": null,
+              "lsa_exchange_seen": false,
+              "sides": [
+                {
+                  "dbd_sent": 1,
+                  "first_t": 1.2,
+                  "frames": [
+                    4
+                  ],
+                  "initial_dbd_sent": 1,
+                  "last_t": 1.2,
+                  "mtu": 1500,
+                  "non_initial_dbd_sent": 0,
+                  "router": "1.1.1.1",
+                  "unacknowledged_sequences": {}
+                },
+                {
+                  "dbd_sent": 1,
+                  "first_t": 1.3,
+                  "frames": [
+                    5
+                  ],
+                  "initial_dbd_sent": 1,
+                  "last_t": 1.3,
+                  "mtu": 1500,
+                  "non_initial_dbd_sent": 0,
+                  "router": "3.3.3.3",
+                  "unacknowledged_sequences": {}
+                }
+              ],
+              "state_hint": "exstart",
+              "stuck": null
+            },
+            "dbd_exchanged": true,
+            "lsa_exchange_seen": false,
+            "routers": [
+              "1.1.1.1",
+              "3.3.3.3"
+            ],
+            "state_hint": "2-way_or_better"
+          }
+        ],
+        "dr": "10.0.13.1",
+        "mismatches": [],
+        "network": "10.0.13.0/24",
+        "routers": [
+          {
+            "address": "10.0.13.1",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1500,
+            "dead_interval": 40,
+            "dr": "10.0.13.1",
+            "first_t": 0.0,
+            "hello_interval": 10,
+            "hellos": 11,
+            "last_hello_t": 90.0,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [
+              "3.3.3.3"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 11,
+              "2": 1
+            },
+            "priority": 1,
+            "router_id": "1.1.1.1"
+          },
+          {
+            "address": "10.0.13.3",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": 1500,
+            "dead_interval": 40,
+            "dr": "10.0.13.1",
+            "first_t": 0.5,
+            "hello_interval": 10,
+            "hellos": 6,
+            "last_hello_t": 95.0,
+            "max_hello_gap_s": 54.5,
+            "neighbors_listed": [
+              "1.1.1.1"
+            ],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 6,
+              "2": 1
+            },
+            "priority": 1,
+            "router_id": "3.3.3.3"
+          }
+        ]
+      }
+    ],
+    "links_omitted": 0,
+    "packets": 19,
+    "present": true,
+    "routers": 2,
+    "status": "warning",
+    "verdict": "OSPF: 2 router(s), 1 of 1 adjacency pair(s) reached 2-Way or better."
+  },
+  "status": "warning",
+  "verdict": "OSPF: 2 router(s), 1 of 1 adjacency pair(s) reached 2-Way or better."
+}

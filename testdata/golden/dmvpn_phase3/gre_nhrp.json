@@ -1,0 +1,131 @@
+{
+  "cannot_show": [
+    "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+  ],
+  "detector": "dmvpn_phase3",
+  "encrypted_shortcuts": {
+    "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "note": null,
+    "shortcuts": []
+  },
+  "error_indications": [
+    {
+      "error": "Protocol Address Unreachable",
+      "error_code": 6,
+      "frame": 14,
+      "from": "192.0.2.1",
+      "request_id": 50331650,
+      "t": 2.005,
+      "to": "198.51.100.2"
+    }
+  ],
+  "events": [
+    {
+      "detail": "198.51.100.2 10.1.2.1 -> 10.1.3.1: shortcut formed",
+      "event": "phase3_complete",
+      "frame": 9,
+      "protocol": "nhrp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    }
+  ],
+  "flows": [
+    {
+      "diagnosis": "Phase 3 shortcut formed: redirect, resolution and direct spoke-to-spoke data all seen",
+      "error_indications": [],
+      "forwarded_by_hub_to": "203.0.113.3",
+      "hub": "192.0.2.1",
+      "missing_step": null,
+      "original_dst": "10.1.3.1",
+      "original_src": "10.1.2.1",
+      "result": "complete",
+      "spoke": "198.51.100.2",
+      "steps": {
+        "direct": {
+          "detail": "10.1.2.1 -> 10.1.3.1 inside GRE 198.51.100.2 -> 203.0.113.3 (1 packet(s))",
+          "frame": 15,
+          "t": 3.0
+        },
+        "redirect": {
+          "detail": "Traffic Indication 192.0.2.1 -> 198.51.100.2 for 10.1.2.1 -> 10.1.3.1 (1 sent)",
+          "frame": 9,
+          "t": 1.002
+        },
+        "resolution_reply": {
+          "detail": "203.0.113.3 answers Success: 10.1.3.1 is behind tunnel 10.0.0.3 at NBMA 203.0.113.3 (prefix /24)",
+          "frame": 12,
+          "t": 1.02
+        },
+        "resolution_request": {
+          "detail": "10.0.0.2 asks for 10.1.3.1 (request id 50331649)",
+          "frame": 10,
+          "t": 1.01
+        },
+        "via_hub": {
+          "detail": "10.1.2.1 -> 10.1.3.1 inside GRE 198.51.100.2 -> 192.0.2.1, forwarded by the hub to 203.0.113.3",
+          "frame": 7,
+          "t": 1.0
+        }
+      },
+      "timings": {
+        "redirect_after_first_data_ms": 2.0,
+        "resolution_rtt_ms": 10.0,
+        "shortcut_after_first_data_ms": 2000.0
+      }
+    }
+  ],
+  "flows_omitted": 0,
+  "hub_relayed_without_redirect": [],
+  "hubs": [
+    "192.0.2.1"
+  ],
+  "hubs_source": {
+    "from_redirects": [
+      "192.0.2.1"
+    ],
+    "from_registrations": [
+      "192.0.2.1"
+    ],
+    "given": []
+  },
+  "issues": [],
+  "resolution_thrashing": {
+    "spokes": [
+      {
+        "average_per_second": 2.02,
+        "peak_per_second": 2,
+        "requests": 2,
+        "spoke_nbma": "198.51.100.2",
+        "targets": [
+          {
+            "answered": 1,
+            "frames": [
+              10
+            ],
+            "requests": 1,
+            "target": "10.1.3.1",
+            "unanswered": 0
+          },
+          {
+            "answered": 0,
+            "frames": [
+              13
+            ],
+            "requests": 1,
+            "target": "10.9.9.9",
+            "unanswered": 1
+          }
+        ],
+        "thrashing": false
+      }
+    ],
+    "thrashing": false,
+    "thresholds": {
+      "peak_per_second": 5,
+      "unanswered_repeats_per_target": 5
+    }
+  },
+  "status": "ok",
+  "verdict": "Phase 3: 1 of 1 redirected flow(s) completed the Phase 3 sequence"
+}

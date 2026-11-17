@@ -17,12 +17,17 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from analyzers.convergence import ConvergenceDetector  # noqa: E402
+from analyzers.dmvpn_phase3 import DmvpnPhase3Detector  # noqa: E402
 from analyzers.esp_overhead import EspOverheadDetector  # noqa: E402
+from analyzers.gre_nhrp import GreNhrpDetector  # noqa: E402
+from analyzers.ipsec_vpn import IPsecDetector  # noqa: E402
 from analyzers.network_common import Context  # noqa: E402
 from analyzers.network_orchestrator import audit_cleartext_capture  # noqa: E402
 from analyzers.path_mtu import PathMtuDetector  # noqa: E402
 from analyzers.qos import QosDetector  # noqa: E402
 from analyzers.reachability import ConversationDetector, ReachabilityDetector  # noqa: E402
+from analyzers.routing_health import RoutingDetector  # noqa: E402
 from analyzers.tcp_health import TcpHealthDetector  # noqa: E402
 from analyzers.tls_inspect import TlsDetector  # noqa: E402
 from extractors.network import open_network_records  # noqa: E402
@@ -32,11 +37,23 @@ RECORD_FIXTURES = [
     "ipsec_cleartext_icmp.pcap",
     "ipsec_ikev2_esp.pcap",
     "ipsec_natt.pcap",
+    "ikev1.pcap",
+    "ikev2_failures.pcap",
     "ikev2_negotiation.pcap",
+    "ikev2_no_proposal.pcap",
+    "ikev2_no_response.pcap",
+    "esp_stale_spi.pcap",
     "gre_nhrp.pcap",
+    "nhrp_phase3_broken.pcap",
+    "phase3_encrypted.pcap",
     "bgp_session.pcap",
+    "bgp_failover.pcap",
     "ospf_hello_mismatch.pcap",
+    "ospf_failover.pcap",
+    "ospf_stuck.pcap",
     "eigrp_mismatch.pcap",
+    "routing_over_gre.pcap",
+    "convergence_dpd.pcap",
     "icmp_loss.pcap",
     "dp_fragments.pcap",
     "dp_tcp_health.pcap",
@@ -184,6 +201,48 @@ def generate_leaf_detectors() -> int:
             ("enc_tls13_integrity_only.pcap", "enc_tls13_integrity_only.json", lambda: TlsDetector()),
             ("grpc_tls12_alert.pcap", "grpc_tls12_alert.json", lambda: TlsDetector()),
             ("grpc_tls13_hrr.pcap", "grpc_tls13_hrr.json", lambda: TlsDetector()),
+        ]),
+        ("gre_nhrp", [
+            ("gre_nhrp.pcap", "gre_nhrp.json", lambda: GreNhrpDetector()),
+            ("nhrp_phase3_broken.pcap", "nhrp_phase3_broken.json", lambda: GreNhrpDetector()),
+            ("routing_over_gre.pcap", "routing_over_gre.json", lambda: GreNhrpDetector()),
+            ("audit_one_leak.pcap", "audit_one_leak.json", lambda: GreNhrpDetector()),
+        ]),
+        ("dmvpn_phase3", [
+            ("gre_nhrp.pcap", "gre_nhrp.json", lambda: DmvpnPhase3Detector()),
+            ("nhrp_phase3_broken.pcap", "nhrp_phase3_broken.json", lambda: DmvpnPhase3Detector()),
+            ("phase3_encrypted.pcap", "phase3_encrypted_no_hubs.json", lambda: DmvpnPhase3Detector()),
+            ("phase3_encrypted.pcap", "phase3_encrypted_with_hubs.json", lambda: DmvpnPhase3Detector(hubs=["192.0.2.1", "192.0.2.2"])),
+        ]),
+        ("ipsec", [
+            ("ipsec_ikev2_esp.pcap", "ipsec_ikev2_esp.json", lambda: IPsecDetector()),
+            ("ipsec_cleartext_icmp.pcap", "ipsec_cleartext_icmp.json", lambda: IPsecDetector()),
+            ("ipsec_natt.pcap", "ipsec_natt.json", lambda: IPsecDetector()),
+            ("ikev1.pcap", "ikev1.json", lambda: IPsecDetector()),
+            ("ikev2_failures.pcap", "ikev2_failures.json", lambda: IPsecDetector()),
+            ("ikev2_negotiation.pcap", "ikev2_negotiation.json", lambda: IPsecDetector()),
+            ("ikev2_no_proposal.pcap", "ikev2_no_proposal.json", lambda: IPsecDetector()),
+            ("ikev2_no_response.pcap", "ikev2_no_response.json", lambda: IPsecDetector()),
+            ("esp_stale_spi.pcap", "esp_stale_spi.json", lambda: IPsecDetector()),
+            ("phase3_encrypted.pcap", "phase3_encrypted.json", lambda: IPsecDetector()),
+            ("convergence_dpd.pcap", "convergence_dpd.json", lambda: IPsecDetector()),
+        ]),
+        ("routing", [
+            ("bgp_session.pcap", "bgp_session.json", lambda: RoutingDetector()),
+            ("bgp_failover.pcap", "bgp_failover.json", lambda: RoutingDetector()),
+            ("bgp_failover.pcap", "bgp_failover_mss1360.json", lambda: RoutingDetector(expected_mss=1360)),
+            ("ospf_hello_mismatch.pcap", "ospf_hello_mismatch.json", lambda: RoutingDetector()),
+            ("ospf_failover.pcap", "ospf_failover.json", lambda: RoutingDetector()),
+            ("ospf_stuck.pcap", "ospf_stuck.json", lambda: RoutingDetector()),
+            ("eigrp_mismatch.pcap", "eigrp_mismatch.json", lambda: RoutingDetector()),
+            ("routing_over_gre.pcap", "routing_over_gre.json", lambda: RoutingDetector()),
+        ]),
+        ("convergence", [
+            ("convergence_dpd.pcap", "convergence_dpd.json", lambda: ConvergenceDetector()),
+            ("convergence_dpd.pcap", "convergence_dpd_event30.json", lambda: ConvergenceDetector(event_time="+30.0", hold_time=30.0)),
+            ("bgp_failover.pcap", "bgp_failover.json", lambda: ConvergenceDetector()),
+            ("ospf_failover.pcap", "ospf_failover.json", lambda: ConvergenceDetector()),
+            ("icmp_loss.pcap", "icmp_loss.json", lambda: ConvergenceDetector()),
         ]),
     ]
     for folder, cases in suites:

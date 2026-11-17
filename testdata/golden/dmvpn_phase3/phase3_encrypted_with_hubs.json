@@ -1,0 +1,117 @@
+{
+  "cannot_show": [
+    "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+  ],
+  "detector": "dmvpn_phase3",
+  "encrypted_shortcuts": {
+    "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "note": null,
+    "shortcuts": [
+      {
+        "initiator": "198.51.100.2",
+        "missing_step": null,
+        "result": "complete",
+        "setup_ms": 30.0,
+        "spokes": [
+          "198.51.100.2",
+          "203.0.113.3"
+        ],
+        "steps": {
+          "direct_esp": {
+            "detail": "first ESP 198.51.100.2 -> 203.0.113.3",
+            "frame": 65,
+            "t": 4.93
+          },
+          "esp_to_hub_before": {
+            "detail": "last ESP 203.0.113.3 -> hub 192.0.2.2 before the shortcut (data and routing keepalives look alike inside ESP)",
+            "frame": 54,
+            "t": 4.012
+          },
+          "ike_auth": {
+            "detail": "IKE_AUTH answered",
+            "frame": 64,
+            "t": 4.92
+          },
+          "ike_sa_init": {
+            "detail": "198.51.100.2 starts IKE_SA_INIT to 203.0.113.3",
+            "frame": 61,
+            "t": 4.9
+          }
+        }
+      },
+      {
+        "initiator": "198.51.100.2",
+        "missing_step": "ike_sa_init",
+        "result": "incomplete",
+        "setup_ms": null,
+        "spokes": [
+          "198.51.100.2",
+          "198.51.100.4"
+        ],
+        "steps": {
+          "direct_esp": null,
+          "esp_to_hub_before": {
+            "detail": "last ESP 198.51.100.4 -> hub 192.0.2.2 before the shortcut (data and routing keepalives look alike inside ESP)",
+            "frame": 108,
+            "t": 7.022
+          },
+          "ike_auth": null,
+          "ike_sa_init": {
+            "detail": "198.51.100.2 starts IKE_SA_INIT to 198.51.100.4, never answered",
+            "frame": 113,
+            "negative": true,
+            "t": 7.9
+          }
+        }
+      }
+    ]
+  },
+  "error_indications": [],
+  "events": [
+    {
+      "detail": "encrypted spoke-to-spoke shortcut 198.51.100.2 <-> 203.0.113.3 carries ESP (30.0 ms after IKE_SA_INIT)",
+      "event": "shortcut_formed",
+      "frame": 65,
+      "protocol": "ipsec",
+      "t": 4.93,
+      "time": "2026-01-01T00:00:05.030Z"
+    }
+  ],
+  "flows": [],
+  "flows_omitted": 0,
+  "hub_relayed_without_redirect": [],
+  "hubs": [
+    "192.0.2.1",
+    "192.0.2.2"
+  ],
+  "hubs_source": {
+    "from_redirects": [],
+    "from_registrations": [],
+    "given": [
+      "192.0.2.1",
+      "192.0.2.2"
+    ]
+  },
+  "issues": [
+    {
+      "code": "SHORTCUT_MISSING_IKE_SA_INIT",
+      "frames": [
+        108,
+        113
+      ],
+      "message": "spoke-to-spoke shortcut 198.51.100.2 <-> 198.51.100.4: 198.51.100.4 never answered IKE_SA_INIT from 198.51.100.2: UDP 500 blocked between the spokes, or the remote spoke has no matching IKEv2 policy",
+      "severity": "error"
+    }
+  ],
+  "resolution_thrashing": {
+    "spokes": [],
+    "thrashing": false,
+    "thresholds": {
+      "peak_per_second": 5,
+      "unanswered_repeats_per_target": 5
+    }
+  },
+  "status": "problem",
+  "verdict": "Phase 3: 1 of 2 encrypted spoke-to-spoke shortcut(s) formed (IKE then direct ESP)"
+}

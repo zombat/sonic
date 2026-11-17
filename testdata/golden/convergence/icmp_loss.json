@@ -1,0 +1,104 @@
+{
+  "cannot_show": [
+    "On a transport-link capture of a protected tunnel, BGP, NHRP and the user traffic travel inside ESP: routing reaction and traffic resumption are then inferred from ESP packet rates, not read from BGP.",
+    "A liveness check (DPD) is recognised by size because its payload is encrypted.",
+    "An event time from the runbook host and the capture's timestamps come from different clocks; a skew between them shifts every delta measured from the event.",
+    "Only this capture point is seen: a failure elsewhere shows only through its effect on these links."
+  ],
+  "detector": "convergence",
+  "driver": {
+    "mechanism": "undetermined",
+    "reason": "no DPD, BFD or BGP hold expiry seen; pass hold_time to infer the hold timer from timing"
+  },
+  "event_t": null,
+  "event_time": null,
+  "events": [
+    {
+      "detail": "ping 10.1.1.1 -> 10.2.2.2: 3 request(s) unanswered",
+      "event": "icmp_outage",
+      "frame": 7,
+      "protocol": "convergence",
+      "t": 3.0,
+      "time": "2026-01-01T00:00:03.000Z"
+    },
+    {
+      "detail": "ping 10.1.1.1 -> 10.2.2.2 answered again",
+      "event": "icmp_recovered",
+      "frame": 11,
+      "protocol": "convergence",
+      "t": 6.017,
+      "time": "2026-01-01T00:00:06.017Z"
+    },
+    {
+      "detail": "ping 10.1.1.1 -> 10.3.3.3: 1 request(s) unanswered",
+      "event": "icmp_outage",
+      "frame": 18,
+      "protocol": "convergence",
+      "t": 11.0,
+      "time": "2026-01-01T00:00:11.000Z"
+    }
+  ],
+  "failed_peer": null,
+  "failed_peer_source": null,
+  "issues": [],
+  "measurements": {
+    "detection": null,
+    "event_to_detection_s": null,
+    "event_to_first_failure_sign_s": 0.0,
+    "event_to_first_update_s": null,
+    "event_to_traffic_resumed_s": 3.017,
+    "first_failure_sign": {
+      "delta_s": 0.0,
+      "detail": "ping 10.1.1.1 -> 10.2.2.2: 3 request(s) unanswered",
+      "frame": 7,
+      "signal": "icmp_outage",
+      "t": 3.0
+    },
+    "first_update_on_surviving_path": null,
+    "origin": "first_failure_sign",
+    "origin_t": 3.0,
+    "traffic_resumed": {
+      "delta_s": 3.017,
+      "detail": "ping 10.1.1.1 -> 10.2.2.2 answered again",
+      "frame": 11,
+      "signal": "icmp_recovered",
+      "t": 6.017
+    }
+  },
+  "status": "ok",
+  "timeline": [
+    {
+      "delta_s": 0.0,
+      "detail": "ping 10.1.1.1 -> 10.2.2.2: 3 request(s) unanswered",
+      "frame": 7,
+      "peer": null,
+      "phase": "failure",
+      "signal": "icmp_outage",
+      "t": 3.0,
+      "time": "2026-01-01T00:00:03.000Z"
+    },
+    {
+      "delta_s": 3.017,
+      "detail": "ping 10.1.1.1 -> 10.2.2.2 answered again",
+      "frame": 11,
+      "peer": null,
+      "phase": "recovery",
+      "signal": "icmp_recovered",
+      "t": 6.017,
+      "time": "2026-01-01T00:00:06.017Z"
+    },
+    {
+      "delta_s": 8.0,
+      "detail": "ping 10.1.1.1 -> 10.3.3.3: 1 request(s) unanswered",
+      "frame": 18,
+      "peer": null,
+      "phase": "failure",
+      "signal": "icmp_outage",
+      "t": 11.0,
+      "time": "2026-01-01T00:00:11.000Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "traffic_shift": null,
+  "verdict": "Convergence from the first failure sign: failed peer unknown; traffic resumed after 3.017 s (icmp_recovered); driver: undetermined"
+}

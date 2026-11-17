@@ -1,0 +1,446 @@
+{
+  "cleartext": [],
+  "detector": "ipsec",
+  "encryption_verdict": "encrypted",
+  "esp_flows": [
+    {
+      "bytes": 732,
+      "dst": "192.0.2.1",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 1.0,
+      "frames": [
+        5,
+        7,
+        9,
+        11,
+        39,
+        42
+      ],
+      "last_seq": 6,
+      "last_t": 10.1,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 6,
+      "spi": "0xaa000001",
+      "src": "198.51.100.2",
+      "stale_frames": [
+        39,
+        42
+      ],
+      "stale_packets": 2,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 488,
+      "dst": "198.51.100.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 1.002,
+      "frames": [
+        6,
+        8,
+        10,
+        12
+      ],
+      "last_seq": 4,
+      "last_t": 2.502,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 4,
+      "spi": "0xaa000002",
+      "src": "192.0.2.1",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 1464,
+      "dst": "192.0.2.1",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 3.5,
+      "frames": [
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33
+      ],
+      "last_seq": 12,
+      "last_t": 9.0,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 12,
+      "spi": "0xbb000001",
+      "src": "198.51.100.2",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 1464,
+      "dst": "198.51.100.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 3.502,
+      "frames": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "last_seq": 12,
+      "last_t": 9.002,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 12,
+      "spi": "0xbb000002",
+      "src": "192.0.2.1",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    }
+  ],
+  "esp_flows_omitted": 0,
+  "events": [
+    {
+      "detail": "IKE SA 198.51.100.2 -> 192.0.2.1 established (IKE_AUTH answered, ESP followed)",
+      "event": "established",
+      "frame": 4,
+      "protocol": "ike",
+      "t": 0.02,
+      "time": "2026-01-01T00:00:00.020Z"
+    },
+    {
+      "detail": "1 rekey exchange(s) on IKE SA e5e5e5e5e5e5e5e5 (198.51.100.2 -> 192.0.2.1)",
+      "event": "rekey",
+      "frame": null,
+      "protocol": "ike",
+      "t": 10.01,
+      "time": "2026-01-01T00:00:10.010Z"
+    },
+    {
+      "detail": "198.51.100.2->192.0.2.1 ESP on old SPI 0xaa000001 after 0xbb000001 took over",
+      "event": "stale_spi",
+      "frame": 39,
+      "protocol": "esp",
+      "t": 9.6,
+      "time": "2026-01-01T00:00:09.600Z"
+    },
+    {
+      "detail": "198.51.100.2->192.0.2.1 ESP SPI 0xaa000001 replaced by 0xbb000001 (rekey)",
+      "event": "spi_change",
+      "frame": 15,
+      "protocol": "esp",
+      "t": 3.5,
+      "time": "2026-01-01T00:00:03.500Z"
+    },
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.1 (SPI 0xaa000001)",
+      "event": "esp_start",
+      "frame": 5,
+      "protocol": "esp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "192.0.2.1->198.51.100.2 ESP SPI 0xaa000002 replaced by 0xbb000002 (rekey)",
+      "event": "spi_change",
+      "frame": 16,
+      "protocol": "esp",
+      "t": 3.502,
+      "time": "2026-01-01T00:00:03.502Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->198.51.100.2 (SPI 0xaa000002)",
+      "event": "esp_start",
+      "frame": 6,
+      "protocol": "esp",
+      "t": 1.002,
+      "time": "2026-01-01T00:00:01.002Z"
+    }
+  ],
+  "ike_sas": [
+    {
+      "detail": "IKE_SA_INIT and IKE_AUTH completed and ESP followed",
+      "diagnosis": {
+        "code": "peer_lost_sa",
+        "text": "established with AES-CBC-256/HMAC-SHA2-256/MODP-2048 (group 14); later the peer answered with INVALID_IKE_SPI: it no longer has the SA (restarted or cleared), so traffic on the old SPIs is dropped until a new SA forms"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            1
+          ],
+          "requests": 1,
+          "response_frames": [
+            2
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 0.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            3
+          ],
+          "requests": 1,
+          "response_frames": [
+            4
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 0.02,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "CREATE_CHILD_SA",
+          "message_id": 2,
+          "request_frames": [
+            13
+          ],
+          "requests": 1,
+          "response_frames": [
+            14
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 3.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 3,
+          "request_frames": [
+            40
+          ],
+          "requests": 1,
+          "response_frames": [
+            41
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 10.0,
+          "unanswered": false
+        }
+      ],
+      "first_t": 0.0,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        13,
+        14,
+        40,
+        41
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.2",
+      "initiator_spi": "e5e5e5e5e5e5e5e5",
+      "last_t": 10.01,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 2,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": 14,
+        "ke_groups_offered": [
+          14
+        ],
+        "liveness": {
+          "answered": 1,
+          "by_sender": {
+            "198.51.100.2": 1
+          },
+          "checks": 1,
+          "frames": [
+            40
+          ],
+          "interval_s_by_sender": {
+            "198.51.100.2": null
+          },
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 1,
+        "proposal_chosen": {
+          "dh_group": [
+            "MODP-2048 (group 14)"
+          ],
+          "encryption": [
+            "AES-CBC-256"
+          ],
+          "esn": [],
+          "integrity": [
+            "HMAC-SHA2-256-128"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA2-256"
+          ],
+          "protocol": "IKE",
+          "weak": []
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": true,
+          "frame": 41,
+          "from": "192.0.2.1",
+          "name": "INVALID_IKE_SPI",
+          "type": 4
+        }
+      ],
+      "outcome": "established",
+      "rekeys": 1,
+      "responder": "192.0.2.1",
+      "responder_spi": "f5f5f5f5f5f5f5f5",
+      "retransmissions": 0,
+      "udp_ports": [
+        500
+      ]
+    }
+  ],
+  "ike_sas_omitted": 0,
+  "issues": [
+    {
+      "code": "IKE_INVALID_IKE_SPI",
+      "frames": [
+        41
+      ],
+      "message": "192.0.2.1 sent INVALID_IKE_SPI to 198.51.100.2 in cleartext: the peer has no IKE SA for this SPI (it restarted or cleared its SAs)",
+      "severity": "warning"
+    },
+    {
+      "code": "ESP_STALE_SPI",
+      "frames": [
+        39,
+        42
+      ],
+      "message": "ESP SPI 0xaa000001 198.51.100.2->192.0.2.1 was still used 2 time(s) more than 2.0 s after SPI 0xbb000001 took over that direction: the receiver may have deleted the old SA (an SPI mismatch after a rekey, answered with INVALID_SPI inside the encrypted IKE SA), or two child SAs are in use after an IKE SA collision",
+      "newer_spi": "0xbb000001",
+      "severity": "warning",
+      "spi": "0xaa000001"
+    }
+  ],
+  "nat_traversal": {
+    "esp_in_udp_flows": 0,
+    "ike_packets_on_4500": 0,
+    "in_use": false,
+    "keepalive_frames": [],
+    "nat_detection_payloads_seen": true,
+    "nat_keepalives": 0,
+    "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+  },
+  "negotiation_verdict": "1 IKE SA(s): 1 established",
+  "peer_pairs": [
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.2"
+      ],
+      "protected_packets": {
+        "esp": 34,
+        "ike": 8
+      },
+      "verdict": "encrypted"
+    }
+  ],
+  "peer_pairs_omitted": 0,
+  "status": "warning",
+  "summary": {
+    "esp_flows": 4,
+    "esp_packets": 34,
+    "ike_packets": 8,
+    "ike_sas": 1,
+    "ike_sas_established": 1,
+    "nat_keepalives": 0
+  },
+  "verdict": "all inter-site traffic encrypted: 1 peer pair(s), 34 ESP packets, no cleartext between the same endpoints"
+}

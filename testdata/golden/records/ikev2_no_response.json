@@ -1,0 +1,363 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b4d02c65cfc6ea43",
+        "pl": "444444444444444400000000000000002120220800000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00004f534fc4d96a02211d7c20e0d29a57ab7eb2707a9540529497c07c7795c81fa8e48551a97f0eff95f3f740e47ac04969836a42e4ebf283a29853687704568b362900002403ce08956c4544fd531ce9a96453c98994d631c9e2ec0c04b3cc1f32f8c12d502900001c000040045a085915975a1684688ac9ee876ff31a1c534dc60000001c000040053df1d3d72798ed2a0096ddcea9ea4881b11a3780",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "4444444444444444",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "3df1d3d72798ed2a0096ddcea9ea4881b11a3780"
+        ],
+        "natd_src": [
+          "5a085915975a1684688ac9ee876ff31a1c534dc6"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "0000000000000000",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 1,
+      "t": 1767225600.0,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b4d02c65cfc6ea43",
+        "pl": "444444444444444400000000000000002120220800000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00004f534fc4d96a02211d7c20e0d29a57ab7eb2707a9540529497c07c7795c81fa8e48551a97f0eff95f3f740e47ac04969836a42e4ebf283a29853687704568b362900002403ce08956c4544fd531ce9a96453c98994d631c9e2ec0c04b3cc1f32f8c12d502900001c000040045a085915975a1684688ac9ee876ff31a1c534dc60000001c000040053df1d3d72798ed2a0096ddcea9ea4881b11a3780",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "4444444444444444",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "3df1d3d72798ed2a0096ddcea9ea4881b11a3780"
+        ],
+        "natd_src": [
+          "5a085915975a1684688ac9ee876ff31a1c534dc6"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "0000000000000000",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 2,
+      "t": 1767225602.0,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b4d02c65cfc6ea43",
+        "pl": "444444444444444400000000000000002120220800000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00004f534fc4d96a02211d7c20e0d29a57ab7eb2707a9540529497c07c7795c81fa8e48551a97f0eff95f3f740e47ac04969836a42e4ebf283a29853687704568b362900002403ce08956c4544fd531ce9a96453c98994d631c9e2ec0c04b3cc1f32f8c12d502900001c000040045a085915975a1684688ac9ee876ff31a1c534dc60000001c000040053df1d3d72798ed2a0096ddcea9ea4881b11a3780",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "4444444444444444",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "3df1d3d72798ed2a0096ddcea9ea4881b11a3780"
+        ],
+        "natd_src": [
+          "5a085915975a1684688ac9ee876ff31a1c534dc6"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "0000000000000000",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 3,
+      "t": 1767225606.0,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "b4d02c65cfc6ea43",
+        "pl": "444444444444444400000000000000002120220800000000000000f0220000300000002c010100040300000c0100000c800e01000300000802000005030000080300000c000000080400000e28000048000e00004f534fc4d96a02211d7c20e0d29a57ab7eb2707a9540529497c07c7795c81fa8e48551a97f0eff95f3f740e47ac04969836a42e4ebf283a29853687704568b362900002403ce08956c4544fd531ce9a96453c98994d631c9e2ec0c04b3cc1f32f8c12d502900001c000040045a085915975a1684688ac9ee876ff31a1c534dc60000001c000040053df1d3d72798ed2a0096ddcea9ea4881b11a3780",
+        "tl": 268
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 34,
+        "flags": 8,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "4444444444444444",
+        "ke_group": 14,
+        "length": 240,
+        "msgid": 0,
+        "natd_dst": [
+          "3df1d3d72798ed2a0096ddcea9ea4881b11a3780"
+        ],
+        "natd_src": [
+          "5a085915975a1684688ac9ee876ff31a1c534dc6"
+        ],
+        "natt": false,
+        "notify": [
+          16388,
+          16389
+        ],
+        "payloads": [
+          33,
+          34,
+          40,
+          41,
+          41
+        ],
+        "proposals": [
+          {
+            "num": 1,
+            "protocol": 1,
+            "spi": null,
+            "transforms": [
+              {
+                "id": 12,
+                "key_length": 256,
+                "type": 1
+              },
+              {
+                "id": 5,
+                "key_length": null,
+                "type": 2
+              },
+              {
+                "id": 12,
+                "key_length": null,
+                "type": 3
+              },
+              {
+                "id": 14,
+                "key_length": null,
+                "type": 4
+              }
+            ]
+          }
+        ],
+        "rspi": "0000000000000000",
+        "version": 2
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 282,
+      "n": 4,
+      "t": 1767225614.0,
+      "udp": {
+        "dport": 500,
+        "len": 240,
+        "sport": 500
+      }
+    }
+  ],
+  "warnings": []
+}

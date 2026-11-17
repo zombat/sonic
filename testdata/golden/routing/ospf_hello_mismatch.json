@@ -1,0 +1,167 @@
+{
+  "bgp": {
+    "present": false
+  },
+  "detector": "routing",
+  "eigrp": {
+    "present": false
+  },
+  "events": [],
+  "failover_timeline": [],
+  "issues": [
+    {
+      "code": "OSPF_HELLO_INTERVAL_MISMATCH",
+      "frames": [
+        1,
+        4,
+        2,
+        3
+      ],
+      "message": "OSPF hello interval mismatch on 10.0.12.0/24: 1.1.1.1=10, 2.2.2.2=5; these routers will not become neighbors",
+      "protocol": "ospf",
+      "severity": "error",
+      "values": {
+        "1.1.1.1": 10,
+        "2.2.2.2": 5
+      }
+    },
+    {
+      "code": "OSPF_DEAD_INTERVAL_MISMATCH",
+      "frames": [
+        1,
+        4,
+        2,
+        3
+      ],
+      "message": "OSPF dead interval mismatch on 10.0.12.0/24: 1.1.1.1=40, 2.2.2.2=20; these routers will not become neighbors",
+      "protocol": "ospf",
+      "severity": "error",
+      "values": {
+        "1.1.1.1": 40,
+        "2.2.2.2": 20
+      }
+    }
+  ],
+  "ospf": {
+    "issues": [
+      {
+        "code": "OSPF_HELLO_INTERVAL_MISMATCH",
+        "frames": [
+          1,
+          4,
+          2,
+          3
+        ],
+        "message": "OSPF hello interval mismatch on 10.0.12.0/24: 1.1.1.1=10, 2.2.2.2=5; these routers will not become neighbors",
+        "severity": "error",
+        "values": {
+          "1.1.1.1": 10,
+          "2.2.2.2": 5
+        }
+      },
+      {
+        "code": "OSPF_DEAD_INTERVAL_MISMATCH",
+        "frames": [
+          1,
+          4,
+          2,
+          3
+        ],
+        "message": "OSPF dead interval mismatch on 10.0.12.0/24: 1.1.1.1=40, 2.2.2.2=20; these routers will not become neighbors",
+        "severity": "error",
+        "values": {
+          "1.1.1.1": 40,
+          "2.2.2.2": 20
+        }
+      }
+    ],
+    "links": [
+      {
+        "adjacencies": [
+          {
+            "database_exchange": null,
+            "dbd_exchanged": false,
+            "lsa_exchange_seen": false,
+            "routers": [
+              "1.1.1.1",
+              "2.2.2.2"
+            ],
+            "state_hint": "none"
+          }
+        ],
+        "dr": null,
+        "mismatches": [
+          {
+            "parameter": "hello_interval",
+            "values": {
+              "1.1.1.1": 10,
+              "2.2.2.2": 5
+            }
+          },
+          {
+            "parameter": "dead_interval",
+            "values": {
+              "1.1.1.1": 40,
+              "2.2.2.2": 20
+            }
+          }
+        ],
+        "network": "10.0.12.0/24",
+        "routers": [
+          {
+            "address": "10.0.12.1",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": null,
+            "dead_interval": 40,
+            "dr": "0.0.0.0",
+            "first_t": 0.0,
+            "hello_interval": 10,
+            "hellos": 4,
+            "last_hello_t": 30.0,
+            "max_hello_gap_s": 10.0,
+            "neighbors_listed": [],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 4
+            },
+            "priority": 1,
+            "router_id": "1.1.1.1"
+          },
+          {
+            "address": "10.0.12.2",
+            "area": "0.0.0.0",
+            "auth_type": 0,
+            "bdr": "0.0.0.0",
+            "dbd_mtu": null,
+            "dead_interval": 20,
+            "dr": "0.0.0.0",
+            "first_t": 1.0,
+            "hello_interval": 5,
+            "hellos": 8,
+            "last_hello_t": 36.0,
+            "max_hello_gap_s": 5.0,
+            "neighbors_listed": [],
+            "network_mask": "255.255.255.0",
+            "over_gre": false,
+            "packets_by_type": {
+              "1": 8
+            },
+            "priority": 1,
+            "router_id": "2.2.2.2"
+          }
+        ]
+      }
+    ],
+    "links_omitted": 0,
+    "packets": 12,
+    "present": true,
+    "routers": 2,
+    "status": "problem",
+    "verdict": "OSPF: 2 router(s), 0 of 1 adjacency pair(s) reached 2-Way or better; problems: OSPF_DEAD_INTERVAL_MISMATCH, OSPF_HELLO_INTERVAL_MISMATCH."
+  },
+  "status": "problem",
+  "verdict": "OSPF: 2 router(s), 0 of 1 adjacency pair(s) reached 2-Way or better; problems: OSPF_DEAD_INTERVAL_MISMATCH, OSPF_HELLO_INTERVAL_MISMATCH."
+}

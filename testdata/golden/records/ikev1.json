@@ -1,0 +1,821 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "cfb4e24ff7fd05e3",
+        "pl": "777777777777777700000000000000000110020000000000000000540000003800000001000000010000002c01010001000000240101000080010007800e010080020002800300018004000e800b0001800c7080",
+        "tl": 112
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 2,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 84,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [
+          1
+        ],
+        "proposals": [],
+        "rspi": "0000000000000000",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 126,
+      "n": 1,
+      "t": 1767225600.0,
+      "udp": {
+        "dport": 500,
+        "len": 84,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "caf74cd29d714afd",
+        "pl": "777777777777777788888888888888880110020000000000000000540000003800000001000000010000002c01010001000000240101000080010007800e010080020002800300018004000e800b0001800c7080",
+        "tl": 112
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 2,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 84,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [
+          1
+        ],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 126,
+      "n": 2,
+      "t": 1767225600.01,
+      "udp": {
+        "dport": 500,
+        "len": 84,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "e6209d17f3b1b073",
+        "pl": "777777777777777788888888888888880410020000000000000000840a000044374521a08c504de47ee0f116c11b465f0d63cd6a15784840f12735e0485801c5ea8092d98c0fd86c5e7837a63b8418ee4692eb49b21f2794d4da67d501124ad9000000240853a6927656be83eaa10a7f1287d82b6e1df15b6b1afc60bf97cddad3953e0d",
+        "tl": 160
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 2,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 132,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [
+          4,
+          10
+        ],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 174,
+      "n": 3,
+      "t": 1767225600.02,
+      "udp": {
+        "dport": 500,
+        "len": 132,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "fef1859ed573cf93",
+        "pl": "777777777777777788888888888888880410020000000000000000840a000044dfb3a74a5b872613df92d08b053134a29c405be7f9627f690bec7a1645c7bc0a96a4da3450540a2086aa62e1f3cf1d6b3ac6ead053c76b25d41e07cd27b7a3db00000024840963becce5cf7b260205a350ce7a06ddda806a8c80138481a24f873b9ab1ff",
+        "tl": 160
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 2,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 132,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [
+          4,
+          10
+        ],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 174,
+      "n": 4,
+      "t": 1767225600.03,
+      "udp": {
+        "dport": 500,
+        "len": 132,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "bdf8cb6a4a04ec47",
+        "pl": "7777777777777777888888888888888805100201000000000000006cd24c7ced321f40d9f59c4c9df4850ccd18d261811ba3ba1305b1f35bfedc3ff9452dc5aa4177f7364de109943cf7ce32dee0fd886e3ab44739573f076cb547f20f9ae8b43d3cfa5b9329b375c3fa3741",
+        "tl": 136
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 2,
+        "flags": 1,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 108,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 150,
+      "n": 5,
+      "t": 1767225600.04,
+      "udp": {
+        "dport": 500,
+        "len": 108,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "7acea6da4ad37d56",
+        "pl": "7777777777777777888888888888888805100201000000000000006cc90f143a2227e7ff97039086335d64bcd9daf08df588b34cd9679b5cd6334efbe4f8dcbc268d20726c2a1472839dfea8f2275dfd6c6a97ae1eaf538148065cf2b2e43c58620fb93adfd1c311638de9dd",
+        "tl": 136
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 2,
+        "flags": 1,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 108,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 150,
+      "n": 6,
+      "t": 1767225600.05,
+      "udp": {
+        "dport": 500,
+        "len": 108,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "cc8a00d1e20f3b0c",
+        "pl": "77777777777777778888888888888888081020010a0b0c0d0000006c352a57d636673da21fc779543d625ae8659f6331c832ebfd446231ccd17c08f074c7c360d56a813f770aa95953154155d35c72487aeae0e354b206e05bdfadeb687b2fc7e5c88ecd8788b0d6b4ddf75a",
+        "tl": 136
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 32,
+        "flags": 1,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 108,
+        "msgid": 168496141,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 150,
+      "n": 7,
+      "t": 1767225600.06,
+      "udp": {
+        "dport": 500,
+        "len": 108,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "1b5ccfbab449476d",
+        "pl": "77777777777777778888888888888888081020010a0b0c0d0000006cb2c1b868e7aef37b0194a9bb32d55bb40c4e9f2a5e06bac40cda41166e793ad74ede9548ef7274a387e14aa499ee30ea40d02fd1fecce5d3932a5129c02c1ae7f486041b96815fb42b8fff2755608906",
+        "tl": 136
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 32,
+        "flags": 1,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 108,
+        "msgid": 168496141,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 150,
+      "n": 8,
+      "t": 1767225600.07,
+      "udp": {
+        "dport": 500,
+        "len": 108,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "95cc9f95267c179d",
+        "pl": "77777777777777778888888888888888081020010a0b0c0d0000006cc74252d9b8ff5bdfc10ba25f74a01da41cb1c875034d67257460aaf7051c668438d40ff6eaeddbd7b53c490e3db43aa174a79fa37d1e7a011d2ac4449a40838b6f1eca17dd3694eafc8998be71267574",
+        "tl": 136
+      },
+      "ike": {
+        "encrypted": true,
+        "exch": 32,
+        "flags": 1,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "7777777777777777",
+        "ke_group": null,
+        "length": 108,
+        "msgid": 168496141,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [],
+        "proposals": [],
+        "rspi": "8888888888888888",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 150,
+      "n": 9,
+      "t": 1767225600.08,
+      "udp": {
+        "dport": 500,
+        "len": 108,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 1,
+        "spi": 3489660929,
+        "udp": false
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 50,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 10,
+      "t": 1767225601.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 1,
+        "spi": 3489660930,
+        "udp": false
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 50,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 11,
+      "t": 1767225601.003
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 2,
+        "spi": 3489660929,
+        "udp": false
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 50,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 12,
+      "t": 1767225601.5
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 2,
+        "spi": 3489660930,
+        "udp": false
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 50,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 13,
+      "t": 1767225601.503
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 3,
+        "spi": 3489660929,
+        "udp": false
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 50,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 14,
+      "t": 1767225602.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 3,
+        "spi": 3489660930,
+        "udp": false
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 50,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 15,
+      "t": 1767225602.003
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 4,
+        "spi": 3489660929,
+        "udp": false
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 50,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 16,
+      "t": 1767225602.5
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 4,
+        "spi": 3489660930,
+        "udp": false
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 50,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 17,
+      "t": 1767225602.503
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 5,
+        "spi": 3489660929,
+        "udp": false
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 50,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 18,
+      "t": 1767225603.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 108
+      },
+      "esp": {
+        "seq": 5,
+        "spi": 3489660930,
+        "udp": false
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 50,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 122,
+      "n": 19,
+      "t": 1767225603.003
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "e5b4525c4b19b469",
+        "pl": "999999999999999900000000000000000110020000000000000000540000003800000001000000010000002c01010001000000240101000080010007800e010080020002800300018004000e800b0001800c7080",
+        "tl": 112
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 2,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "9999999999999999",
+        "ke_group": null,
+        "length": 84,
+        "msgid": 0,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [],
+        "payloads": [
+          1
+        ],
+        "proposals": [],
+        "rspi": "0000000000000000",
+        "version": 1
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 17,
+        "src": "203.0.113.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 126,
+      "n": 20,
+      "t": 1767225604.0,
+      "udp": {
+        "dport": 500,
+        "len": 84,
+        "sport": 500
+      }
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "ph": "7ff5ae64a1fb3477",
+        "pl": "999999999999999900000000000000000b10050011223344000000280000000c000000010100000e",
+        "tl": 68
+      },
+      "ike": {
+        "encrypted": false,
+        "exch": 5,
+        "flags": 0,
+        "invalid_ke_group": null,
+        "invalid_spis": [],
+        "ispi": "9999999999999999",
+        "ke_group": null,
+        "length": 40,
+        "msgid": 287454020,
+        "natd_dst": [],
+        "natd_src": [],
+        "natt": false,
+        "notify": [
+          14
+        ],
+        "payloads": [
+          11
+        ],
+        "proposals": [],
+        "rspi": "0000000000000000",
+        "version": 1
+      },
+      "ip": {
+        "dst": "203.0.113.3",
+        "proto": 17,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 21,
+      "t": 1767225604.01,
+      "udp": {
+        "dport": 500,
+        "len": 40,
+        "sport": 500
+      }
+    }
+  ],
+  "warnings": []
+}

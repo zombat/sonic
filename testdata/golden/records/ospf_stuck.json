@@ -1,0 +1,1322 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 64
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 78,
+      "n": 1,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [],
+        "options": 2,
+        "prio": 1,
+        "rid": "4.4.4.4",
+        "type": 1
+      },
+      "t": 1767225600.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 2,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "4.4.4.4"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "5.5.5.5",
+        "type": 1
+      },
+      "t": 1767225600.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 64
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 78,
+      "n": 3,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [],
+        "options": 2,
+        "prio": 1,
+        "rid": "6.6.6.6",
+        "type": 1
+      },
+      "t": 1767225600.4
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 4,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "6.6.6.6"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "7.7.7.7",
+        "type": 1
+      },
+      "t": 1767225600.6
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.2",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 5,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 1000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "4.4.4.4",
+        "type": 2
+      },
+      "t": 1767225601.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.2",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 6,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 5000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "6.6.6.6",
+        "type": 2
+      },
+      "t": 1767225601.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.1",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 7,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 7000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "7.7.7.7",
+        "type": 2
+      },
+      "t": 1767225601.05
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.1",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 8,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 2000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1400,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "5.5.5.5",
+        "type": 2
+      },
+      "t": 1767225601.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.2",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 9,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 2,
+        "dd_seq": 7000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "6.6.6.6",
+        "type": 2
+      },
+      "t": 1767225601.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.1",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 10,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 3,
+        "dd_seq": 7001,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "7.7.7.7",
+        "type": 2
+      },
+      "t": 1767225601.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.2",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 11,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 1000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "4.4.4.4",
+        "type": 2
+      },
+      "t": 1767225606.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.1",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 12,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 2000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1400,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "5.5.5.5",
+        "type": 2
+      },
+      "t": 1767225606.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.1",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 13,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 3,
+        "dd_seq": 7001,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "7.7.7.7",
+        "type": 2
+      },
+      "t": 1767225606.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 14,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "5.5.5.5"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "4.4.4.4",
+        "type": 1
+      },
+      "t": 1767225610.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 15,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "4.4.4.4"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "5.5.5.5",
+        "type": 1
+      },
+      "t": 1767225610.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 16,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "7.7.7.7"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "6.6.6.6",
+        "type": 1
+      },
+      "t": 1767225610.4
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 17,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "6.6.6.6"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "7.7.7.7",
+        "type": 1
+      },
+      "t": 1767225610.6
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.2",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 18,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 1000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "4.4.4.4",
+        "type": 2
+      },
+      "t": 1767225611.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.1",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 19,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 2000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1400,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "5.5.5.5",
+        "type": 2
+      },
+      "t": 1767225611.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.1",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 20,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 3,
+        "dd_seq": 7001,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "7.7.7.7",
+        "type": 2
+      },
+      "t": 1767225611.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.2",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 21,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 1000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "4.4.4.4",
+        "type": 2
+      },
+      "t": 1767225616.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.1",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 22,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 2000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1400,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "5.5.5.5",
+        "type": 2
+      },
+      "t": 1767225616.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.67.1",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 23,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 3,
+        "dd_seq": 7001,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "7.7.7.7",
+        "type": 2
+      },
+      "t": 1767225616.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 24,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "5.5.5.5"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "4.4.4.4",
+        "type": 1
+      },
+      "t": 1767225620.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 25,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "4.4.4.4"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "5.5.5.5",
+        "type": 1
+      },
+      "t": 1767225620.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 26,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "7.7.7.7"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "6.6.6.6",
+        "type": 1
+      },
+      "t": 1767225620.4
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 27,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "6.6.6.6"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "7.7.7.7",
+        "type": 1
+      },
+      "t": 1767225620.6
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.2",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 28,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 1000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1500,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "4.4.4.4",
+        "type": 2
+      },
+      "t": 1767225621.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 52
+      },
+      "ip": {
+        "dst": "10.0.45.1",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 66,
+      "n": 29,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": null,
+        "dbd_flags": 7,
+        "dd_seq": 2000,
+        "dead": null,
+        "dr": null,
+        "hello": null,
+        "mask": null,
+        "mtu": 1400,
+        "neighbors": [],
+        "options": 2,
+        "prio": null,
+        "rid": "5.5.5.5",
+        "type": 2
+      },
+      "t": 1767225621.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 30,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "5.5.5.5"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "4.4.4.4",
+        "type": 1
+      },
+      "t": 1767225630.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.45.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 31,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "4.4.4.4"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "5.5.5.5",
+        "type": 1
+      },
+      "t": 1767225630.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.1",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 32,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "7.7.7.7"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "6.6.6.6",
+        "type": 1
+      },
+      "t": 1767225630.4
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "ip": {
+        "dst": "224.0.0.5",
+        "proto": 89,
+        "src": "10.0.67.2",
+        "ttl": 1,
+        "v": 4
+      },
+      "len": 82,
+      "n": 33,
+      "ospf": {
+        "area": "0.0.0.0",
+        "auth": 0,
+        "bdr": "0.0.0.0",
+        "dbd_flags": null,
+        "dd_seq": null,
+        "dead": 40,
+        "dr": "0.0.0.0",
+        "hello": 10,
+        "mask": "255.255.255.0",
+        "mtu": null,
+        "neighbors": [
+          "6.6.6.6"
+        ],
+        "options": 2,
+        "prio": 1,
+        "rid": "7.7.7.7",
+        "type": 1
+      },
+      "t": 1767225630.6
+    }
+  ],
+  "warnings": []
+}

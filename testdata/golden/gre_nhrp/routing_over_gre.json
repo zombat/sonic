@@ -1,0 +1,82 @@
+{
+  "detector": "gre_nhrp",
+  "dmvpn_phase_hint": "unknown",
+  "error_indications": [],
+  "events": [],
+  "hubs": [],
+  "issues": [],
+  "purges": {},
+  "redirects": [],
+  "registrations": [],
+  "registrations_omitted": 0,
+  "resolutions": [],
+  "resolutions_omitted": 0,
+  "spoke_to_spoke_tunnels": [],
+  "spokes": [],
+  "status": "ok",
+  "summary": {
+    "gre_packets": 18,
+    "gre_tunnels": 2,
+    "hubs": 0,
+    "nhrp_messages": {},
+    "spoke_to_spoke_tunnels": 0,
+    "spokes": 0,
+    "spokes_registered": 0
+  },
+  "tunnels": [
+    {
+      "bytes": 928,
+      "dst": "198.51.100.2",
+      "first_t": 0.0,
+      "frames": [
+        1,
+        3,
+        6,
+        9,
+        11,
+        12,
+        13,
+        15,
+        17
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "ipv4": 9
+      },
+      "keyless_packets": 0,
+      "last_t": 15.0,
+      "packets": 9,
+      "src": "192.0.2.1"
+    },
+    {
+      "bytes": 880,
+      "dst": "192.0.2.1",
+      "first_t": 0.3,
+      "frames": [
+        2,
+        4,
+        5,
+        7,
+        8,
+        10,
+        14,
+        16,
+        18
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "ipv4": 9
+      },
+      "keyless_packets": 0,
+      "last_t": 15.3,
+      "packets": 9,
+      "src": "198.51.100.2"
+    }
+  ],
+  "tunnels_omitted": 0,
+  "verdict": "2 GRE tunnel direction(s) seen; no NHRP registrations captured (static GRE, or NHRP outside the capture window)"
+}
