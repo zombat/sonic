@@ -50,7 +50,7 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Codec Quality Assessment**: Bandwidth usage, quality profiles, and compatibility checks
 
 ### 📊 Advanced Diagnostics
-- **Multi-Format Support**: pcap, pcapng file analysis with tshark and scapy fallback
+- **Multi-Format Support**: pcap, pcapng file analysis with `tshark` (plus pure Python `scapy` fallback in `sonic.py`)
 - **Real-Time Quality Assessment**: Industry-standard thresholds for call quality
 - **Visual Indicators**: Rich console output with emojis and progress tracking
 
@@ -454,7 +454,7 @@ S.O.N.I.C. also reads captures that are not VoIP. The network detectors decode t
 
 One call runs every detector that applies. The report lists the protocols it found (`protocols_present`), which detectors ran (`detectors_run`), every issue, and one `timeline` of events in time order. When SIP is present, the existing SIP quality scoring (the same path as `quick_quality_check`) runs unchanged and is attached under `sip`.
 
-Extraction follows the SIP path: tshark first, scapy when tshark is missing. Both backends produce the same records and the tests hold them to identical reports. tshark is read as a stream, so memory stays flat on large captures.
+Extraction follows the SIP path: tshark first, scapy when tshark is missing (in Python). Both Python backends produce the same records and the tests hold them to identical reports; compiled Go binaries always extract through tshark. tshark is read as a stream, so memory stays flat on large captures.
 
 ### IPsec / VPN (`ipsec`)
 - **IKE negotiation per IKE SA**: IKEv2 IKE_SA_INIT and IKE_AUTH, IKEv1 Main, Aggressive and Quick Mode. The outcome is one of `established`, `failed` (with the NOTIFY name, for example `NO_PROPOSAL_CHOSEN`), `no_response` (requests retransmitted with no reply), `auth_no_response`, `auth_likely_failed`, `authenticated_no_esp`, `sa_init_only`.
@@ -1116,7 +1116,7 @@ python3 sonic.py --file capture.pcapng --model combined --verbose
 
 ## ⚡ Go vs Python Performance
 
-Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12`, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled `./build/sonic` and `./build/sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py`. Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, binary sizes, RSS memory footprint, and `10,001`-frame scaling details.
+Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12`, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled `./build/sonic` and `./build/sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py` (11 MiB static Go binaries; 10.1 MiB vs 155.5 MiB idle MCP RSS, 15.3x less memory). Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, full RSS footprint details, and `10,001`-frame scaling.
 
 ### 1. Deterministic CLI & Capture Analysis
 
