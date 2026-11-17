@@ -30,6 +30,7 @@ type AuditReport struct {
 	ProtocolsPresent       []string           `json:"protocols_present"`
 	Credentials            *[]AuditCredential `json:"credentials,omitempty"`
 	Grpc                   *AuditGrpcSummary  `json:"grpc,omitempty"`
+	Events                 []Event            `json:"-"`
 }
 
 // AuditCredential summarizes one masked cleartext or encrypted credential key found in gRPC metadata.

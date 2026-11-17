@@ -42,9 +42,13 @@ func runWithArgs(ctx context.Context, args []string, in io.Reader, out io.Writer
 	skillDir, createSkill, cleanArgs := guide.ExtractCreateSkillFlag(args)
 	fs := flag.NewFlagSet("sonic-mcp", flag.ContinueOnError)
 	fs.SetOutput(errOut)
-	var envFile string
+	var envFile, skillDoc string
 	fs.StringVar(&envFile, "env-file", "", "dotenv file to read API keys from when unset ($SONIC_ENV_FILE)")
+	fs.StringVar(&skillDoc, "create-skill", "", "write S.O.N.I.C. Agent Skill into DIR (default .claude/skills/sonic) and exit")
 	if err := fs.Parse(cleanArgs); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
 		return 2
 	}
 

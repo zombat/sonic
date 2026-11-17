@@ -12,6 +12,7 @@ import (
 	"github.com/zombat/sonic/internal/analyze/grpc"
 	"github.com/zombat/sonic/internal/analyze/httpinspect"
 	"github.com/zombat/sonic/internal/analyze/netorch"
+	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/analyze/snmpinspect"
 	"github.com/zombat/sonic/internal/extract"
 	"github.com/zombat/sonic/internal/model"
@@ -260,4 +261,44 @@ func TestReserveStdoutForProtocol(t *testing.T) {
 	}
 	restore()
 	restore() // idempotent
+}
+
+func TestBuildAndSaveQualityReport(t *testing.T) {
+	rep := sip.QuickQualityReport{
+		Status: "success",
+		File:   "/tmp/call.pcap",
+		QualityAnalysis: &sip.QualityMetrics{
+			OverallScore:    88.5,
+			Grade:           sip.GradeGood,
+			NetworkScore:    90,
+			ProtocolScore:   85,
+			CodecScore:      92,
+			CompletionScore: 87,
+		},
+		MOSAnalysis: &sip.MOSAnalysisResult{
+			AverageMOS:      4.15,
+			WorstMOS:        4.01,
+			BestMOS:         4.30,
+			OverallCategory: sip.MOSGood,
+			Recommendations: []string{"Keep monitoring jitter"},
+		},
+	}
+	md := BuildQualityMarkdown(rep)
+	for _, want := range []string{"# S.O.N.I.C. Call Quality Report", "Overall Score: 88.5/100", "Average MOS: 4.15", "Keep monitoring jitter"} {
+		if !strings.Contains(md, want) {
+			t.Fatalf("missing %q in quality markdown: %s", want, md)
+		}
+	}
+	tmp := t.TempDir()
+	mdPath := filepath.Join(tmp, "q.md")
+	jsonPath := filepath.Join(tmp, "q.json")
+	if err := SaveQualityReport(rep, mdPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveQualityReport(rep, jsonPath); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(jsonPath); err != nil || !strings.Contains(string(b), `"average_mos": 4.15`) {
+		t.Fatalf("unexpected quality JSON file: err=%v body=%s", err, b)
+	}
 }

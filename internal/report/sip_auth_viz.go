@@ -3,10 +3,12 @@
 package report
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/extract"
 )
 
@@ -210,4 +212,38 @@ func findAuthChallenge(challenges []extract.AuthChallenge, pktNum int) (extract.
 		}
 	}
 	return extract.AuthChallenge{}, false
+}
+
+// BuildQualityMarkdown formats a deterministic SIP call quality and RTP MOS report.
+func BuildQualityMarkdown(rep sip.QuickQualityReport) string {
+	var sb strings.Builder
+	sb.WriteString("# S.O.N.I.C. Call Quality Report\n\n")
+	if rep.File != "" {
+		fmt.Fprintf(&sb, "- File: `%s`\n", rep.File)
+	}
+	fmt.Fprintf(&sb, "- Status: %s\n\n", rep.Status)
+	if rep.QualityAnalysis != nil {
+		q := rep.QualityAnalysis
+		fmt.Fprintf(&sb, "## Call Quality Summary\n\n- Overall Score: %.1f/100 (Grade %s)\n- Network: %.1f | Protocol: %.1f | Codec: %.1f | Completion: %.1f\n\n",
+			q.OverallScore, q.Grade, q.NetworkScore, q.ProtocolScore, q.CodecScore, q.CompletionScore)
+	}
+	if rep.MOSAnalysis != nil {
+		m := rep.MOSAnalysis
+		fmt.Fprintf(&sb, "## RTP MOS Summary\n\n- Average MOS: %.2f (%s)\n- Worst MOS: %.2f | Best MOS: %.2f | Streams: %d\n\n",
+			m.AverageMOS, m.OverallCategory, m.WorstMOS, m.BestMOS, len(m.Streams))
+		if len(m.Recommendations) > 0 {
+			sb.WriteString("### Recommendations\n\n")
+			for _, rec := range m.Recommendations {
+				fmt.Fprintf(&sb, "- %s\n", rec)
+			}
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// SaveQualityReport writes rep as redacted indented JSON (when ending in .json) or Markdown.
+func SaveQualityReport(rep sip.QuickQualityReport, path string) error {
+	raw, err := json.MarshalIndent(rep, "", "  ")
+	return SaveRawReport(raw, err, BuildQualityMarkdown(rep), path)
 }

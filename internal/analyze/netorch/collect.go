@@ -103,14 +103,14 @@ func collectReport(
 			r := ds.cleartextAudit.Report(mCtx, filePath, capInfo, families)
 			audit.AddGrpcFindings(ctx, &r, filePath, opts.DisplayFilter, opts.MaxPackets)
 			sec.cleartextAudit = &r
-			rep.CleartextAudit = stripEventsBytes(json.Marshal(r))
 			st := model.StatusOK
 			if !r.Passed {
 				st = model.StatusProblem
 			} else if !r.Clean {
 				st = model.StatusWarning
 			}
-			appendSectionIssuesEvents(name, r.Verdict, st, r.Issues, nil, &rep.DetectorsRun, &rep.DetectorsNotPresent, rep.Verdicts, &statuses, &allIssues, &allTimeline)
+			rep.CleartextAudit = auditSectionBytes(r, st)
+			appendSectionIssuesEvents(name, r.Verdict, st, r.Issues, r.Events, &rep.DetectorsRun, &rep.DetectorsNotPresent, rep.Verdicts, &statuses, &allIssues, &allTimeline)
 		case "convergence":
 			r, err := ds.convergence.Report(mCtx)
 			if err != nil {
@@ -137,6 +137,32 @@ func collectReport(
 		Note:            sipRes.Note,
 	}
 	return builtReport{report: rep, sections: sec}
+}
+
+func auditSectionBytes(r model.AuditReport, st model.Status) json.RawMessage {
+	raw, err := json.Marshal(r)
+	if err != nil {
+		return nil
+	}
+	var obj map[string]json.RawMessage
+	if uerr := json.Unmarshal(raw, &obj); uerr != nil {
+		return raw
+	}
+	delete(obj, "events")
+	delete(obj, "capture")
+	delete(obj, "file")
+	delete(obj, "protocols_present")
+	if detRaw, merr := json.Marshal("cleartext_audit"); merr == nil {
+		obj["detector"] = detRaw
+	}
+	if stRaw, merr := json.Marshal(st); merr == nil {
+		obj["status"] = stRaw
+	}
+	cleaned, merr := json.Marshal(obj)
+	if merr != nil {
+		return raw
+	}
+	return cleaned
 }
 
 func stripEventsBytes(raw []byte, err error) json.RawMessage {

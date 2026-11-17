@@ -127,6 +127,7 @@ type flexCall struct {
 // ReportOutput wraps DiagnosticReport inside the standard status/output envelope.
 type ReportOutput struct {
 	DiagnosticReport DiagnosticReport `json:"diagnostic_report"`
+	AnalysisMethod   string           `json:"analysis_method,omitempty"`
 }
 
 // StreamingMeta captures streamed token and provider timing fields.

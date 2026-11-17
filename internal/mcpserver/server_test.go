@@ -633,10 +633,17 @@ func TestLLMToolsOverStdio(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(batchDir, "call2.pcapng"), sipBytes, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	batchArgs, _ := json.Marshal(map[string]string{"directory": batchDir, "provider": "openai", "model": "detailed", "mode": "parallel"})
+	batchArgs, _ := json.Marshal(map[string]string{"directory": batchDir, "provider": "ollama", "model": "fast", "mode": "parallel"})
 	br := callToolRPC(t, srv, 7, "analyze_batch_pcaps", batchArgs)
-	if br.IsError || !strings.Contains(br.Content[0].Text, `"successful":2`) {
-		t.Fatalf("unexpected batch response: %+v", br)
+	var batchOut struct {
+		Status    string `json:"status"`
+		Aggregate struct {
+			Successful  int `json:"successful"`
+			TotalTokens int `json:"total_tokens"`
+		} `json:"aggregate"`
+	}
+	if br.IsError || json.Unmarshal(br.StructuredContent, &batchOut) != nil || batchOut.Aggregate.Successful != 2 || batchOut.Aggregate.TotalTokens == 0 {
+		t.Fatalf("unexpected batch response (want successful=2 and non-zero tokens for ollama): %+v", br)
 	}
 	badModeArgs, _ := json.Marshal(map[string]string{"directory": batchDir, "mode": "bogus"})
 	if badMode := callToolRPC(t, srv, 8, "analyze_batch_pcaps", badModeArgs); badMode.IsError || !strings.Contains(badMode.Content[0].Text, "Invalid batch mode") {

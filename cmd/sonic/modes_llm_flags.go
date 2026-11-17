@@ -62,6 +62,18 @@ func registerLLMFlags(fs *flag.FlagSet, lo *llmCLIOptions) {
 	fs.BoolVar(&lo.verbose, "verbose", false, "emit detailed progress to stderr")
 }
 
+func configureCLIUsage(fs *flag.FlagSet, errOut io.Writer) {
+	var skillDoc, protoDoc string
+	fs.StringVar(&skillDoc, "create-skill", "", "write S.O.N.I.C. Agent Skill into DIR (default .claude/skills/sonic) and exit")
+	fs.StringVar(&protoDoc, "fetch-grpc-protos", "", "download pinned gRPC/gNMI .proto files into DIR and exit")
+	fs.Usage = func() {
+		fmt.Fprintln(errOut, "Usage of sonic:")
+		fs.PrintDefaults()
+		fmt.Fprintf(errOut, "\nProviders:\n  ollama (local default), anthropic, openai, azure (via %s / --env-file / %s)\n",
+			llm.ProviderVariable, redact.EnvFileVariable)
+	}
+}
+
 func hasVisitedFlag(fs *flag.FlagSet, name string) bool {
 	visited := false
 	fs.Visit(func(f *flag.Flag) {

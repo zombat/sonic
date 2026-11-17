@@ -41,6 +41,24 @@ func RunCombinedAnalysisStreaming(
 		var rawReport json.RawMessage
 		if res.Output != nil {
 			rawReport, _ = json.Marshal(res.Output.DiagnosticReport)
+			if res.Output.AnalysisMethod == "" {
+				res.Output.AnalysisMethod = "Standard combined analysis"
+			}
+		}
+		if res.Status == "success" {
+			tokCount := 0
+			if res.StreamingMetadata != nil {
+				tokCount = res.StreamingMetadata.TotalTokens
+			}
+			if tokCount == 0 && len(rawReport) > 0 {
+				tokCount = len(strings.Fields(string(rawReport)))
+			}
+			res.StreamingMetadata = &StreamingMeta{TotalTokens: tokCount, Provider: resolved}
+			if onToken != nil && len(rawReport) > 0 {
+				for _, word := range strings.Fields(string(rawReport)) {
+					onToken(word + " ")
+				}
+			}
 		}
 		return res, rawReport
 	}
@@ -79,7 +97,10 @@ func RunCombinedAnalysisStreaming(
 	}
 	return AnalysisResult{
 		Status: "success",
-		Output: &ReportOutput{DiagnosticReport: art.Report},
+		Output: &ReportOutput{
+			DiagnosticReport: art.Report,
+			AnalysisMethod:   "Streaming combined analysis",
+		},
 		StreamingMetadata: &StreamingMeta{
 			TotalTokens: tokCount,
 			Provider:    resolved,

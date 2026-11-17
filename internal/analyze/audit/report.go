@@ -53,6 +53,7 @@ func (d *Detector) Report(ctx model.Context, filePath string, capInfo model.Capt
 	})
 
 	violationsOut := make([]model.AuditViolation, 0, len(rows))
+	events := make([]model.Event, 0, len(rows))
 	violating := 0
 	for _, r := range rows {
 		violating += r.packets
@@ -92,6 +93,9 @@ func (d *Detector) Report(ctx model.Context, filePath string, capInfo model.Capt
 			Reasons:    r.reasons,
 		}
 		violationsOut = append(violationsOut, av)
+		frameCopy := r.firstFrame
+		events = append(events, model.MakeEvent(ctx, r.firstT, "audit", "first_leak",
+			fmt.Sprintf("first %s frame outside the allowlist %s", r.protocol, pair), &frameCopy))
 
 		msg := fmt.Sprintf("%d %s frame(s) %s outside the allowlist (%s)", r.packets, r.protocol, pair, hint)
 		if len(r.reasons) > 0 {
@@ -168,6 +172,7 @@ func (d *Detector) Report(ctx model.Context, filePath string, capInfo model.Capt
 		File:                   filePath,
 		Capture:                capInfo,
 		ProtocolsPresent:       nonNilStrings(families),
+		Events:                 events,
 	}
 }
 

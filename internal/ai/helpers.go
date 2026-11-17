@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/extract"
@@ -51,4 +52,11 @@ func buildQualityBundle(summary *extract.SIPExtractionSummary, _ string, auth *e
 	}
 	raw, _ := json.Marshal(b)
 	return json.RawMessage(redact.RedactText(string(raw)))
+}
+
+func countTokens(reported int, text string) int {
+	if reported > 0 {
+		return reported
+	}
+	return len(strings.Fields(text))
 }

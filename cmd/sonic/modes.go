@@ -40,11 +40,12 @@ func runNetwork(ctx context.Context, o cliOptions, detectors []string, stdout, s
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".network.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveNetworkReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveNetworkReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatNetworkSummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatNetworkSummary(rep), o.asJSON, stdout, stderr)
 }
 
 func runGRPC(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
@@ -59,11 +60,12 @@ func runGRPC(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".grpc.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveGRPCReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveGRPCReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatGRPCSummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatGRPCSummary(rep), o.asJSON, stdout, stderr)
 }
 
 func runHTTP(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
@@ -77,11 +79,12 @@ func runHTTP(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".restconf.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveHTTPReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveHTTPReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatHTTPSummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatHTTPSummary(rep), o.asJSON, stdout, stderr)
 }
 
 func runSNMP(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
@@ -94,11 +97,12 @@ func runSNMP(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".snmp.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveSNMPReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveSNMPReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatSNMPSummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatSNMPSummary(rep), o.asJSON, stdout, stderr)
 }
 
 func runAAA(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
@@ -111,11 +115,12 @@ func runAAA(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".aaa.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveAAAReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveAAAReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatAAASummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatAAASummary(rep), o.asJSON, stdout, stderr)
 }
 
 func runESP(ctx context.Context, o cliOptions, detectors []string, stdout, stderr io.Writer) int {
@@ -129,11 +134,22 @@ func runESP(ctx context.Context, o cliOptions, detectors []string, stdout, stder
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	savePath := effectiveSavePath(o, ".esp.md")
 	var saveErr error
-	if o.saveFile != "" {
-		saveErr = report.SaveESPReport(rep, o.saveFile)
+	if savePath != "" {
+		saveErr = report.SaveESPReport(rep, savePath)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", report.FormatESPSummary(rep), o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, savePath != "", report.FormatESPSummary(rep), o.asJSON, stdout, stderr)
+}
+
+func effectiveSavePath(o cliOptions, defaultSuffix string) string {
+	if o.saveFile != "" {
+		return o.saveFile
+	}
+	if !o.asJSON && o.file != "" {
+		return o.file + defaultSuffix
+	}
+	return ""
 }
 
 func runQualityOnly(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
@@ -142,10 +158,14 @@ func runQualityOnly(ctx context.Context, o cliOptions, stdout, stderr io.Writer)
 	if rep.Status != "success" {
 		return writeFailure(rep.Error, raw, merr, o.asJSON, stdout, stderr)
 	}
+	var saveErr error
+	if o.saveFile != "" {
+		saveErr = report.SaveQualityReport(rep, o.saveFile)
+	}
 	summary := fmt.Sprintf("File: %s | Quality Grade: %s (%.1f/100) | MOS: %.2f (%s)\n",
 		rep.File, rep.QualityAnalysis.Grade, rep.QualityAnalysis.OverallScore,
 		rep.MOSAnalysis.AverageMOS, rep.MOSAnalysis.OverallCategory)
-	return finishReport(raw, merr, nil, false, summary, o.asJSON, stdout, stderr)
+	return finishReport(raw, merr, saveErr, o.saveFile != "", summary, o.asJSON, stdout, stderr)
 }
 
 func finishReport(raw []byte, merr, saveErr error, wantSave bool, summary string, asJSON bool, stdout, stderr io.Writer) int {

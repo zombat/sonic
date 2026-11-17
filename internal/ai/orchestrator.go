@@ -96,7 +96,7 @@ func SIPDiagnosticTest(
 	targetModel := llm.GetModelName(resolvedProvider, profile, modelName)
 	enriched := d.Creds.Redact(EnrichSIPDataWithCodecContext(fileContent))
 
-	resp, _, err := d.Completer.Complete(ctx, resolvedProvider, profile, modelName, DiagnosticMessages(enriched), nil, nil)
+	resp, usage, err := d.Completer.Complete(ctx, resolvedProvider, profile, modelName, DiagnosticMessages(enriched), nil, nil)
 	if err != nil {
 		errText := d.Creds.Redact(err.Error())
 		if recovered, ok := RecoverLMResponseError(errText); ok {
@@ -108,7 +108,11 @@ func SIPDiagnosticTest(
 				KnownSecrets: d.Creds.KnownSecrets(),
 			})
 			if aerr == nil {
-				return AnalysisResult{Status: "success", Output: &ReportOutput{DiagnosticReport: art.Report}}
+				return AnalysisResult{
+					Status:            "success",
+					Output:            &ReportOutput{DiagnosticReport: art.Report},
+					StreamingMetadata: &StreamingMeta{TotalTokens: countTokens(0, recovered), Provider: resolvedProvider},
+				}
 			}
 		}
 		return AnalysisResult{Status: "error", Error: errText}
@@ -125,9 +129,10 @@ func SIPDiagnosticTest(
 		return AnalysisResult{Status: "error", Error: d.Creds.Redact(aerr.Error())}
 	}
 	return AnalysisResult{
-		Status:      "success",
-		Output:      &ReportOutput{DiagnosticReport: art.Report},
-		RawResponse: d.Creds.Redact(resp.Text),
+		Status:            "success",
+		Output:            &ReportOutput{DiagnosticReport: art.Report},
+		RawResponse:       d.Creds.Redact(resp.Text),
+		StreamingMetadata: &StreamingMeta{TotalTokens: countTokens(usage.OutputTokens, resp.Text), Provider: resolvedProvider},
 	}
 }
 
@@ -162,9 +167,23 @@ func CombineDiagnosticResults(fastRes, detailedRes AnalysisResult) AnalysisResul
 	}
 	combined.AnalysisMethod = "Combined: Fast structured analysis + Detailed natural language insights"
 	combined.ModelsUsed = []string{"qwen2.5:0.5b (structured)", "qwen2.5vl:7b (detailed)"}
+	var meta *StreamingMeta
+	totalToks, prov := 0, ""
+	for _, r := range []AnalysisResult{fastRes, detailedRes} {
+		if r.StreamingMetadata != nil {
+			totalToks += r.StreamingMetadata.TotalTokens
+			if prov == "" {
+				prov = r.StreamingMetadata.Provider
+			}
+		}
+	}
+	if totalToks > 0 || prov != "" {
+		meta = &StreamingMeta{TotalTokens: totalToks, Provider: prov}
+	}
 	return AnalysisResult{
-		Status: "success",
-		Output: &ReportOutput{DiagnosticReport: combined},
+		Status:            "success",
+		Output:            &ReportOutput{DiagnosticReport: combined},
+		StreamingMetadata: meta,
 	}
 }
 

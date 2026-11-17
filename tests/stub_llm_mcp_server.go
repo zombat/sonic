@@ -24,7 +24,7 @@ import (
 	"github.com/zombat/sonic/internal/report"
 )
 
-const stubReportJSON = `{"calls":[],"overallAssessment":"stub diagnosis","stub":true}`
+const stubReportJSON = `{"calls": [], "overallAssessment": "stub diagnosis", "stub": true}`
 
 type stubCompleter struct{}
 

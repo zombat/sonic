@@ -132,8 +132,12 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 	fs.StringVar(&o.espSA, "esp-sa", "", "IPsec SA file path for ESP decryption")
 	fs.StringVar(&o.envFile, "env-file", "", "dotenv file to read API keys from when unset in process env ($SONIC_ENV_FILE)")
 	registerLLMFlags(fs, &lo)
+	configureCLIUsage(fs, stderr)
 
 	if err := fs.Parse(cleanArgs); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
 		return 2
 	}
 	if createSkill {
@@ -195,7 +199,7 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 		return runESP(ctx, o, espDetectors, stdout, stderr)
 	case o.qualityOnly:
 		return runQualityOnly(ctx, o, stdout, stderr)
-	case o.networkOnly && (!detectorsExplicit || splitCSV(o.detectorsCSV) == nil || !slices.Equal(splitCSV(o.detectorsCSV), []string{"cleartext_audit"})):
+	case o.networkOnly:
 		var reqDetectors []string
 		if detectorsExplicit {
 			reqDetectors = splitCSV(o.detectorsCSV)

@@ -39,10 +39,9 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 		t.Fatalf("dump golden parity mismatch: %v", err)
 	}
 
-	// 2. --network-only --detectors cleartext_audit --allow crypto --json reproduces golden audit JSON.
+	// 2. Standalone --detectors cleartext_audit --allow crypto --json reproduces golden audit JSON.
 	var auditOut, auditErr bytes.Buffer
 	code = run(ctx, []string{
-		"--network-only",
 		"--file", filepath.Join("tests", "fixtures", "audit_one_leak.pcap"),
 		"--detectors", "cleartext_audit",
 		"--allow", "crypto",
@@ -59,9 +58,31 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 		t.Fatalf("audit golden parity mismatch: %v", err)
 	}
 
+	// 2b. --network-only --detectors cleartext_audit matches Python's analyze_network_capture wrapper.
+	var netAuditOut, netAuditErr bytes.Buffer
+	code = run(ctx, []string{
+		"--network-only",
+		"--file", filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap"),
+		"--detectors", "cleartext_audit",
+		"--allow", "encrypted",
+		"--json",
+	}, &netAuditOut, &netAuditErr)
+	if code != 0 {
+		t.Fatalf("network cleartext_audit exited %d: %s", code, netAuditErr.String())
+	}
+	var netWrap struct {
+		Schema        string          `json:"schema"`
+		OverallStatus string          `json:"overall_status"`
+		DetectorsRun  []string        `json:"detectors_run"`
+		Cleartext     json.RawMessage `json:"cleartext_audit"`
+	}
+	if err := json.Unmarshal(netAuditOut.Bytes(), &netWrap); err != nil || netWrap.Schema == "" || len(netWrap.Cleartext) == 0 || len(netWrap.DetectorsRun) != 1 || netWrap.DetectorsRun[0] != "cleartext_audit" {
+		t.Fatalf("unexpected network cleartext_audit wrapper: err=%v body=%s", err, netAuditOut.String())
+	}
+
 	// 3. Human-readable verdict mode without --json.
 	var textOut, textErr bytes.Buffer
-	code = run(ctx, []string{"--network-only", "--detectors", "cleartext_audit", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
+	code = run(ctx, []string{"--detectors", "cleartext_audit", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
 	if code != 0 || !strings.Contains(textOut.String(), "PASS:") {
 		t.Fatalf("text mode = (code=%d, out=%q, err=%q)", code, textOut.String(), textErr.String())
 	}
@@ -136,8 +157,8 @@ func TestCLIProtocolModesAndSaveFile(t *testing.T) {
 		{"snmp_text_save", []string{"--snmp", "--file", filepath.Join("tests", "fixtures", "snmp_v1v2c.pcap"), "--save_file", filepath.Join(tmp, "snmp.md")}, "S.O.N.I.C. SNMP troubleshooting"},
 		{"aaa_text_save", []string{"--aaa", "--file", filepath.Join("tests", "fixtures", "aaa_radius.pcap"), "--save_file", filepath.Join(tmp, "aaa.md")}, "S.O.N.I.C. TACACS+ and RADIUS troubleshooting"},
 		{"esp_text_save", []string{"--esp-decrypt", "--esp-sa", saPath, "--file", filepath.Join("tests", "fixtures", "esp_tunnel.pcap"), "--save_file", filepath.Join(tmp, "esp.md")}, "S.O.N.I.C. IPsec ESP decryption"},
-		{"quality_json", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap"), "--json"}, `"mos_analysis"`},
-		{"quality_text", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap")}, "Quality Grade:"},
+		{"quality_json", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.json"), "--json"}, `"mos_analysis"`},
+		{"quality_text", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.md")}, "Quality Grade:"},
 	}
 	for _, tc := range runs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -149,6 +170,36 @@ func TestCLIProtocolModesAndSaveFile(t *testing.T) {
 				t.Fatalf("%s output missing %q: %s", tc.name, tc.want, out.String())
 			}
 		})
+	}
+	savedQ, err := os.ReadFile(filepath.Join(tmp, "q.md"))
+	if err != nil || !strings.Contains(string(savedQ), "# S.O.N.I.C. Call Quality Report") {
+		t.Fatalf("expected --quality-only --save_file markdown, got err=%v body=%s", err, savedQ)
+	}
+	var helpOut, helpErr bytes.Buffer
+	if code := run(ctx, []string{"--help"}, &helpOut, &helpErr); code != 0 {
+		t.Fatalf("expected --help exit 0, got %d", code)
+	}
+	for _, want := range []string{"-create-skill", "-fetch-grpc-protos", "Providers:"} {
+		if !strings.Contains(helpErr.String(), want) {
+			t.Fatalf("--help stderr missing %q: %s", want, helpErr.String())
+		}
+	}
+
+	// Default save path writes <capture>.network.md when --save_file and --json are omitted.
+	tmpCap := filepath.Join(tmp, "wan.pcap")
+	capBytes, err := os.ReadFile(filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tmpCap, capBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, errBuf := bytes.Buffer{}, bytes.Buffer{}
+	if code := run(ctx, []string{"--network-only", "--file", tmpCap}, &out, &errBuf); code != 0 {
+		t.Fatalf("default save network run failed (%d): %s", code, errBuf.String())
+	}
+	if _, err := os.Stat(tmpCap + ".network.md"); err != nil {
+		t.Fatalf("expected default %s.network.md: %v", tmpCap, err)
 	}
 }
 
