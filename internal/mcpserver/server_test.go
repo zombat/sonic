@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zombat/sonic/internal/guide"
 	"github.com/zombat/sonic/internal/parity"
 )
 
@@ -124,9 +125,15 @@ func TestProtocolLifecycleAndErrors(t *testing.T) {
 		`{"jsonrpc":"2.0","id":7,"method":"tools/list"}`,
 		`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{}}`,
 		`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"bogus_tool"}}`,
+		`{"jsonrpc":"2.0","id":10,"method":"prompts/list"}`,
+		`{"jsonrpc":"2.0","id":11,"method":"prompts/get","params":{"name":"check_vpn_encryption","arguments":{"file_path":"/c/wan.pcap","peers":"192.0.2.1, 198.51.100.2"}}}`,
+		`{"jsonrpc":"2.0","id":12,"method":"prompts/get","params":{"name":"nope"}}`,
+		`{"jsonrpc":"2.0","id":13,"method":"resources/list"}`,
+		`{"jsonrpc":"2.0","id":14,"method":"resources/read","params":{"uri":"sonic://guide/mcp-tools"}}`,
+		`{"jsonrpc":"2.0","id":15,"method":"resources/read","params":{"uri":"sonic://guide/nope"}}`,
 	)
-	if len(resps) != 10 {
-		t.Fatalf("expected 10 responses (2 skipped for empty/notification), got %d", len(resps))
+	if len(resps) != 16 {
+		t.Fatalf("expected 16 responses (2 skipped for empty/notification), got %d", len(resps))
 	}
 	if resps[0].Error == nil || resps[0].Error.Code != codeParseError {
 		t.Fatalf("expected parse error, got %+v", resps[0].Error)
@@ -184,6 +191,39 @@ func TestProtocolLifecycleAndErrors(t *testing.T) {
 	}
 	if !unknownRes.IsError || !strings.Contains(unknownRes.Content[0].Text, "Unknown tool: 'bogus_tool'") {
 		t.Fatalf("unexpected unknown tool response: %+v", unknownRes)
+	}
+
+	var plist struct {
+		Prompts []guide.PromptInfo `json:"prompts"`
+	}
+	if err := json.Unmarshal(resps[10].Result, &plist); err != nil || len(plist.Prompts) != len(guide.Workflows) {
+		t.Fatalf("unexpected prompts/list result: %s err=%v", resps[10].Result, err)
+	}
+	var pget promptGetResult
+	if err := json.Unmarshal(resps[11].Result, &pget); err != nil || len(pget.Messages) != 1 || !strings.Contains(pget.Messages[0].Content.Text, "peers=['192.0.2.1', '198.51.100.2']") {
+		t.Fatalf("unexpected prompts/get result: %s err=%v", resps[11].Result, err)
+	}
+	if resps[12].Error == nil || resps[12].Error.Code != codeInvalidParams {
+		t.Fatalf("expected invalid params on unknown prompt, got %+v", resps[12].Error)
+	}
+	var rlist struct {
+		Resources []guide.ResourceInfo `json:"resources"`
+	}
+	if err := json.Unmarshal(resps[13].Result, &rlist); err != nil || len(rlist.Resources) != len(guide.Topics)+1 {
+		t.Fatalf("unexpected resources/list result: %s err=%v", resps[13].Result, err)
+	}
+	var rread struct {
+		Contents []resourceContent `json:"contents"`
+	}
+	if err := json.Unmarshal(resps[14].Result, &rread); err != nil || len(rread.Contents) != 1 || !strings.Contains(rread.Contents[0].Text, "## `analyze_vpn_pcap`") {
+		t.Fatalf("unexpected resources/read result: %s err=%v", resps[14].Result, err)
+	}
+	if resps[15].Error == nil || resps[15].Error.Code != codeInvalidParams {
+		t.Fatalf("expected invalid params on unknown resource, got %+v", resps[15].Error)
+	}
+	specs, err := DefaultToolSpecs()
+	if err != nil || len(specs) != len(srv.ToolSpecs()) {
+		t.Fatalf("DefaultToolSpecs mismatch: %v", err)
 	}
 }
 

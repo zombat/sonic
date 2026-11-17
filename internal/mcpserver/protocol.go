@@ -142,6 +142,14 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest) (json.RawMessage,
 		return s.listTools()
 	case "tools/call":
 		return s.callTool(ctx, req.Params)
+	case "prompts/list":
+		return s.listPrompts()
+	case "prompts/get":
+		return s.getPrompt(req.Params)
+	case "resources/list":
+		return s.listResources()
+	case "resources/read":
+		return s.readResource(req.Params)
 	default:
 		if len(req.Method) > len("notifications/") && req.Method[:len("notifications/")] == "notifications/" {
 			return json.RawMessage("{}"), nil
@@ -164,7 +172,7 @@ func (s *Server) initialize(params json.RawMessage) (json.RawMessage, *rpcError)
 	}
 	return marshalResult(initializeResult{
 		ProtocolVersion: version,
-		Capabilities:    json.RawMessage(`{"tools":{"listChanged":false}}`),
+		Capabilities:    json.RawMessage(`{"tools":{"listChanged":false},"prompts":{"listChanged":false},"resources":{"subscribe":false,"listChanged":false}}`),
 		ServerInfo:      serverInfo{Name: s.name, Version: s.version},
 		Instructions:    s.instructions,
 	})

@@ -4,12 +4,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/zombat/sonic/internal/guide"
 	"github.com/zombat/sonic/internal/mcpserver"
 	"github.com/zombat/sonic/internal/redact"
 	"github.com/zombat/sonic/internal/report"
@@ -28,16 +30,31 @@ func defaultDeps() runtimeDeps {
 }
 
 func main() {
-	os.Exit(run(context.Background(), os.Stdin, os.Stdout, os.Stderr, true, defaultDeps()))
+	os.Exit(runWithArgs(context.Background(), os.Args[1:], os.Stdin, os.Stdout, os.Stderr, true, defaultDeps()))
 }
 
-func run(ctx context.Context, in io.Reader, out io.Writer, errOut io.Writer, reserveFD bool, deps runtimeDeps) int {
+func runWithArgs(ctx context.Context, args []string, in io.Reader, out io.Writer, errOut io.Writer, reserveFD bool, deps runtimeDeps) int {
+	skillDir, createSkill, cleanArgs := guide.ExtractCreateSkillFlag(args)
+	fs := flag.NewFlagSet("sonic-mcp", flag.ContinueOnError)
+	fs.SetOutput(errOut)
+	var envFile string
+	fs.StringVar(&envFile, "env-file", "", "dotenv file to read API keys from when unset ($SONIC_ENV_FILE)")
+	if err := fs.Parse(cleanArgs); err != nil {
+		return 2
+	}
+
 	srv, err := deps.newServer()
 	if err != nil {
 		fmt.Fprintf(errOut, "initialize mcp server: %s\n", redact.RedactText(err.Error()))
 		return 1
 	}
+	if createSkill {
+		return guide.CreateSkillCommand(skillDir, srv.ToolSpecs(), "sonic", guide.DefaultCLIFlags(), out, errOut)
+	}
+	return serveServer(ctx, srv, in, out, errOut, reserveFD, deps)
+}
 
+func serveServer(ctx context.Context, srv *mcpserver.Server, in io.Reader, out io.Writer, errOut io.Writer, reserveFD bool, deps runtimeDeps) int {
 	protoOut := out
 	if reserveFD {
 		reserved, restore, rerr := deps.reserveStdout()

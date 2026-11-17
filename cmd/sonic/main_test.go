@@ -140,3 +140,31 @@ func TestCLIProtocolModesAndSaveFile(t *testing.T) {
 		})
 	}
 }
+
+func TestCLICreateSkillAndRefusal(t *testing.T) {
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "sonic")
+	var out, errOut bytes.Buffer
+	if code := run(context.Background(), []string{"--create-skill", target}, &out, &errOut); code != 0 {
+		t.Fatalf("--create-skill exited %d: %s", code, errOut.String())
+	}
+	if !strings.Contains(out.String(), "Skill 'sonic'") {
+		t.Fatalf("unexpected stdout: %s", out.String())
+	}
+	if _, err := os.Stat(filepath.Join(target, "SKILL.md")); err != nil {
+		t.Fatalf("missing SKILL.md: %v", err)
+	}
+
+	foreign := filepath.Join(tmp, "other")
+	if err := os.MkdirAll(foreign, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(foreign, "SKILL.md"), []byte("foreign\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run(context.Background(), []string{"--create-skill", foreign}, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "not written by sonic --create-skill") {
+		t.Fatalf("expected refusal exit 1, got code=%d err=%s", code, errOut.String())
+	}
+}

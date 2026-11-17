@@ -15,6 +15,8 @@ import (
 
 	"github.com/zombat/sonic/internal/analyze/audit"
 	"github.com/zombat/sonic/internal/extract"
+	"github.com/zombat/sonic/internal/guide"
+	"github.com/zombat/sonic/internal/mcpserver"
 	"github.com/zombat/sonic/internal/redact"
 	"github.com/zombat/sonic/internal/tshark"
 )
@@ -42,6 +44,7 @@ type cliOptions struct {
 	snmpUsers     string
 	aaaSecrets    string
 	espSA         string
+	envFile       string
 }
 
 type stringListFlag []string
@@ -95,6 +98,7 @@ func runDump(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 }
 
 func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	skillDir, createSkill, cleanArgs := guide.ExtractCreateSkillFlag(args)
 	var o cliOptions
 	fs := flag.NewFlagSet("sonic", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -120,9 +124,18 @@ func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) in
 	fs.StringVar(&o.snmpUsers, "snmp-users", "", "USM users file path for SNMPv3 decryption")
 	fs.StringVar(&o.aaaSecrets, "aaa-secrets", "", "AAA shared secret file path")
 	fs.StringVar(&o.espSA, "esp-sa", "", "IPsec SA file path for ESP decryption")
+	fs.StringVar(&o.envFile, "env-file", "", "dotenv file to read API keys from when unset in process env ($SONIC_ENV_FILE)")
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(cleanArgs); err != nil {
 		return 2
+	}
+	if createSkill {
+		specs, err := mcpserver.DefaultToolSpecs()
+		if err != nil {
+			fmt.Fprintln(stderr, redact.RedactText(err.Error()))
+			return 1
+		}
+		return guide.CreateSkillCommand(skillDir, specs, "sonic", guide.DefaultCLIFlags(), stdout, stderr)
 	}
 	if o.file == "" {
 		fmt.Fprintln(stderr, "missing required --file flag")

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/zombat/sonic/internal/guide"
 	"github.com/zombat/sonic/internal/redact"
 )
 
@@ -87,21 +88,54 @@ func newServer(defs []toolDef, handlers map[string]Handler) (*Server, error) {
 			return nil, fmt.Errorf("handler without a tool definition: %s", name)
 		}
 	}
-	s.instructions = buildInstructions(s.tools)
+	s.instructions = guide.Instructions(s.ToolSpecs())
 	return s, nil
 }
 
-// buildInstructions lists every tool with its title for the initialize result.
-// Stage 6C replaces this with the guide text from utils/agent_guide.py.
-func buildInstructions(tools []registeredTool) string {
-	var sb strings.Builder
-	sb.WriteString("S.O.N.I.C. reads pcap/pcapng files on the server's machine. Pass absolute paths.\n\n")
-	sb.WriteString("Tools (no LLM):\n")
-	for _, t := range tools {
-		fmt.Fprintf(&sb, "- %s: %s\n", t.def.Name, t.def.Title)
+// ToolSpecs returns guide descriptors for every registered tool in definition order.
+func (s *Server) ToolSpecs() []guide.ToolSpec {
+	out := make([]guide.ToolSpec, len(s.tools))
+	for i, t := range s.tools {
+		var notes guide.ToolAnnotations
+		if len(t.def.Annotations) > 0 {
+			_ = json.Unmarshal(t.def.Annotations, &notes)
+		} else if _, fallback, ok := guide.ToolOptions(t.def.Name); ok {
+			notes = fallback
+		}
+		out[i] = guide.ToolSpec{
+			Name:        t.def.Name,
+			Title:       t.def.Title,
+			Description: t.def.Description,
+			InputSchema: t.def.InputSchema,
+			Annotations: notes,
+		}
 	}
-	sb.WriteString("\nEvery tool returns a JSON object with status \"success\" or \"error\".")
-	return sb.String()
+	return out
+}
+
+// DefaultToolSpecs decodes tool metadata directly from embedded tools.json for CLI skill generation.
+func DefaultToolSpecs() ([]guide.ToolSpec, error) {
+	var defs []toolDef
+	if err := json.Unmarshal(toolsJSON, &defs); err != nil {
+		return nil, fmt.Errorf("parse embedded tool definitions: %w", err)
+	}
+	out := make([]guide.ToolSpec, len(defs))
+	for i, d := range defs {
+		var notes guide.ToolAnnotations
+		if len(d.Annotations) > 0 {
+			_ = json.Unmarshal(d.Annotations, &notes)
+		} else if _, fallback, ok := guide.ToolOptions(d.Name); ok {
+			notes = fallback
+		}
+		out[i] = guide.ToolSpec{
+			Name:        d.Name,
+			Title:       d.Title,
+			Description: d.Description,
+			InputSchema: d.InputSchema,
+			Annotations: notes,
+		}
+	}
+	return out, nil
 }
 
 // listTools returns every tool definition.
