@@ -1,0 +1,186 @@
+{
+  "capture": {
+    "decode_as": [
+      "tcp.port==57400,tls"
+    ],
+    "decode_as_reasons": {
+      "tcp/57400": "tls_h2"
+    },
+    "display_filter": null,
+    "end": "2026-01-01T00:00:00.051Z",
+    "http2_packets": 0,
+    "keylog_file_given": false,
+    "max_packets": null,
+    "proto_paths": [],
+    "reread_without_out_of_order": [],
+    "start": "2026-01-01T00:00:00.000Z",
+    "tls_secrets": {
+      "key_log_file": false,
+      "pcapng_decryption_secrets_blocks": 0,
+      "sessions_in_key_log": 0,
+      "sessions_in_pcapng": 0,
+      "source": null
+    },
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "warnings": []
+  },
+  "connections": [
+    {
+      "client": "10.40.0.10:53000",
+      "credential_keys": [],
+      "detected_by": "alpn h2",
+      "duration_s": 0.051,
+      "first_frame": 1,
+      "flow": "10.40.0.10:53000 -> 192.0.2.57:57400",
+      "flow_control": {
+        "followed": true,
+        "stalls": []
+      },
+      "frames_by_type": {},
+      "goaways": [],
+      "max_concurrent_streams_used": 0,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {},
+      "protocol": "tls, h2 offered",
+      "rpc_status": {},
+      "rpcs": 0,
+      "rst_streams": [],
+      "server": "192.0.2.57:57400",
+      "server_known_by": "syn",
+      "service": "tcp/57400",
+      "service_name": "gnmi (Nokia SR Linux, Cisco IOS XR)",
+      "services": [],
+      "settings": {
+        "client": {},
+        "server": {}
+      },
+      "t": 0.0,
+      "tcp_resets": [],
+      "tls": {
+        "alerts": [
+          {
+            "description": "unknown_ca",
+            "frame": 6,
+            "from": "10.40.0.10:53000",
+            "hint": "the client refused the server's certificate: it does not trust the CA that signed it (a self-signed or private-CA certificate); give the client that CA (for example gnmic --tls-ca), or in a lab only skip verification",
+            "level": "fatal",
+            "sender": "client"
+          }
+        ],
+        "alpn_chosen": "h2",
+        "alpn_offered": [
+          "h2"
+        ],
+        "certificate": {
+          "chain_length": 1,
+          "dns_names": [
+            "gnmi.example.net"
+          ],
+          "ip_addresses": [],
+          "issuer": "gnmi.example.net",
+          "not_after": "2030-01-01T00:00:00Z",
+          "not_before": "2025-01-01T00:00:00Z",
+          "parsed": true,
+          "self_signed": true,
+          "subject": "gnmi.example.net",
+          "valid_at_capture_time": true,
+          "visible": true
+        },
+        "cipher_suite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "decrypted": false,
+        "hello_retry_request": false,
+        "hints": [
+          {
+            "code": "TLS_CERT_NO_IP_SAN",
+            "severity": "warning",
+            "text": "the client sent no SNI name, so it most likely dialled the address 192.0.2.57, and the certificate has no IP SAN for it (IP SANs: none; DNS names: gnmi.example.net): a client that verifies the server refuses it (Go reports that the certificate does not contain any IP SANs); dial a name the certificate lists, or reissue it with the IP as a SAN"
+          },
+          {
+            "code": "GRPC_TLS_NOT_DECRYPTED",
+            "severity": "info",
+            "text": "the RPCs are encrypted; have the client write a TLS key log while capturing (gnmic --log-tls-secret, SSLKEYLOGFILE for Python and curl, tls.Config.KeyLogWriter in Go) and pass the file as keylog_file to decode them"
+          }
+        ],
+        "sni": null,
+        "version": "TLS1.2"
+      },
+      "transport": "tls"
+    }
+  ],
+  "connections_omitted": 0,
+  "credentials": [],
+  "file": "tests/fixtures/grpc_tls12_alert.pcap",
+  "issues": [
+    {
+      "code": "TLS_ALERT",
+      "frames": [
+        6
+      ],
+      "message": "10.40.0.10:53000 -> 192.0.2.57:57400 (tcp/57400): TLS fatal alert unknown_ca from 10.40.0.10:53000: the client refused the server's certificate: it does not trust the CA that signed it (a self-signed or private-CA certificate); give the client that CA (for example gnmic --tls-ca), or in a lab only skip verification",
+      "severity": "error"
+    },
+    {
+      "code": "TLS_CERT_NO_IP_SAN",
+      "frames": [
+        4
+      ],
+      "message": "10.40.0.10:53000 -> 192.0.2.57:57400 (tcp/57400): the client sent no SNI name, so it most likely dialled the address 192.0.2.57, and the certificate has no IP SAN for it (IP SANs: none; DNS names: gnmi.example.net): a client that verifies the server refuses it (Go reports that the certificate does not contain any IP SANs); dial a name the certificate lists, or reissue it with the IP as a SAN",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_TLS_NOT_DECRYPTED",
+      "frames": [
+        4
+      ],
+      "message": "10.40.0.10:53000 -> 192.0.2.57:57400 (tcp/57400): the RPCs are encrypted; have the client write a TLS key log while capturing (gnmic --log-tls-secret, SSLKEYLOGFILE for Python and curl, tls.Config.KeyLogWriter in Go) and pass the file as keylog_file to decode them",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "Wireshark needs the start of each HTTP/2 connection: HPACK headers are compressed against a table both sides build from the first request on, so a capture that begins mid-connection may show headers as undecodable and RPCs without a method.",
+    "Without a key log (or TLS secrets embedded in a pcapng), TLS-wrapped gRPC shows only the handshake: no method, status or metadata. In TLS 1.3 the certificate is encrypted too.",
+    "A session's secret is matched by its ClientHello random: a session whose ClientHello is not in the capture cannot be decrypted, whatever the key log holds.",
+    "Plaintext HTTP/2 is found by its preface on any port and assumed on the well-known gRPC ports; HTTP/2 that upgraded from HTTP/1.1 (Upgrade: h2c) on another port is not decoded.",
+    "Flow control is followed only when the connection's start was captured (the initial windows are in it).",
+    "A gRPC message over 4 MiB is flagged against the common default receive limit; the receiver's real limit is configuration and is not on the wire.",
+    "Message contents are decoded only for gNMI and gNOI system.Time (paths, encodings, modes, counts); values are never decoded. Other services show sizes and counts, or Wireshark's protobuf view with .proto files."
+  ],
+  "overall_status": "problem",
+  "rpcs": [],
+  "rpcs_omitted": 0,
+  "schema": "sonic.grpc_report/1",
+  "status": "success",
+  "summary": {
+    "cleartext_credentials": 0,
+    "connections": 1,
+    "rpc_status": {},
+    "rpcs": 0
+  },
+  "timeline": [],
+  "timeline_omitted": 0,
+  "tls_decryption": {
+    "decrypted": 0,
+    "secrets_source": null,
+    "sessions": [
+      {
+        "application_data": [],
+        "client_hello_frame": 4,
+        "decrypted": false,
+        "flow": "10.40.0.10:53000 -> 192.0.2.57:57400",
+        "handshake_decrypted": false,
+        "labels": [],
+        "reason": "no key log given, and the capture carries no TLS secrets",
+        "secret_in": [],
+        "service": "tcp/57400",
+        "tcp_stream": 0,
+        "version": "TLS1.2"
+      }
+    ],
+    "sessions_omitted": 0,
+    "total": 1,
+    "verdict": "0 of 1 TLS session(s) decrypted: no key log given, and the capture carries no TLS secrets."
+  },
+  "verdict": "1 TLS connection(s) on a gRPC port or offering ALPN h2 (tcp/57400), 0 decrypted: without a key log only the handshake is visible, so whether they carry gRPC cannot be seen."
+}

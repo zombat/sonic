@@ -1,0 +1,348 @@
+{
+  "allowed_by_rule": {
+    "encrypted": 26
+  },
+  "allowlist": [
+    "encrypted"
+  ],
+  "by_protocol": [
+    {
+      "bytes": 345,
+      "category": "cleartext",
+      "first_frame": 27,
+      "packets": 5,
+      "pairs": 2,
+      "protocol": "tcp/23"
+    },
+    {
+      "bytes": 904,
+      "category": "cleartext_management",
+      "first_frame": 32,
+      "grpc_services": [
+        "gnmi.gNMI"
+      ],
+      "packets": 7,
+      "pairs": 2,
+      "protocol": "grpc (tcp/50001)"
+    }
+  ],
+  "cannot_show": [
+    "Only frames that crossed this capture point and that the capture kept are audited: a capture filter, a snap length or a full buffer can hide frames, and traffic on other links is not seen.",
+    "ESP payload is opaque: ESP with NULL encryption or a weak cipher passes, because the cipher is negotiated inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
+    "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
+    "SSH and TLS are judged by their handshake: the TLS suite in the ServerHello, the SSH cipher from both KEXINITs. Without the handshake (a session that began before the capture) a NULL cipher looks like a real one, so such a session passes only as encrypted, unverified (a warning). A TLS session is recognised that way only when a segment begins at a record boundary, an SSH session only on tcp/22 or tcp/830 and only when its payload looks like ciphertext; anything else is reported as cleartext (fail-closed).",
+    "Encryption is judged by the cipher's name: key sizes, certificate trust and the strength of the key exchange are not (analyze_network_pcap's tls detector reads certificates and checks a baseline)."
+  ],
+  "capture": {
+    "backend": "tshark",
+    "bytes": 5635,
+    "display_filter": null,
+    "duration_s": 3.05,
+    "end": "2026-01-01T00:00:03.050Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 38,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "clean": false,
+  "cleartext_frames": 12,
+  "credentials": [
+    {
+      "cleartext": true,
+      "first_frame": 37,
+      "flow": "10.70.0.10:41000 -> 10.70.0.1:50001",
+      "frames": [
+        37
+      ],
+      "key": "authorization",
+      "requests": 1,
+      "service": "tcp/50001",
+      "transport": "cleartext",
+      "value": "masked"
+    }
+  ],
+  "encryption": {
+    "cleartext": 0,
+    "encrypted": 2,
+    "not_started": 0,
+    "sessions": 2,
+    "unverified": 0,
+    "weak": 0
+  },
+  "file": "tests/fixtures/grpc_mgmt_mix.pcap",
+  "first_violation_frame": 27,
+  "frames_allowed": 26,
+  "frames_audited": 38,
+  "frames_outside_allowlist": 12,
+  "grpc": {
+    "checked": true,
+    "connections": 2,
+    "rpcs": 1,
+    "services": [
+      "gnmi.gNMI"
+    ]
+  },
+  "issues": [
+    {
+      "category": "cleartext",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        27,
+        29,
+        31
+      ],
+      "message": "3 tcp/23 frame(s) 10.70.0.10 -> 10.70.0.1 outside the allowlist (application or management traffic outside the tunnel)",
+      "protocol": "tcp/23",
+      "severity": "error"
+    },
+    {
+      "category": "cleartext",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        28,
+        30
+      ],
+      "message": "2 tcp/23 frame(s) 10.70.0.1 -> 10.70.0.10 outside the allowlist (application or management traffic outside the tunnel)",
+      "protocol": "tcp/23",
+      "severity": "error"
+    },
+    {
+      "category": "cleartext_management",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        32,
+        34,
+        35,
+        37
+      ],
+      "message": "4 grpc (tcp/50001) frame(s) 10.70.0.10 -> 10.70.0.1 outside the allowlist (cleartext HTTP/2 (gRPC, gNMI or gNOI without TLS): every request, response and metadata value, credentials included, is readable on the wire)",
+      "protocol": "grpc (tcp/50001)",
+      "severity": "error"
+    },
+    {
+      "category": "cleartext_management",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        33,
+        36,
+        38
+      ],
+      "message": "3 grpc (tcp/50001) frame(s) 10.70.0.1 -> 10.70.0.10 outside the allowlist (cleartext HTTP/2 (gRPC, gNMI or gNOI without TLS): every request, response and metadata value, credentials included, is readable on the wire)",
+      "protocol": "grpc (tcp/50001)",
+      "severity": "error"
+    },
+    {
+      "code": "ENCRYPTED_OUTSIDE_TUNNEL",
+      "frames": [
+        1,
+        19
+      ],
+      "message": "2 SSH or TLS session(s) passed as encrypted by their own transport, not inside IPsec (1 netconf over ssh (tcp/830), 1 tls (tcp/443 https)); allow crypto alone to require the tunnel",
+      "severity": "info"
+    },
+    {
+      "code": "CLEARTEXT_CREDENTIAL",
+      "flow": "10.70.0.10:41000 -> 10.70.0.1:50001",
+      "frames": [
+        37
+      ],
+      "key": "authorization",
+      "message": "10.70.0.10:41000 -> 10.70.0.1:50001 (tcp/50001): gRPC metadata key 'authorization' sent in cleartext in 1 request(s) (value masked): anyone on the path can read it; use TLS",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "protection": {
+    "authenticated_only": 0,
+    "cleartext": 12,
+    "encrypted": 12,
+    "key_exchange": 14,
+    "layer2": 0
+  },
+  "protocols_present": [
+    "http2",
+    "ssh",
+    "tcp",
+    "tls"
+  ],
+  "result": "fail",
+  "status": "success",
+  "tcp_sessions": [
+    {
+      "allowed_as_encrypted": true,
+      "category": "encrypted",
+      "client": "10.70.0.10:56000",
+      "encryption": {
+        "cipher_client_to_server": "aes128-ctr",
+        "cipher_server_to_client": "aes128-ctr",
+        "handshake_captured": true,
+        "kexinit_frames": {
+          "client": 7,
+          "server": 6
+        },
+        "mac_client_to_server": "hmac-sha2-256",
+        "mac_server_to_client": "hmac-sha2-256",
+        "reason": null,
+        "state": "encrypted"
+      },
+      "first_frame": 1,
+      "packets": 18,
+      "protection": {
+        "encrypted": 8,
+        "key_exchange": 10
+      },
+      "protocol": "netconf over ssh (tcp/830)",
+      "server": "10.70.0.1:830",
+      "server_known_by": "syn",
+      "service": "tcp/830"
+    },
+    {
+      "allowed_as_encrypted": true,
+      "category": "encrypted",
+      "client": "10.70.0.10:56001",
+      "encryption": {
+        "cipher_suite": "TLS_AES_128_GCM_SHA256",
+        "handshake_captured": true,
+        "reason": null,
+        "server_hello_frame": 23,
+        "state": "encrypted",
+        "version": "TLS1.3"
+      },
+      "first_frame": 19,
+      "packets": 8,
+      "protection": {
+        "encrypted": 4,
+        "key_exchange": 4
+      },
+      "protocol": "tls (tcp/443 https)",
+      "server": "10.70.0.1:443",
+      "server_known_by": "syn",
+      "service": "tcp/443"
+    },
+    {
+      "category": "cleartext",
+      "client": "10.70.0.10:56002",
+      "first_frame": 27,
+      "packets": 5,
+      "protection": {
+        "cleartext": 5
+      },
+      "protocol": "tcp/23",
+      "server": "10.70.0.1:23",
+      "server_known_by": "syn",
+      "service": "tcp/23"
+    },
+    {
+      "category": "cleartext_management",
+      "client": "10.70.0.10:41000",
+      "first_frame": 32,
+      "grpc_services": [
+        "gnmi.gNMI"
+      ],
+      "packets": 7,
+      "protection": {
+        "cleartext": 7
+      },
+      "protocol": "grpc (tcp/50001)",
+      "server": "10.70.0.1:50001",
+      "server_known_by": "syn",
+      "service": "tcp/50001"
+    }
+  ],
+  "tcp_sessions_omitted": 0,
+  "verdict": "FAIL: 12 of 38 frames outside the allowlist (5 tcp/23, 7 grpc (tcp/50001)); first at frame 27; 12 of them cleartext (all frames: 12 encrypted, 14 key exchange, 12 cleartext); credentials in cleartext gRPC metadata: authorization (values masked)",
+  "violations": [
+    {
+      "bytes": 185,
+      "category": "cleartext",
+      "dst": "10.70.0.1",
+      "first_frame": 27,
+      "first_t": 2.0,
+      "frames": [
+        27,
+        29,
+        31
+      ],
+      "hint": "application or management traffic outside the tunnel",
+      "last_frame": 31,
+      "last_t": 2.04,
+      "packets": 3,
+      "protection": {
+        "cleartext": 3
+      },
+      "protocol": "tcp/23",
+      "src": "10.70.0.10"
+    },
+    {
+      "bytes": 160,
+      "category": "cleartext",
+      "dst": "10.70.0.10",
+      "first_frame": 28,
+      "first_t": 2.01,
+      "frames": [
+        28,
+        30
+      ],
+      "hint": "application or management traffic outside the tunnel",
+      "last_frame": 30,
+      "last_t": 2.03,
+      "packets": 2,
+      "protection": {
+        "cleartext": 2
+      },
+      "protocol": "tcp/23",
+      "src": "10.70.0.1"
+    },
+    {
+      "bytes": 526,
+      "category": "cleartext_management",
+      "dst": "10.70.0.1",
+      "first_frame": 32,
+      "first_t": 3.0,
+      "frames": [
+        32,
+        34,
+        35,
+        37
+      ],
+      "grpc_services": [
+        "gnmi.gNMI"
+      ],
+      "hint": "cleartext HTTP/2 (gRPC, gNMI or gNOI without TLS): every request, response and metadata value, credentials included, is readable on the wire",
+      "last_frame": 37,
+      "last_t": 3.04,
+      "packets": 4,
+      "protection": {
+        "cleartext": 4
+      },
+      "protocol": "grpc (tcp/50001)",
+      "src": "10.70.0.10"
+    },
+    {
+      "bytes": 378,
+      "category": "cleartext_management",
+      "dst": "10.70.0.10",
+      "first_frame": 33,
+      "first_t": 3.01,
+      "frames": [
+        33,
+        36,
+        38
+      ],
+      "grpc_services": [
+        "gnmi.gNMI"
+      ],
+      "hint": "cleartext HTTP/2 (gRPC, gNMI or gNOI without TLS): every request, response and metadata value, credentials included, is readable on the wire",
+      "last_frame": 38,
+      "last_t": 3.05,
+      "packets": 3,
+      "protection": {
+        "cleartext": 3
+      },
+      "protocol": "grpc (tcp/50001)",
+      "src": "10.70.0.1"
+    }
+  ],
+  "violations_omitted": 0
+}

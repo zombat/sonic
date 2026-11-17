@@ -1,0 +1,134 @@
+{
+  "capture": {
+    "display_filter": null,
+    "esp_decrypted": 7,
+    "esp_packets": 7,
+    "inner_packets_reconstructed": 7,
+    "max_packets": null,
+    "sa_count": 5,
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "warnings": []
+  },
+  "file": "tests/fixtures/esp_tunnel.pcap",
+  "inner_analysis": {
+    "issues": [
+      {
+        "code": "TCP_NO_ANSWER",
+        "detector": "tcp",
+        "message": "1 connection(s) SYN without SYN-ACK. 198.51.100.1:45000 -> 198.51.100.2:22: 1 SYN(s) from 198.51.100.1:45000, no SYN-ACK seen at this capture point: the server is down, a filter drops it silently, or the reply returns by another path",
+        "severity": "error"
+      }
+    ],
+    "overall_status": "problem",
+    "protocols_present": [
+      "icmp",
+      "tcp"
+    ],
+    "status": "success",
+    "verdicts": {
+      "conversations": "7 packets, 411 bytes over 0.4 s; 2 address pair(s); most bytes: icmp",
+      "dmvpn_phase3": "No GRE/NHRP and no spoke-to-spoke IKE in this capture.",
+      "esp_overhead": "No ESP in this capture.",
+      "gre_nhrp": "No GRE traffic in this capture.",
+      "ipsec": "No IPsec (IKE/ESP) or GRE tunnel traffic in this capture.",
+      "path_mtu": "No large DF packets, no Fragmentation Needed and no fragments in this capture.",
+      "qos": "No DSCP marking, tunnel, ESP or RTP to judge.",
+      "reachability": "all 1 ping pair(s) answered, no loss",
+      "routing": "No BGP, OSPF or EIGRP in this capture.",
+      "tcp": "2 TCP connection(s): 1 no answer.",
+      "tls": "No TLS handshake in this capture."
+    }
+  },
+  "issues": [],
+  "limits": [
+    "Only ESP packets whose (src, dst, SPI) matches an SA, and whose keys and algorithms are correct, decrypt; a wrong key, a missing SA or NULL-but-undeclared encryption leaves the packet encrypted.",
+    "Cisco IOS and IOS XE do not expose ESP session keys, so a capture of a Cisco IOS tunnel cannot be decrypted this way. This feature is for SAs whose keys an operator can read (a Linux/strongSwan endpoint's ip xfrm state, a lab).",
+    "A packet counts as decrypted only when its decrypted ESP trailer is real: the RFC 4303 default padding (1, 2, 3, ...), a real next header, and in tunnel mode an inner IP packet whose own length is the payload's. tshark fills its decrypted-data field under a wrong key too, so its presence proves nothing.",
+    "Tunnel-mode inner packets are analysed as sent; a transport-mode payload is given back its outer IP header (the SA's addresses), so ports and payload are the sender's but the IP header is rebuilt.",
+    "The inner analysis sees only what the ESP packets carried; a one-way capture shows one direction of the inner conversation.",
+    "SA keys are secrets: read by path, kept off the tshark command line, and never written to a record, a log or a report."
+  ],
+  "overall_status": "ok",
+  "schema": "sonic.esp_decrypt_report/1",
+  "security_associations": [
+    {
+      "decrypted": 2,
+      "dst": "198.51.100.2",
+      "encryption": "aes-cbc",
+      "icv_bad": 0,
+      "icv_good": 2,
+      "integrity": "hmac-sha1-96",
+      "packets": 2,
+      "reason": null,
+      "spi": "0x00001001",
+      "src": "198.51.100.1",
+      "transport": 0,
+      "tunnel": 2
+    },
+    {
+      "decrypted": 1,
+      "dst": "198.51.100.2",
+      "encryption": "aes-cbc",
+      "icv_bad": 0,
+      "icv_good": 1,
+      "integrity": "hmac-sha256-128",
+      "packets": 1,
+      "reason": null,
+      "spi": "0x00002001",
+      "src": "198.51.100.1",
+      "transport": 0,
+      "tunnel": 1
+    },
+    {
+      "decrypted": 1,
+      "dst": "198.51.100.2",
+      "encryption": "aes-cbc",
+      "icv_bad": 0,
+      "icv_good": 1,
+      "integrity": "hmac-sha256-128",
+      "packets": 1,
+      "reason": null,
+      "spi": "0x00003001",
+      "src": "198.51.100.1",
+      "transport": 1,
+      "tunnel": 0
+    },
+    {
+      "decrypted": 1,
+      "dst": "198.51.100.2",
+      "encryption": "aes-gcm",
+      "icv_bad": 0,
+      "icv_good": 1,
+      "integrity": null,
+      "packets": 1,
+      "reason": null,
+      "spi": "0x00004001",
+      "src": "198.51.100.1",
+      "transport": 0,
+      "tunnel": 1
+    },
+    {
+      "decrypted": 2,
+      "dst": "198.51.100.1",
+      "encryption": "aes-gcm",
+      "icv_bad": 0,
+      "icv_good": 2,
+      "integrity": null,
+      "packets": 2,
+      "reason": null,
+      "spi": "0x00001002",
+      "src": "198.51.100.2",
+      "transport": 0,
+      "tunnel": 2
+    }
+  ],
+  "security_associations_omitted": 0,
+  "status": "success",
+  "summary": {
+    "esp_decrypted": 7,
+    "esp_packets": 7,
+    "sas_decrypting": 5,
+    "security_associations": 5
+  },
+  "verdict": "5 SA(s), 5 decrypting. 7 of 7 ESP packet(s) decrypted. 7 inner packet(s) reconstructed; inner traffic: icmp, tcp."
+}

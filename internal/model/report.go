@@ -183,6 +183,12 @@ type Issue struct {
 	Status         *int            `json:"status,omitempty"`
 	ErrorTag       string          `json:"error_tag,omitempty"`
 	Header         string          `json:"header,omitempty"`
+	Method         string          `json:"method,omitempty"`
+	GrpcStatus     *int            `json:"grpc_status,omitempty"`
+	Key            string          `json:"key,omitempty"`
+	Flow           string          `json:"flow,omitempty"`
+	Error          string          `json:"error,omitempty"`
+	Detector       string          `json:"detector,omitempty"`
 }
 
 // Event represents one chronological timeline entry from a detector run.
@@ -193,6 +199,7 @@ type Event struct {
 	Event    string   `json:"event"`
 	Detail   string   `json:"detail"`
 	Frame    *int     `json:"frame"`
+	Detector string   `json:"detector,omitempty"`
 }
 
 // CaptureInfo summarizes the capture metadata and extractor diagnostics.

@@ -268,3 +268,36 @@ func TestProtocolTokensHTTP2AHAndTLSContinuation(t *testing.T) {
 	}
 	_ = strp
 }
+
+func TestAddGrpcFindingsAndGoldenMix(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(repoRoot)
+
+	ctx := context.Background()
+	pcap := filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap")
+	rep, err := AuditCleartextCapture(ctx, AuditOptions{FilePath: pcap})
+	if err != nil {
+		t.Fatalf("AuditCleartextCapture: %v", err)
+	}
+	AddGrpcFindings(ctx, &rep, pcap, "", nil)
+	parity.CompareGolden(t, rep, filepath.Join("testdata", "golden", "network_orchestrator", "audit_grpc_mgmt_mix.json"))
+
+	// Error and no-op branches.
+	AddGrpcFindings(ctx, nil, pcap, "", nil)
+	noH2 := model.AuditReport{Status: "success"}
+	AddGrpcFindings(ctx, &noH2, pcap, "", nil)
+	if noH2.Grpc != nil {
+		t.Fatalf("expected no Grpc summary when no HTTP/2 sessions exist")
+	}
+	errRep := model.AuditReport{
+		Status:      "success",
+		TCPSessions: []model.TCPSession{{Protocol: "http2 (tcp/50001)"}},
+	}
+	AddGrpcFindings(ctx, &errRep, filepath.Join("tests", "fixtures", "missing.pcap"), "", nil)
+	if errRep.Grpc == nil || errRep.Grpc.Checked || errRep.Grpc.Error == "" {
+		t.Fatalf("expected checked=false error on missing capture: %+v", errRep.Grpc)
+	}
+}

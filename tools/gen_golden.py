@@ -21,12 +21,21 @@ if str(ROOT) not in sys.path:
 from analyzers.aaa_inspect import analyze_aaa_capture  # noqa: E402
 from analyzers.convergence import ConvergenceDetector  # noqa: E402
 from analyzers.dmvpn_phase3 import DmvpnPhase3Detector  # noqa: E402
+from analyzers.esp_decrypt import analyze_esp_capture  # noqa: E402
 from analyzers.esp_overhead import EspOverheadDetector  # noqa: E402
 from analyzers.gre_nhrp import GreNhrpDetector  # noqa: E402
+import analyzers.grpc_inspect as grpc_inspect  # noqa: E402
 from analyzers.http_inspect import analyze_http_capture  # noqa: E402
 from analyzers.ipsec_vpn import IPsecDetector  # noqa: E402
 from analyzers.network_common import Context  # noqa: E402
-from analyzers.network_orchestrator import audit_cleartext_capture  # noqa: E402
+from analyzers.network_orchestrator import (  # noqa: E402
+    analyze_convergence_capture,
+    analyze_data_plane_capture,
+    analyze_network_capture,
+    analyze_routing_capture,
+    analyze_vpn_capture,
+    audit_cleartext_capture,
+)
 from analyzers.path_mtu import PathMtuDetector  # noqa: E402
 from analyzers.qos import QosDetector  # noqa: E402
 from analyzers.reachability import ConversationDetector, ReachabilityDetector  # noqa: E402
@@ -36,6 +45,7 @@ from analyzers.tcp_health import TcpHealthDetector  # noqa: E402
 from analyzers.tls_inspect import TlsDetector  # noqa: E402
 from extractors.network import open_network_records  # noqa: E402
 from tests.fixtures.generate_aaa_fixtures import RADIUS_SECRET, TACACS_KEY  # noqa: E402
+from tests.fixtures.generate_esp_fixtures import sa_file_text, xfrm_state_text  # noqa: E402
 
 RECORD_FIXTURES = [
     "audit_one_leak.pcap",
@@ -294,16 +304,66 @@ def generate_stage3b1() -> int:
     return count
 
 
+def generate_stage3b2() -> int:
+    """Generate golden baselines for gRPC, ESP decryption, and network orchestrator."""
+    count = 0
+    orig_resolve = grpc_inspect.resolve_proto_paths
+    grpc_inspect.resolve_proto_paths = lambda p=None: list(p) if p else []
+    try:
+        grpc_cases = [
+            "grpc_connection_trouble.pcap",
+            "grpc_h2_trouble.pcap",
+            "grpc_mgmt_mix.pcap",
+            "grpc_tls12_alert.pcap",
+            "grpc_tls13_hrr.pcap",
+        ]
+        for pcap_name in grpc_cases:
+            stem = Path(pcap_name).stem
+            rep = grpc_inspect.analyze_grpc_capture(os.path.join("tests", "fixtures", pcap_name), proto_paths=[])
+            _write_json(ROOT / "testdata" / "golden" / "grpc" / f"{stem}.json", rep)
+            count += 1
+
+        net_cases = [
+            ("net_ipsec_ikev2_esp.json", lambda: analyze_network_capture("tests/fixtures/ipsec_ikev2_esp.pcap", backend="tshark")),
+            ("net_dp_qos_rtp.json", lambda: analyze_network_capture("tests/fixtures/dp_qos_rtp.pcap", backend="tshark")),
+            ("vpn_ipsec_ikev2_esp.json", lambda: analyze_vpn_capture("tests/fixtures/ipsec_ikev2_esp.pcap", backend="tshark")),
+            ("routing_bgp_failover.json", lambda: analyze_routing_capture("tests/fixtures/bgp_failover.pcap", backend="tshark", expected_mss=1360)),
+            ("audit_grpc_mgmt_mix.json", lambda: audit_cleartext_capture("tests/fixtures/grpc_mgmt_mix.pcap", backend="tshark")),
+            ("conv_dpd.json", lambda: analyze_convergence_capture("tests/fixtures/convergence_dpd.pcap", backend="tshark")),
+            ("dataplane_tcp_health.json", lambda: analyze_data_plane_capture("tests/fixtures/dp_tcp_health.pcap", backend="tshark")),
+        ]
+        for out_name, fn in net_cases:
+            _write_json(ROOT / "testdata" / "golden" / "network_orchestrator" / out_name, fn())
+            count += 1
+    finally:
+        grpc_inspect.resolve_proto_paths = orig_resolve
+
+    for out_name, text in (
+        ("esp_tunnel_sa_file.json", sa_file_text()),
+        ("esp_tunnel_xfrm.json", xfrm_state_text()),
+    ):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            rep = analyze_esp_capture("tests/fixtures/esp_tunnel.pcap", sa_file=handle.name)
+            _write_json(ROOT / "testdata" / "golden" / "esp_decrypt" / out_name, rep)
+            count += 1
+    return count
+
+
 def main() -> int:
     os.chdir(ROOT)
     generate_records()
     generate_cleartext_audit()
     leaf_count = generate_leaf_detectors()
     stage3b1_count = generate_stage3b1()
+    stage3b2_count = generate_stage3b2()
     print(
         f"Generated {len(RECORD_FIXTURES)} record golden files, "
         f"{len(AUDIT_FIXTURES) + 2} audit golden files, "
-        f"{leaf_count} leaf detector golden files, and {stage3b1_count} stage 3b1 golden files."
+        f"{leaf_count} leaf detector golden files, "
+        f"{stage3b1_count} stage 3b1 golden files, and "
+        f"{stage3b2_count} stage 3b2 golden files."
     )
     return 0
 

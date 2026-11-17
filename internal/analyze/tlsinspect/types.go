@@ -122,19 +122,20 @@ func (b *Baseline) active() bool {
 
 // CertificateInfo represents visibility and parsed fields of a leaf X.509 certificate.
 type CertificateInfo struct {
-	Visible            bool      `json:"visible"`
-	Reason             string    `json:"reason,omitempty"`
-	ChainLength        *int      `json:"chain_length,omitempty"`
-	Parsed             *bool     `json:"parsed,omitempty"`
-	Note               string    `json:"note,omitempty"`
-	Subject            *string   `json:"subject,omitempty"`
-	Issuer             *string   `json:"issuer,omitempty"`
-	SelfSigned         *bool     `json:"self_signed,omitempty"`
-	NotBefore          *string   `json:"not_before,omitempty"`
-	NotAfter           *string   `json:"not_after,omitempty"`
-	ValidAtCaptureTime *bool     `json:"valid_at_capture_time,omitempty"`
-	DNSNames           *[]string `json:"dns_names,omitempty"`
-	IPAddresses        *[]string `json:"ip_addresses,omitempty"`
+	Visible             bool      `json:"visible"`
+	Reason              string    `json:"reason,omitempty"`
+	ChainLength         *int      `json:"chain_length,omitempty"`
+	Parsed              *bool     `json:"parsed,omitempty"`
+	Note                string    `json:"note,omitempty"`
+	Subject             *string   `json:"subject,omitempty"`
+	Issuer              *string   `json:"issuer,omitempty"`
+	SelfSigned          *bool     `json:"self_signed,omitempty"`
+	NotBefore           *string   `json:"not_before,omitempty"`
+	NotAfter            *string   `json:"not_after,omitempty"`
+	ValidAtCaptureTime  *bool     `json:"valid_at_capture_time,omitempty"`
+	DNSNames            *[]string `json:"dns_names,omitempty"`
+	IPAddresses         *[]string `json:"ip_addresses,omitempty"`
+	DecryptedWithKeyLog *bool     `json:"decrypted_with_key_log,omitempty"`
 }
 
 // AlertRecord describes a decoded or encrypted TLS Alert record observed on a session.
