@@ -149,7 +149,10 @@ func appendConnectionDiagnostics(
 		credItems = append(credItems, credEntry{key: k, track: tr})
 	}
 	slices.SortStableFunc(credItems, func(a, b credEntry) int {
-		return cmp.Compare(a.track.firstFrame, b.track.firstFrame)
+		if c := cmp.Compare(a.track.firstFrame, b.track.firstFrame); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.track.order, b.track.order)
 	})
 	for _, ce := range credItems {
 		clear := reportConn.Transport == "cleartext"

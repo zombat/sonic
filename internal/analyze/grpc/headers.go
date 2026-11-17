@@ -123,7 +123,7 @@ func (a *grpcAnalysis) onHeaders(conn *connTrack, side string, fr *extract.HTTP2
 				if h.Credential {
 					entry, ok := conn.credentials[low]
 					if !ok {
-						entry = &credTrack{firstFrame: n, firstT: t}
+						entry = &credTrack{firstFrame: n, firstT: t, order: len(conn.credentials)}
 						conn.credentials[low] = entry
 					}
 					entry.requests++

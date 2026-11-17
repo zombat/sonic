@@ -8,6 +8,7 @@ import (
 	"github.com/zombat/sonic/internal/analyze/espoverhead"
 	"github.com/zombat/sonic/internal/analyze/ipsec"
 	"github.com/zombat/sonic/internal/analyze/reach"
+	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/analyze/tlsinspect"
 	"github.com/zombat/sonic/internal/model"
 )
@@ -62,11 +63,15 @@ type Options struct {
 	DetectorOpts  DetectorOptions
 }
 
-// SIPSummary notes whether SIP frames were seen (full SIP analysis belongs to Phase 5).
+// SIPSummary reports whether SIP frames were seen and embeds Phase 5 call quality and MOS analysis.
 type SIPSummary struct {
-	Present bool   `json:"present"`
-	Note    string `json:"note,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Present         bool                   `json:"present"`
+	QualityAnalysis *sip.QualityMetrics    `json:"quality_analysis,omitempty"`
+	QualityError    string                 `json:"quality_error,omitempty"`
+	MOSAnalysis     *sip.MOSAnalysisResult `json:"mos_analysis,omitempty"`
+	MOSError        string                 `json:"mos_error,omitempty"`
+	Error           string                 `json:"error,omitempty"`
+	Note            string                 `json:"note,omitempty"`
 }
 
 // NetworkBody holds shared fields across NetworkReport and wrapper reports without custom MarshalJSON promotion.

@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/zombat/sonic/internal/analyze/audit"
+	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/model"
 )
 
@@ -124,11 +125,17 @@ func collectReport(
 	limit := maxItems * 8
 	rep.OverallStatus = model.WorstStatus(statuses)
 	rep.Issues, rep.IssuesOmitted, rep.Timeline, rep.TimelineOmitted = sortAndCapAll(allIssues, allTimeline, limit)
-	note := "no SIP in this capture"
-	if sipSeen {
-		note = "SIP present; set include_sip to run the SIP quality path"
+	includeSIP := opts.IncludeSIP == nil || *opts.IncludeSIP
+	sipRes := sip.EvaluateNetorchSIP(ctx, filePath, sipSeen, includeSIP)
+	rep.SIP = SIPSummary{
+		Present:         sipRes.Present,
+		QualityAnalysis: sipRes.QualityAnalysis,
+		QualityError:    sipRes.QualityError,
+		MOSAnalysis:     sipRes.MOSAnalysis,
+		MOSError:        sipRes.MOSError,
+		Error:           sipRes.Error,
+		Note:            sipRes.Note,
 	}
-	rep.SIP = SIPSummary{Present: sipSeen, Note: note}
 	return builtReport{report: rep, sections: sec}
 }
 

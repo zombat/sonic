@@ -1,0 +1,20 @@
+{
+  "call_details": {
+    "fixture-call-1@10.5.5.10": {
+      "collected_digits": [],
+      "digit_progression": [],
+      "digit_sequence": "",
+      "evidence": [],
+      "info_count": 0,
+      "invite_count": 1,
+      "overlap_detected": false,
+      "pattern_type": null,
+      "reinvite_count": 0,
+      "timing_analysis": {}
+    }
+  },
+  "overall_pattern": "En-bloc dialing (complete numbers sent at once)",
+  "overlap_calls_count": 0,
+  "overlap_detected": false,
+  "total_calls_analyzed": 1
+}

@@ -1,0 +1,135 @@
+{
+  "auth_anomalies": [
+    "\ud83d\udd13 Weak authentication algorithm (MD5) detected in 1 challenge(s). Consider upgrading to SHA-256."
+  ],
+  "auth_challenges": [
+    {
+      "algorithm": "MD5",
+      "call_id": "reg-1@192.0.2.10",
+      "challenge_type": "server",
+      "domain": "",
+      "from_ip": "192.0.2.20",
+      "full_header": "Digest realm=\"example.com\", nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", algorithm=MD5, qop=\"auth\"",
+      "method": "",
+      "nonce": "dcd98b7102dd2f0e8b11d0f600bfb0c093",
+      "opaque": "",
+      "packet_num": 2,
+      "qop": "auth",
+      "realm": "example.com",
+      "stale": false,
+      "status_code": "401",
+      "timestamp": "Nov 14, 2023 17:13:21.000000000 EST",
+      "to_ip": "192.0.2.10"
+    }
+  ],
+  "auth_responses": [
+    {
+      "algorithm": "MD5",
+      "call_id": "reg-1@192.0.2.10",
+      "cnonce": "0a4f113b...",
+      "from_ip": "192.0.2.10",
+      "full_header": "Digest username=\"alice\", realm=\"example.com\", nonce=\"dcd98b7102dd2f0e8b11d0f600b...",
+      "is_proxy": false,
+      "method": "REGISTER",
+      "nc": "00000001",
+      "nonce": "dcd98b7102dd2f0e8b11d0f600bfb0c093",
+      "packet_num": 3,
+      "qop": "auth",
+      "realm": "example.com",
+      "request_uri": "sip:example.com",
+      "response_hash": "[MASKED]",
+      "timestamp": "Nov 14, 2023 17:13:22.000000000 EST",
+      "to_ip": "192.0.2.20",
+      "uri": "sip:example.com",
+      "username": "alice"
+    },
+    {
+      "algorithm": "MD5",
+      "call_id": "inv-1@192.0.2.10",
+      "cnonce": "",
+      "from_ip": "192.0.2.10",
+      "full_header": "Basic [MASKED]",
+      "is_proxy": true,
+      "method": "INVITE",
+      "nc": "",
+      "nonce": "",
+      "packet_num": 5,
+      "qop": "",
+      "realm": "",
+      "request_uri": "sip:carol@example.com",
+      "response_hash": "",
+      "timestamp": "Nov 14, 2023 17:13:24.000000000 EST",
+      "to_ip": "192.0.2.20",
+      "uri": "",
+      "username": ""
+    }
+  ],
+  "realms": [
+    "example.com"
+  ],
+  "register_attempts": [
+    {
+      "authenticated": true,
+      "call_id": "reg-1@192.0.2.10",
+      "count": 2,
+      "packets": [
+        {
+          "contact": "",
+          "expires": "",
+          "from_addr": "sip:alice@example.com",
+          "from_ip": "192.0.2.10",
+          "has_auth": false,
+          "packet_num": 1,
+          "request_uri": "sip:example.com",
+          "timestamp": "Nov 14, 2023 17:13:20.000000000 EST",
+          "to_addr": "sip:alice@example.com",
+          "to_ip": "192.0.2.20",
+          "type": "request"
+        },
+        {
+          "from_ip": "192.0.2.20",
+          "nonce": "dcd98b7102dd2f0e...",
+          "packet_num": 2,
+          "realm": "example.com",
+          "status_code": "401",
+          "timestamp": "Nov 14, 2023 17:13:21.000000000 EST",
+          "to_ip": "192.0.2.10",
+          "type": "challenge"
+        },
+        {
+          "contact": "",
+          "expires": "",
+          "from_addr": "sip:alice@example.com",
+          "from_ip": "192.0.2.10",
+          "has_auth": true,
+          "packet_num": 3,
+          "request_uri": "sip:example.com",
+          "timestamp": "Nov 14, 2023 17:13:22.000000000 EST",
+          "to_addr": "sip:alice@example.com",
+          "to_ip": "192.0.2.20",
+          "type": "request"
+        },
+        {
+          "expires": "3600",
+          "from_ip": "192.0.2.20",
+          "packet_num": 4,
+          "status_code": "200",
+          "timestamp": "Nov 14, 2023 17:13:23.000000000 EST",
+          "to_ip": "192.0.2.10",
+          "type": "response"
+        }
+      ],
+      "success": true
+    }
+  ],
+  "sip_servers": {
+    "192.0.2.20": {
+      "challenge_count": 1,
+      "proxy_challenges": 0,
+      "realms": [
+        "example.com"
+      ],
+      "server_challenges": 1
+    }
+  }
+}

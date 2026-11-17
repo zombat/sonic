@@ -280,4 +280,29 @@ func TestSecretDirRootAndOrphanEdgeCases(t *testing.T) {
 	if _, err := newInRoot(notADir, nil, nil); err == nil {
 		t.Fatal("newInRoot on file path should fail")
 	}
+	fallbackDir, err := newInRoot("", nil, nil)
+	if err != nil {
+		t.Fatalf("newInRoot fallback failed: %v", err)
+	}
+	if err := fallbackDir.Close(); err != nil {
+		t.Fatalf("close fallbackDir: %v", err)
+	}
+	if err := WithConfig(nil, map[string][]string{"../bad": {"x"}}, func(string) error { return nil }); err == nil {
+		t.Fatal("WithConfig should reject invalid UAT name")
+	}
+	if err := validateUATName("a/b"); err == nil {
+		t.Fatal("validateUATName should reject slash")
+	}
+	roDir := filepath.Join(dir, "ro")
+	if err := os.Mkdir(roDir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(roDir, 0o700) })
+	if secretDirRootFrom(roDir, "/proc/self/mounts") != "" {
+		t.Fatal("secretDirRootFrom should reject read-only dir")
+	}
+	InstallSignalCleanup()
+	if sigStopFunc != nil {
+		sigStopFunc()
+	}
 }

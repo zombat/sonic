@@ -212,6 +212,7 @@ type credTrack struct {
 	frames     []int
 	firstFrame int
 	firstT     float64
+	order      int
 }
 
 type connTrack struct {

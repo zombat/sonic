@@ -61,6 +61,15 @@ func TestGoldenNetorchParity(t *testing.T) {
 		got := AnalyzeDataPlaneCapture(ctx, fix("dp_tcp_health.pcap"), Options{})
 		parity.CompareGolden(t, got, golden("dataplane_tcp_health.json"))
 	})
+	t.Run("sip_minimal_network", func(t *testing.T) {
+		got := AnalyzeNetworkCapture(ctx, fix("sip_minimal.pcap"), Options{})
+		parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "sip", "sip_minimal_network.json"))
+		noSIP := false
+		skipped := AnalyzeNetworkCapture(ctx, fix("sip_minimal.pcap"), Options{IncludeSIP: &noSIP})
+		if !skipped.SIP.Present || skipped.SIP.QualityAnalysis != nil || skipped.SIP.Note == "" {
+			t.Fatalf("expected include_sip=false to skip SIP quality path, got %+v", skipped.SIP)
+		}
+	})
 }
 
 func TestNetorchValidationAndEdges(t *testing.T) {

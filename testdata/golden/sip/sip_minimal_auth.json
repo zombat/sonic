@@ -1,0 +1,8 @@
+{
+  "auth_anomalies": [],
+  "auth_challenges": [],
+  "auth_responses": [],
+  "realms": [],
+  "register_attempts": [],
+  "sip_servers": {}
+}

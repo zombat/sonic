@@ -19,6 +19,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from analyzers.aaa_inspect import analyze_aaa_capture  # noqa: E402
+from analyzers.call_quality_scoring import CallQualityScorer  # noqa: E402
+from analyzers.call_tracking import extract_and_analyze_call_tracking  # noqa: E402
 from analyzers.convergence import ConvergenceDetector  # noqa: E402
 from analyzers.correlate import correlate_captures  # noqa: E402
 from analyzers.dmvpn_phase3 import DmvpnPhase3Detector  # noqa: E402
@@ -36,18 +38,25 @@ from analyzers.network_orchestrator import (  # noqa: E402
     analyze_routing_capture,
     analyze_vpn_capture,
     audit_cleartext_capture,
+    to_jsonable,
 )
+from analyzers.overlap_dialing import detect_overlap_dialing  # noqa: E402
 from analyzers.path_mtu import PathMtuDetector  # noqa: E402
 from analyzers.qos import QosDetector  # noqa: E402
 from analyzers.reachability import ConversationDetector, ReachabilityDetector  # noqa: E402
 from analyzers.routing_health import RoutingDetector  # noqa: E402
+from analyzers.rtp_mos_analysis import AdvancedRTPMOSAnalyzer  # noqa: E402
 from analyzers.snmp_inspect import analyze_snmp_capture  # noqa: E402
 from analyzers.tcp_health import TcpHealthDetector  # noqa: E402
 from analyzers.timeline import merge_timelines  # noqa: E402
 from analyzers.tls_inspect import TlsDetector  # noqa: E402
+from extractors.auth_info import extract_auth_and_registration_info  # noqa: E402
 from extractors.network import open_network_records  # noqa: E402
+from extractors.tshark import extract_sip_data  # noqa: E402
+from test_sip_credentials import build_capture as build_sip_auth_capture  # noqa: E402
 from tests.fixtures.generate_aaa_fixtures import RADIUS_SECRET, TACACS_KEY  # noqa: E402
 from tests.fixtures.generate_esp_fixtures import sa_file_text, xfrm_state_text  # noqa: E402
+from utils.sip_converter import convert_sip_data_for_tracking  # noqa: E402
 
 RECORD_FIXTURES = [
     "audit_one_leak.pcap",
@@ -441,6 +450,69 @@ def generate_phase4() -> int:
     return count
 
 
+def generate_phase5() -> int:
+    """Generate golden baselines for SIP extraction, auth info, quality scoring, MOS, tracking, and overlap."""
+    count = 0
+    sip_dir = ROOT / "testdata" / "golden" / "sip"
+
+    sip_min_path = "tests/fixtures/sip_minimal.pcap"
+    sip_min = extract_sip_data(sip_min_path)
+    auth_min = extract_auth_and_registration_info(sip_min_path)
+    _write_json(sip_dir / "sip_minimal_extract.json", json.loads(sip_min))
+    _write_json(sip_dir / "sip_minimal_auth.json", auth_min)
+    _write_json(
+        sip_dir / "sip_minimal_quick_quality.json",
+        to_jsonable(
+            {
+                "status": "success",
+                "file": sip_min_path,
+                "quality_analysis": CallQualityScorer().score_call_quality(
+                    sip_min, [], None, sip_min_path, auth_data=auth_min
+                ),
+                "mos_analysis": AdvancedRTPMOSAnalyzer().analyze_rtp_streams(sip_min, sip_min_path),
+            }
+        ),
+    )
+    _write_json(
+        sip_dir / "sip_minimal_network.json",
+        analyze_network_capture(sip_min_path, backend="tshark"),
+    )
+    sessions, tracking_analysis = extract_and_analyze_call_tracking(convert_sip_data_for_tracking(sip_min))
+    _write_json(
+        sip_dir / "sip_minimal_tracking.json",
+        {
+            "sessions": {k: v.get_call_summary() for k, v in sessions.items()},
+            "analysis": tracking_analysis,
+        },
+    )
+    _write_json(sip_dir / "sip_minimal_overlap.json", detect_overlap_dialing(sip_min))
+    count += 6
+
+    with tempfile.NamedTemporaryFile(suffix=".pcap") as tmp:
+        build_sip_auth_capture(tmp.name)
+        sip_auth = extract_sip_data(tmp.name)
+        auth_info = extract_auth_and_registration_info(tmp.name)
+        _write_json(sip_dir / "sip_auth_extract.json", json.loads(sip_auth))
+        _write_json(sip_dir / "sip_auth_info.json", auth_info)
+        _write_json(
+            sip_dir / "sip_auth_quick_quality.json",
+            to_jsonable(
+                {
+                    "status": "success",
+                    "file": "tests/fixtures/sip_auth_synthetic.pcap",
+                    "quality_analysis": CallQualityScorer().score_call_quality(
+                        sip_auth, [], None, "tests/fixtures/sip_auth_synthetic.pcap", auth_data=auth_info
+                    ),
+                    "mos_analysis": AdvancedRTPMOSAnalyzer().analyze_rtp_streams(
+                        sip_auth, "tests/fixtures/sip_auth_synthetic.pcap"
+                    ),
+                }
+            ),
+        )
+        count += 3
+    return count
+
+
 def main() -> int:
     os.chdir(ROOT)
     generate_records()
@@ -449,13 +521,15 @@ def main() -> int:
     stage3b1_count = generate_stage3b1()
     stage3b2_count = generate_stage3b2()
     phase4_count = generate_phase4()
+    phase5_count = generate_phase5()
     print(
         f"Generated {len(RECORD_FIXTURES)} record golden files, "
         f"{len(AUDIT_FIXTURES) + 2} audit golden files, "
         f"{leaf_count} leaf detector golden files, "
         f"{stage3b1_count} stage 3b1 golden files, "
-        f"{stage3b2_count} stage 3b2 golden files, and "
-        f"{phase4_count} phase 4 golden files."
+        f"{stage3b2_count} stage 3b2 golden files, "
+        f"{phase4_count} phase 4 golden files, and "
+        f"{phase5_count} phase 5 golden files."
     )
     return 0
 
