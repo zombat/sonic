@@ -29,7 +29,29 @@ func CompareJSON(gotBytes, wantBytes []byte) error {
 	if err := json.Unmarshal(wantBytes, &wantVal); err != nil {
 		return fmt.Errorf("unmarshal want json: %w", err)
 	}
+	dropInstalledTool(gotVal)
+	dropInstalledTool(wantVal)
 	return compareValues("$", gotVal, wantVal)
+}
+
+// dropInstalledTool removes what describes the installed tshark, not the
+// analysis: its version string, and the fields that build did not decode.
+// Goldens were made with tshark 3.6.2 and CI runs 4.6.4, which renamed a BGP
+// field, so comparing these would fail on the tool's version rather than on a
+// change to the analysis. The analysis itself is still compared in full.
+func dropInstalledTool(v any) {
+	root, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	// The record extractor reports the same thing at the top level.
+	delete(root, "missing_fields")
+	capture, ok := root["capture"].(map[string]any)
+	if !ok {
+		return
+	}
+	delete(capture, "tshark")
+	delete(capture, "missing_tshark_fields")
 }
 
 // CompareGolden marshals got to JSON, reads the golden file at goldenPath, and
