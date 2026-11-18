@@ -150,6 +150,24 @@ func RecordFromTShark(row tshark.Row, versionMajor int) model.Record {
 		}
 	}
 
+	// tshark names the version of a v1 or v2c message snmp.version, and of a v3
+	// message snmp.msgVersion, which is always 3.
+	version := row.Int("snmp.version")
+	if version == nil {
+		version = row.Int("snmp.msg_version")
+	}
+	if version != nil {
+		flags := ""
+		if p := row.FirstPtr("snmp.flags"); p != nil {
+			flags = *p
+		}
+		rec.SNMP = &model.SNMPHeader{
+			Version:   *version,
+			Flags:     flags,
+			Discovery: snmpDiscovery(*version, flags, row.All("snmp.oids")),
+		}
+	}
+
 	if row.Has("arp.opcode") {
 		rec.ARP = &model.ARPPacket{
 			Op:  row.Int("arp.opcode"),

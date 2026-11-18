@@ -159,6 +159,13 @@ sonic --file mgmt.pcap --network-only --detectors cleartext_audit
 sonic --file wan-link.pcap --network-only --detectors cleartext_audit --allow crypto,l2-control
 ```
 
+```bash
+# SNMP on a non-standard UDP port: name it, so its frames are decoded and classed by version
+sonic --file mgmt.pcap --network-only --detectors cleartext_audit --snmp-ports 1161
+```
+
+SNMP is decoded on UDP 161 and 162 by default. Any other port reads as cleartext until it is named with `--snmp-ports`. Once decoded, SNMP is classed by version and security: SNMPv3 with privacy is encrypted and passes by default (token `snmp-v3-privacy`); SNMPv3 engine discovery, which carries no security and no data, is a key exchange and passes by default (token `snmp-v3-discovery`); SNMPv1, SNMPv2c and SNMPv3 without privacy carry readable PDUs and fail. Allow one token by name to accept only that class.
+
 The report goes to `--save_file`, or to `<capture>.network.md` when none is given. A path ending in `.json` writes the full JSON report.
 
 ### gRPC / gNMI / gNOI Troubleshooting (No LLM, needs tshark)

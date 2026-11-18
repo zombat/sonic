@@ -184,6 +184,9 @@ type AuditOptions struct {
 	DisplayFilter string
 	MaxPackets    *int
 	MaxItems      int
+	// SNMPPorts are UDP ports to decode as SNMP, for a manager or agent that
+	// does not use the standard port 161 or 162.
+	SNMPPorts []int
 }
 
 // AuditCleartextCapture runs tshark extraction and audits every frame against the allowlist.
@@ -202,6 +205,7 @@ func AuditCleartextCapture(ctx context.Context, opts AuditOptions) (model.AuditR
 		FilePath:      opts.FilePath,
 		DisplayFilter: opts.DisplayFilter,
 		MaxPackets:    opts.MaxPackets,
+		DecodeAs:      SNMPDecodeAs(opts.SNMPPorts),
 	})
 	if err != nil {
 		return model.AuditReport{Status: "error", Error: err.Error()}, err

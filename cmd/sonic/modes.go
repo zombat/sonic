@@ -43,6 +43,7 @@ func runNetwork(ctx context.Context, o cliOptions, detectors []string, stdin io.
 		Since:         sincePtr,
 		Until:         untilPtr,
 		FastPath:      o.fastPath,
+		SNMPPorts:     parsePortCSV(o.snmpPorts),
 		DetectorOpts:  detOpts,
 	})
 	raw, merr := json.MarshalIndent(rep, "", "  ")
@@ -204,6 +205,7 @@ func runAudit(ctx context.Context, o cliOptions, stdin io.Reader, stdout, stderr
 		Allow:         splitCSV(o.allowCSV),
 		DisplayFilter: o.displayFilter,
 		MaxPackets:    positiveIntPtr(o.maxPackets),
+		SNMPPorts:     parsePortCSV(o.snmpPorts),
 	})
 	if err != nil {
 		rep.Error = redact.RedactText(rep.Error)

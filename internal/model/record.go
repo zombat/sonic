@@ -34,8 +34,19 @@ type Record struct {
 	EIGRP        *EIGRPPacket `json:"eigrp,omitempty"`
 	ICMP         *ICMPPacket  `json:"icmp,omitempty"`
 	ARP          *ARPPacket   `json:"arp,omitempty"`
+	SNMP         *SNMPHeader  `json:"snmp,omitempty"`
 	SIP          *bool        `json:"sip,omitempty"`
 	DP           *DataPlane   `json:"dp,omitempty"`
+}
+
+// SNMPHeader is an SNMP message, decoded on a UDP port. Flags is the SNMPv3
+// msgFlags byte as hex text ("07" is authenticated, encrypted and reportable);
+// v1 and v2c carry no flags, so it is empty for them.
+type SNMPHeader struct {
+	Version int    `json:"version"`
+	Flags   string `json:"flags,omitempty"`
+	// Discovery marks SNMPv3 engine discovery: no security, no data.
+	Discovery bool `json:"discovery,omitempty"`
 }
 
 // IPHeader captures the outer IPv4 or IPv6 header fields.

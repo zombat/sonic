@@ -165,7 +165,7 @@ func analyzeInternal(ctx context.Context, filePath string, opts Options) builtRe
 
 	var recordsOut model.RecordsOutput
 	var err error
-	useFast := opts.FastPath == "always" || (opts.FastPath != "never" && extract.CanUseFastPath(names, opts.DisplayFilter))
+	useFast := len(opts.SNMPPorts) == 0 && (opts.FastPath == "always" || (opts.FastPath != "never" && extract.CanUseFastPath(names, opts.DisplayFilter)))
 	if useFast {
 		recordsOut, err = extract.OpenFastPathRecords(filePath, extract.FastPathOptions{
 			MaxPackets: opts.MaxPackets,
@@ -179,6 +179,7 @@ func analyzeInternal(ctx context.Context, filePath string, opts Options) builtRe
 			MaxPackets:    opts.MaxPackets,
 			Since:         opts.Since,
 			Until:         opts.Until,
+			DecodeAs:      audit.SNMPDecodeAs(opts.SNMPPorts),
 		})
 	}
 	if err != nil {

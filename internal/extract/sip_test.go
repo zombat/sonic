@@ -10,9 +10,37 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+	_ "time/tzdata"
 
 	"github.com/zombat/sonic/internal/parity"
 )
+
+// useEasternTime runs the test in America/New_York, the zone the SIP golden's
+// local timestamps were written in, so the golden does not depend on the
+// machine's own zone (CI runs in UTC).
+func useEasternTime(t *testing.T) {
+	t.Helper()
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatalf("load America/New_York: %v", err)
+	}
+	prev := time.Local
+	time.Local = loc
+	// tshark renders frame.time in its own zone from TZ, and the child inherits it.
+	prevTZ, hadTZ := os.LookupEnv("TZ")
+	if err := os.Setenv("TZ", "America/New_York"); err != nil {
+		t.Fatalf("set TZ: %v", err)
+	}
+	t.Cleanup(func() {
+		time.Local = prev
+		if hadTZ {
+			_ = os.Setenv("TZ", prevTZ)
+		} else {
+			_ = os.Unsetenv("TZ")
+		}
+	})
+}
 
 func buildSyntheticSIPAuthPCAP(t *testing.T, outPath string) (secrets []string) {
 	t.Helper()
@@ -130,6 +158,7 @@ func itoa(n int) string {
 }
 
 func TestSIPMaskingExtractionAndGoldenParity(t *testing.T) {
+	useEasternTime(t)
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)

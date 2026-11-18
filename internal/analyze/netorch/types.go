@@ -63,7 +63,10 @@ type Options struct {
 	FastPath      string
 	IncludeSIP    *bool
 	MaxItems      int
-	DetectorOpts  DetectorOptions
+	// SNMPPorts are UDP ports to decode as SNMP. The fast path does not decode
+	// SNMP, so naming any port takes the tshark path.
+	SNMPPorts    []int
+	DetectorOpts DetectorOptions
 }
 
 // SIPSummary reports whether SIP frames were seen and embeds Phase 5 call quality and MOS analysis.

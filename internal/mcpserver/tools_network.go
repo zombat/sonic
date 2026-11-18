@@ -116,6 +116,7 @@ type auditArgs struct {
 	DisplayFilter string          `json:"display_filter"`
 	MaxPackets    *int            `json:"max_packets"`
 	MaxItems      *int            `json:"max_items"`
+	SNMPPorts     []int           `json:"snmp_ports"`
 }
 
 func handleAuditCleartextPcap(ctx context.Context, raw json.RawMessage) ([]byte, error) {
@@ -135,6 +136,7 @@ func handleAuditCleartextPcap(ctx context.Context, raw json.RawMessage) ([]byte,
 		DisplayFilter: a.DisplayFilter,
 		MaxPackets:    a.MaxPackets,
 		MaxItems:      clampMaxItems(a.MaxItems),
+		SNMPPorts:     a.SNMPPorts,
 		DetectorOpts:  netorch.DetectorOptions{CleartextAudit: auditOpt},
 	})
 	return json.Marshal(rep)
