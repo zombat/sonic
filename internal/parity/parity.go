@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -29,29 +32,69 @@ func CompareJSON(gotBytes, wantBytes []byte) error {
 	if err := json.Unmarshal(wantBytes, &wantVal); err != nil {
 		return fmt.Errorf("unmarshal want json: %w", err)
 	}
-	dropInstalledTool(gotVal)
-	dropInstalledTool(wantVal)
+	normalizeInstalledTool(gotVal, onTShark4())
+	normalizeInstalledTool(wantVal, false)
 	return compareValues("$", gotVal, wantVal)
 }
 
-// dropInstalledTool removes what describes the installed tshark, not the
-// analysis: its version string, and the fields that build did not decode.
-// Goldens were made with tshark 3.6.2 and CI runs 4.6.4, which renamed a BGP
-// field, so comparing these would fail on the tool's version rather than on a
-// change to the analysis. The analysis itself is still compared in full.
-func dropInstalledTool(v any) {
+// knownAbsentOn4 names the fields tshark 4 no longer decodes, which a golden
+// made on tshark 3 lists as present. Only these are forgiven, and only when the
+// tshark that produced the output is 4.x. Any other field a build fails to
+// decode still fails the comparison.
+var knownAbsentOn4 = map[string]bool{
+	"bgp.minor_capability": true,
+}
+
+var (
+	tshark4Once sync.Once
+	tshark4     bool
+)
+
+// onTShark4 reports whether the tshark on PATH is 4.x, the version CI runs.
+func onTShark4() bool {
+	tshark4Once.Do(func() {
+		out, err := exec.Command("tshark", "--version").Output()
+		tshark4 = err == nil && strings.HasPrefix(string(out), "TShark (Wireshark) 4.")
+	})
+	return tshark4
+}
+
+// normalizeInstalledTool removes what describes the installed tshark, not the
+// analysis: its version string. The fields it did not decode stay compared,
+// except the known tshark 4 gaps on a tshark 4 run (knownAbsentOn4). Goldens
+// were made with tshark 3.6.2 and CI runs 4.6.4, so the comparison is
+// otherwise the same on both.
+func normalizeInstalledTool(v any, tshark4Run bool) {
 	root, ok := v.(map[string]any)
 	if !ok {
 		return
 	}
-	// The record extractor reports the same thing at the top level.
-	delete(root, "missing_fields")
+	forgiveOn4(root, "missing_fields", tshark4Run)
 	capture, ok := root["capture"].(map[string]any)
 	if !ok {
 		return
 	}
 	delete(capture, "tshark")
-	delete(capture, "missing_tshark_fields")
+	forgiveOn4(capture, "missing_tshark_fields", tshark4Run)
+}
+
+// forgiveOn4 drops the knownAbsentOn4 names from m[key] on a tshark 4 run.
+func forgiveOn4(m map[string]any, key string, tshark4Run bool) {
+	if !tshark4Run {
+		return
+	}
+	list, ok := m[key].([]any)
+	if !ok {
+		return
+	}
+	kept := make([]any, 0, len(list))
+	for _, f := range list {
+		if s, ok := f.(string); ok && knownAbsentOn4[s] {
+			continue
+		}
+		kept = append(kept, f)
+	}
+	m[key] = kept
 }
 
 // CompareGolden marshals got to JSON, reads the golden file at goldenPath, and
