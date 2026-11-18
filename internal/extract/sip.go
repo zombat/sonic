@@ -1,4 +1,5 @@
-// Package extract extracts masked SIP signaling and RTP stream summaries from packet captures.
+// Package extract extracts masked SIP signaling, SDP media hints, RTP stream
+// summaries, and RFC 4733 RTP telephone-event frames from packet captures.
 package extract
 
 import (
@@ -6,14 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 
 	"github.com/zombat/sonic/internal/tshark"
 )
 
 var sipTsharkFields = []string{
-	"frame.number", "frame.time", "ip.src", "ip.dst",
+	"frame.number", "frame.time", "frame.time_epoch",
+	"ip.src", "ip.dst", "ipv6.src", "ipv6.dst",
 	"sip.Call-ID", "sip.Method", "sip.Status-Code",
 	"sip.r-uri", "sip.from.addr", "sip.to.addr",
 	"sip.User-Agent",
@@ -23,65 +24,86 @@ var sipTsharkFields = []string{
 	"sip.contact.uri", "sip.from.tag", "sip.to.tag",
 	"sip.CSeq.method", "sip.CSeq.seq", "sip.Expires",
 	"sdp.version", "sdp.media", "sdp.media.port",
-	"sdp.media.proto", "sdp.owner.username", "sdp.session_name",
+	"sdp.media.proto", "sdp.media_attr", "sdp.owner.username", "sdp.session_name",
 	"rtp.ssrc", "rtp.seq", "rtp.p_type",
+	"rtpevent.event_id", "rtpevent.duration", "rtpevent.end_of_event",
 	"udp.srcport", "udp.dstport", "udp.length",
 	"frame.protocols",
 }
 
 // SIPPacket holds masked SIP signaling and SDP metadata for a single captured frame.
 type SIPPacket struct {
-	PacketNum          int    `json:"packet_num"`
-	Time               string `json:"time"`
-	SrcIP              string `json:"src_ip"`
-	DstIP              string `json:"dst_ip"`
-	SrcPort            string `json:"src_port"`
-	DstPort            string `json:"dst_port"`
-	CallID             string `json:"call_id"`
-	Method             string `json:"method"`
-	StatusCode         string `json:"status_code"`
-	RequestURI         string `json:"request_uri"`
-	FromAddr           string `json:"from_addr"`
-	ToAddr             string `json:"to_addr"`
-	UserAgent          string `json:"user_agent"`
-	Contact            string `json:"contact"`
-	CSeqMethod         string `json:"cseq_method"`
-	CSeqSeq            string `json:"cseq_seq"`
-	Expires            string `json:"expires"`
-	Authorization      string `json:"authorization"`
-	ProxyAuthorization string `json:"proxy_authorization"`
-	WWWAuthenticate    string `json:"www_authenticate"`
-	ProxyAuthenticate  string `json:"proxy_authenticate"`
-	SDPVersion         string `json:"sdp_version"`
-	SDPMedia           string `json:"sdp_media"`
-	SDPMediaPort       string `json:"sdp_media_port"`
-	SDPMediaProto      string `json:"sdp_media_proto"`
-	SDPOwnerUsername   string `json:"sdp_owner_username"`
-	SDPSessionName     string `json:"sdp_session_name"`
+	PacketNum          int      `json:"packet_num"`
+	Time               string   `json:"time"`
+	Epoch              *float64 `json:"epoch,omitempty"`
+	SrcIP              string   `json:"src_ip"`
+	DstIP              string   `json:"dst_ip"`
+	SrcPort            string   `json:"src_port"`
+	DstPort            string   `json:"dst_port"`
+	CallID             string   `json:"call_id"`
+	Method             string   `json:"method"`
+	StatusCode         string   `json:"status_code"`
+	RequestURI         string   `json:"request_uri"`
+	FromAddr           string   `json:"from_addr"`
+	ToAddr             string   `json:"to_addr"`
+	UserAgent          string   `json:"user_agent"`
+	Contact            string   `json:"contact"`
+	CSeqMethod         string   `json:"cseq_method"`
+	CSeqSeq            string   `json:"cseq_seq"`
+	Expires            string   `json:"expires"`
+	Authorization      string   `json:"authorization"`
+	ProxyAuthorization string   `json:"proxy_authorization"`
+	WWWAuthenticate    string   `json:"www_authenticate"`
+	ProxyAuthenticate  string   `json:"proxy_authenticate"`
+	SDPVersion         string   `json:"sdp_version"`
+	SDPMedia           string   `json:"sdp_media"`
+	SDPMediaPort       string   `json:"sdp_media_port"`
+	SDPMediaProto      string   `json:"sdp_media_proto"`
+	SDPMediaAttrs      []string `json:"sdp_media_attr,omitempty"`
+	SDPOwnerUsername   string   `json:"sdp_owner_username"`
+	SDPSessionName     string   `json:"sdp_session_name"`
 }
 
-// RTPStreamSummary aggregates packet count, payload type, and frame numbers per RTP flow.
+// RTPStreamSummary aggregates packet count, payload type, epochs, and frame numbers per RTP flow.
 type RTPStreamSummary struct {
-	SSRC          string `json:"ssrc"`
-	SrcIP         string `json:"src_ip"`
-	DstIP         string `json:"dst_ip"`
-	SrcPort       string `json:"src_port"`
-	DstPort       string `json:"dst_port"`
-	PacketCount   int    `json:"packet_count"`
-	PayloadType   string `json:"payload_type"`
-	PacketNumbers []int  `json:"packet_numbers"`
+	SSRC          string   `json:"ssrc"`
+	SrcIP         string   `json:"src_ip"`
+	DstIP         string   `json:"dst_ip"`
+	SrcPort       string   `json:"src_port"`
+	DstPort       string   `json:"dst_port"`
+	PacketCount   int      `json:"packet_count"`
+	PayloadType   string   `json:"payload_type"`
+	PacketNumbers []int    `json:"packet_numbers"`
+	FirstEpoch    *float64 `json:"first_epoch,omitempty"`
+	LastEpoch     *float64 `json:"last_epoch,omitempty"`
 }
 
-// SIPExtractionSummary matches the JSON payload returned by extractors/tshark.py.
+// RTPEventPacket holds one decoded RFC 4733 / RFC 2833 telephone-event frame.
+type RTPEventPacket struct {
+	PacketNum   int     `json:"packet_num"`
+	Epoch       float64 `json:"epoch"`
+	SrcIP       string  `json:"src_ip"`
+	DstIP       string  `json:"dst_ip"`
+	SrcPort     string  `json:"src_port"`
+	DstPort     string  `json:"dst_port"`
+	SSRC        string  `json:"ssrc"`
+	PayloadType string  `json:"payload_type"`
+	EventID     int     `json:"event_id"`
+	EndOfEvent  bool    `json:"end_of_event"`
+	Duration    int     `json:"duration"`
+}
+
+// SIPExtractionSummary matches the JSON payload consumed by S.O.N.I.C. SIP analyzers.
 type SIPExtractionSummary struct {
 	SIPPackets     []SIPPacket        `json:"sip_packets"`
 	RTPStreams     []RTPStreamSummary `json:"rtp_streams"`
+	RTPEvents      []RTPEventPacket   `json:"rtpevents,omitempty"`
 	TotalPackets   int                `json:"total_packets"`
 	SIPCount       int                `json:"sip_count"`
 	RTPStreamCount int                `json:"rtp_stream_count"`
 }
 
-// ExtractSIPData runs tshark SIP/RTP extraction, falling back to raw PCAP UDP scan when needed.
+// ExtractSIPData runs streaming tshark SIP/RTP extraction, falling back to raw PCAP UDP scan when needed.
 func ExtractSIPData(ctx context.Context, filePath string) (*SIPExtractionSummary, string, error) {
 	fmt.Fprintf(os.Stderr, "Extracting SIP data from %s...\n", filePath)
 	if tshark.Available("") {
@@ -97,104 +119,59 @@ func ExtractSIPData(ctx context.Context, filePath string) (*SIPExtractionSummary
 	return nil, rawText, nil
 }
 
-// extractSIPWithTShark invokes tshark -T json across sip/rtp filters and summarizes results.
+// extractSIPWithTShark streams SIP, SDP, RTP, and RTPEvent packets via tshark -T ek,
+// running a dynamic -d udp.port==<port>,rtp pass for non-standard SDP media ports.
 func extractSIPWithTShark(ctx context.Context, filePath string) (*SIPExtractionSummary, string, error) {
-	const flt = "sip or rtp or (udp and (udp.port >= 10000 and udp.port <= 20000))"
-	args := make([]string, 0, 8+len(sipTsharkFields)*2)
-	args = append(args, "-r", tshark.SafeCapturePath(filePath), "-Y", flt, "-T", "json")
-	for _, f := range sipTsharkFields {
-		args = append(args, "-e", f)
-	}
-	out, err := exec.CommandContext(ctx, tshark.DefaultBinary, args...).Output()
-	if err != nil || len(out) == 0 {
-		return nil, "", err
-	}
-	var rawPackets []struct {
-		Source struct {
-			Layers map[string][]string `json:"layers"`
-		} `json:"_source"`
-	}
-	if err := json.Unmarshal(out, &rawPackets); err != nil {
-		return nil, MaskSIPText(string(out)), nil
-	}
-	summary := buildSIPSummary(len(rawPackets), func(yield func(map[string][]string)) {
-		for _, pkt := range rawPackets {
-			yield(pkt.Source.Layers)
-		}
+	const flt = "sip or rtp or rtpevent or (udp and (udp.port >= 10000 and udp.port <= 20000))"
+	rows := make([]map[string][]string, 0, 32)
+	_, err := tshark.StreamEKFields(ctx, tshark.CustomStreamOptions{
+		FilePath:      filePath,
+		DisplayFilter: flt,
+		Fields:        sipTsharkFields,
+	}, func(row tshark.Row) error {
+		rows = append(rows, ekRowMap(row))
+		return nil
 	})
-	encoded, err := json.MarshalIndent(summary, "", "  ")
 	if err != nil {
 		return nil, "", err
+	}
+
+	if extraDecode := collectDynamicRTPDecodeSpecs(rows); len(extraDecode) > 0 {
+		rows = appendDynamicRTPPass(ctx, filePath, extraDecode, rows)
+	}
+
+	summary := buildSIPSummary(len(rows), func(yield func(map[string][]string)) {
+		for _, layers := range rows {
+			yield(layers)
+		}
+	})
+	encoded, merr := json.MarshalIndent(summary, "", "  ")
+	if merr != nil {
+		return nil, "", merr
 	}
 	return summary, string(encoded), nil
 }
 
-// buildSIPSummary transforms raw tshark _source.layers maps into a bounded SIPExtractionSummary.
+// buildSIPSummary transforms extracted layer maps into a masked SIPExtractionSummary.
 func buildSIPSummary(total int, iter func(func(map[string][]string))) *SIPExtractionSummary {
 	sipPackets := []SIPPacket{}
 	rtpStreams := make(map[string]*RTPStreamSummary)
 	streamOrder := []string{}
-
-	firstOr := func(m map[string][]string, key, def string) string {
-		if vals := m[key]; len(vals) > 0 {
-			return vals[0]
-		}
-		return def
-	}
+	var rtpEvents []RTPEventPacket
 
 	iter(func(layers map[string][]string) {
-		callID := firstOr(layers, "sip.Call-ID", "")
-		method := firstOr(layers, "sip.Method", "")
-		status := firstOr(layers, "sip.Status-Code", "")
-		if callID != "" || method != "" || status != "" {
-			if callID == "" {
-				callID = "Unknown"
-			}
-			pnum, _ := strconv.Atoi(firstOr(layers, "frame.number", "0"))
-			auth := firstOr(layers, "sip.Authorization", "")
-			if auth != "" {
-				auth = MaskSIPCredentials(auth)
-			}
-			proxyAuth := firstOr(layers, "sip.Proxy-Authorization", "")
-			if proxyAuth != "" {
-				proxyAuth = MaskSIPCredentials(proxyAuth)
-			}
-			sipPackets = append(sipPackets, SIPPacket{
-				PacketNum:          pnum,
-				Time:               firstOr(layers, "frame.time", "Unknown"),
-				SrcIP:              firstOr(layers, "ip.src", "Unknown"),
-				DstIP:              firstOr(layers, "ip.dst", "Unknown"),
-				SrcPort:            firstOr(layers, "udp.srcport", "Unknown"),
-				DstPort:            firstOr(layers, "udp.dstport", "Unknown"),
-				CallID:             callID,
-				Method:             method,
-				StatusCode:         status,
-				RequestURI:         firstOr(layers, "sip.r-uri", ""),
-				FromAddr:           firstOr(layers, "sip.from.addr", ""),
-				ToAddr:             firstOr(layers, "sip.to.addr", ""),
-				UserAgent:          firstOr(layers, "sip.User-Agent", ""),
-				Contact:            firstOr(layers, "sip.contact.uri", ""),
-				CSeqMethod:         firstOr(layers, "sip.CSeq.method", ""),
-				CSeqSeq:            firstOr(layers, "sip.CSeq.seq", ""),
-				Expires:            firstOr(layers, "sip.Expires", ""),
-				Authorization:      auth,
-				ProxyAuthorization: proxyAuth,
-				WWWAuthenticate:    firstOr(layers, "sip.WWW-Authenticate", ""),
-				ProxyAuthenticate:  firstOr(layers, "sip.Proxy-Authenticate", ""),
-				SDPVersion:         firstOr(layers, "sdp.version", ""),
-				SDPMedia:           firstOr(layers, "sdp.media", ""),
-				SDPMediaPort:       firstOr(layers, "sdp.media.port", ""),
-				SDPMediaProto:      firstOr(layers, "sdp.media.proto", ""),
-				SDPOwnerUsername:   firstOr(layers, "sdp.owner.username", ""),
-				SDPSessionName:     firstOr(layers, "sdp.session_name", ""),
-			})
+		pnum, _ := strconv.Atoi(firstOr(layers, "frame.number", "0"))
+		srcIP := firstAddr(layers, "ip.src", "ipv6.src")
+		dstIP := firstAddr(layers, "ip.dst", "ipv6.dst")
+		srcPort := firstOr(layers, "udp.srcport", "Unknown")
+		dstPort := firstOr(layers, "udp.dstport", "Unknown")
+		epoch, hasEpoch := parseEpochValue(firstOr(layers, "frame.time_epoch", ""))
+
+		if pkt, ok := parseSIPPacketRow(layers, pnum, srcIP, dstIP, srcPort, dstPort, epoch, hasEpoch); ok {
+			sipPackets = append(sipPackets, pkt)
 		}
 
 		if ssrcs := layers["rtp.ssrc"]; len(ssrcs) > 0 {
-			srcIP := firstOr(layers, "ip.src", "Unknown")
-			dstIP := firstOr(layers, "ip.dst", "Unknown")
-			srcPort := firstOr(layers, "udp.srcport", "Unknown")
-			dstPort := firstOr(layers, "udp.dstport", "Unknown")
 			key := fmt.Sprintf("%s:%s-%s:%s", srcIP, srcPort, dstIP, dstPort)
 			st, ok := rtpStreams[key]
 			if !ok {
@@ -211,8 +188,14 @@ func buildSIPSummary(total int, iter func(func(map[string][]string))) *SIPExtrac
 				streamOrder = append(streamOrder, key)
 			}
 			st.PacketCount++
-			if pnum, err := strconv.Atoi(firstOr(layers, "frame.number", "0")); err == nil && pnum > 0 {
+			if pnum > 0 {
 				st.PacketNumbers = append(st.PacketNumbers, pnum)
+			}
+			if hasEpoch {
+				updateStreamEpochs(st, epoch)
+			}
+			if ev, ok := parseRTPEventRow(layers, pnum, epoch, srcIP, dstIP, srcPort, dstPort, ssrcs[0]); ok {
+				rtpEvents = append(rtpEvents, ev)
 			}
 		}
 	})
@@ -224,6 +207,7 @@ func buildSIPSummary(total int, iter func(func(map[string][]string))) *SIPExtrac
 	return &SIPExtractionSummary{
 		SIPPackets:     sipPackets,
 		RTPStreams:     ordered,
+		RTPEvents:      rtpEvents,
 		TotalPackets:   total,
 		SIPCount:       len(sipPackets),
 		RTPStreamCount: len(ordered),

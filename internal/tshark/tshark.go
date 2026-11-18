@@ -100,6 +100,8 @@ type StreamOptions struct {
 	FilePath      string
 	DisplayFilter string
 	MaxPackets    *int
+	Since         *float64
+	Until         *float64
 	Env           []string
 }
 

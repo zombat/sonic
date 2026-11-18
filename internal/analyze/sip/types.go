@@ -124,22 +124,26 @@ type ScoringInput struct {
 
 // QuickQualityReport matches the JSON shape returned by mcp_server.quick_quality_check.
 type QuickQualityReport struct {
-	Status          string             `json:"status"`
-	File            string             `json:"file,omitempty"`
-	Error           string             `json:"error,omitempty"`
-	QualityAnalysis *QualityMetrics    `json:"quality_analysis,omitempty"`
-	QualityError    string             `json:"quality_error,omitempty"`
-	MOSAnalysis     *MOSAnalysisResult `json:"mos_analysis,omitempty"`
-	MOSError        string             `json:"mos_error,omitempty"`
+	Status          string                `json:"status"`
+	File            string                `json:"file,omitempty"`
+	Error           string                `json:"error,omitempty"`
+	QualityAnalysis *QualityMetrics       `json:"quality_analysis,omitempty"`
+	QualityError    string                `json:"quality_error,omitempty"`
+	MOSAnalysis     *MOSAnalysisResult    `json:"mos_analysis,omitempty"`
+	MOSError        string                `json:"mos_error,omitempty"`
+	MediaClipping   *MediaClippingSummary `json:"media_clipping,omitempty"`
+	DTMFEvents      *DTMFEventsSummary    `json:"dtmf_events,omitempty"`
 }
 
 // NetorchSIPSummary matches the "sip" block of network_orchestrator reports.
 type NetorchSIPSummary struct {
-	Present         bool               `json:"present"`
-	QualityAnalysis *QualityMetrics    `json:"quality_analysis,omitempty"`
-	QualityError    string             `json:"quality_error,omitempty"`
-	MOSAnalysis     *MOSAnalysisResult `json:"mos_analysis,omitempty"`
-	MOSError        string             `json:"mos_error,omitempty"`
-	Error           string             `json:"error,omitempty"`
-	Note            string             `json:"note,omitempty"`
+	Present         bool                  `json:"present"`
+	QualityAnalysis *QualityMetrics       `json:"quality_analysis,omitempty"`
+	QualityError    string                `json:"quality_error,omitempty"`
+	MOSAnalysis     *MOSAnalysisResult    `json:"mos_analysis,omitempty"`
+	MOSError        string                `json:"mos_error,omitempty"`
+	MediaClipping   *MediaClippingSummary `json:"media_clipping,omitempty"`
+	DTMFEvents      *DTMFEventsSummary    `json:"dtmf_events,omitempty"`
+	Error           string                `json:"error,omitempty"`
+	Note            string                `json:"note,omitempty"`
 }

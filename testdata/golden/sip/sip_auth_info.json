@@ -1,6 +1,6 @@
 {
   "auth_anomalies": [
-    "\ud83d\udd13 Weak authentication algorithm (MD5) detected in 1 challenge(s). Consider upgrading to SHA-256."
+    "🔓 Weak authentication algorithm (MD5) detected in 1 challenge(s). Consider upgrading to SHA-256."
   ],
   "auth_challenges": [
     {

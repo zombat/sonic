@@ -2,6 +2,7 @@ package tshark
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -160,5 +161,86 @@ func TestRealTsharkStreamAndErrorPaths(t *testing.T) {
 		t.Fatal("expected error for corrupt -corrupt.pcap")
 	} else if !strings.Contains(err.Error(), "tshark failed") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestStreamEKFieldsAndDecodeEdgeCases(t *testing.T) {
+	ctx := context.Background()
+	sipFix, err := filepath.Abs(filepath.Join("..", "..", "testdata", "fixtures", "sip_minimal.pcap"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(sipFix); err != nil {
+		t.Fatalf("stat sip fixture: %v", err)
+	}
+
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{}, nil); err == nil {
+		t.Fatal("expected error for empty path")
+	}
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{FilePath: "/nonexistent/nope.pcap", Fields: []string{"frame.number"}}, nil); err == nil {
+		t.Fatal("expected error for missing path")
+	}
+	dir := t.TempDir()
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{FilePath: dir, Fields: []string{"frame.number"}}, nil); err == nil {
+		t.Fatal("expected error for directory")
+	}
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{FilePath: sipFix}, nil); err == nil {
+		t.Fatal("expected error for empty fields")
+	}
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{Binary: "missing-tshark", FilePath: sipFix, Fields: []string{"frame.number"}}, nil); err == nil {
+		t.Fatal("expected error for missing binary")
+	}
+
+	max2 := 2
+	seen := 0
+	var attrs []string
+	_, err = StreamEKFields(ctx, CustomStreamOptions{
+		FilePath:      sipFix,
+		DisplayFilter: "sip",
+		MaxPackets:    &max2,
+		Fields:        []string{"frame.number", "sip.Method", "sdp.media_attr"},
+		DecodeAs:      []string{"udp.port==5060,sip", ""},
+	}, func(r Row) error {
+		seen++
+		attrs = append(attrs, r.All("sdp.media_attr")...)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamEKFields failed: %v", err)
+	}
+	if seen != 2 || len(attrs) == 0 {
+		t.Fatalf("unexpected ek stream: seen=%d attrs=%v", seen, attrs)
+	}
+
+	stopErr := errors.New("abort ek")
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{FilePath: sipFix, Fields: []string{"frame.number"}}, func(Row) error { return stopErr }); !errors.Is(err, stopErr) {
+		t.Fatalf("expected abort error, got %v", err)
+	}
+
+	badPcap := filepath.Join(dir, "bad.pcap")
+	if err := os.WriteFile(badPcap, []byte("not a pcap"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{FilePath: badPcap, Fields: []string{"frame.number"}}, func(Row) error { return nil }); err == nil {
+		t.Fatal("expected error on bad pcap")
+	}
+
+	decoded := decodeEKLayers(map[string]json.RawMessage{
+		"frame_number": []byte(`["1"]`),
+		"flag_true":    []byte(`true`),
+		"flag_false":   []byte(`false`),
+		"count":        []byte(`42`),
+		"scalar_str":   []byte(`"hello"`),
+		"empty":        []byte(`null`),
+		"blank":        []byte(`   `),
+		"obj_skip":     []byte(`{"x":1}`),
+		"bad_arr":      []byte(`[invalid`),
+		"arr_mix":      []byte(`["a", true, 5, {}]`),
+	}, map[string]string{"frame_number": "frame.number"})
+	if decoded["frame.number"][0] != "1" || decoded["flag_true"][0] != "1" || decoded["flag_false"][0] != "0" || decoded["count"][0] != "42" || decoded["scalar_str"][0] != "hello" || len(decoded["arr_mix"]) != 3 {
+		t.Fatalf("unexpected decodeEKLayers: %+v", decoded)
+	}
+	if EKFieldKey("sip.Call-ID") != "sip_Call-ID" {
+		t.Fatalf("EKFieldKey unexpected: %s", EKFieldKey("sip.Call-ID"))
 	}
 }
