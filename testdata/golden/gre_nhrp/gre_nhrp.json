@@ -1,0 +1,438 @@
+{
+  "detector": "gre_nhrp",
+  "dmvpn_phase_hint": "phase3",
+  "error_indications": [
+    {
+      "error": "Protocol Address Unreachable",
+      "error_code": 6,
+      "frame": 14,
+      "from": "192.0.2.1",
+      "request_id": 50331650,
+      "t": 2.005,
+      "to": "198.51.100.2"
+    }
+  ],
+  "events": [
+    {
+      "detail": "spoke 198.51.100.2 (10.0.0.2) registered with hub 192.0.2.1",
+      "event": "registered",
+      "frame": 2,
+      "protocol": "nhrp",
+      "t": 0.005,
+      "time": "2026-01-01T00:00:00.005Z"
+    },
+    {
+      "detail": "spoke 203.0.113.3 (10.0.0.3) registered with hub 192.0.2.1",
+      "event": "registered",
+      "frame": 4,
+      "protocol": "nhrp",
+      "t": 0.105,
+      "time": "2026-01-01T00:00:00.105Z"
+    },
+    {
+      "detail": "hub 192.0.2.1 refused spoke 192.0.2.44: Administratively Prohibited",
+      "event": "registration_refused",
+      "frame": 6,
+      "protocol": "nhrp",
+      "t": 0.205,
+      "time": "2026-01-01T00:00:00.205Z"
+    },
+    {
+      "detail": "10.1.3.1 resolved for 10.0.0.2: tunnel 10.0.0.3 at NBMA 203.0.113.3",
+      "event": "resolved",
+      "frame": 12,
+      "protocol": "nhrp",
+      "t": 1.01,
+      "time": "2026-01-01T00:00:01.010Z"
+    },
+    {
+      "detail": "192.0.2.1 redirected 198.51.100.2 for traffic to 10.1.3.1 (Phase 3 shortcut signal)",
+      "event": "redirect",
+      "frame": 9,
+      "protocol": "nhrp",
+      "t": 1.002,
+      "time": "2026-01-01T00:00:01.002Z"
+    },
+    {
+      "detail": "192.0.2.1->198.51.100.2: Protocol Address Unreachable",
+      "event": "error_indication",
+      "frame": 14,
+      "protocol": "nhrp",
+      "t": 2.005,
+      "time": "2026-01-01T00:00:02.005Z"
+    },
+    {
+      "detail": "direct spoke-to-spoke GRE 203.0.113.3->198.51.100.2",
+      "event": "spoke_to_spoke",
+      "frame": 12,
+      "protocol": "gre",
+      "t": 1.02,
+      "time": "2026-01-01T00:00:01.020Z"
+    }
+  ],
+  "hubs": [
+    {
+      "nbma": "192.0.2.1",
+      "spokes_refused": [
+        "192.0.2.44"
+      ],
+      "spokes_registered": [
+        "198.51.100.2",
+        "203.0.113.3"
+      ],
+      "spokes_unanswered": [],
+      "tunnel_ip": "10.0.0.1"
+    }
+  ],
+  "issues": [
+    {
+      "code": "NHRP_REGISTRATION_REFUSED",
+      "frames": [
+        6
+      ],
+      "message": "hub 192.0.2.1 refused the registration of spoke 192.0.2.44 (10.0.0.4): Administratively Prohibited",
+      "nhrp_code": 4,
+      "severity": "error"
+    },
+    {
+      "code": "NHRP_ERROR_INDICATION",
+      "error_code": 6,
+      "frames": [
+        14
+      ],
+      "message": "NHRP error indication 192.0.2.1->198.51.100.2: Protocol Address Unreachable",
+      "severity": "warning"
+    }
+  ],
+  "purges": {},
+  "redirects": [
+    {
+      "count": 1,
+      "first_t": 1.002,
+      "frames": [
+        9
+      ],
+      "from": "192.0.2.1",
+      "original_dst": "10.1.3.1",
+      "original_src": "10.1.2.1",
+      "redirecting_tunnel_ip": "10.0.0.1",
+      "to": "198.51.100.2"
+    }
+  ],
+  "registrations": [
+    {
+      "first_t": 0.0,
+      "hub_nbma": "192.0.2.1",
+      "hub_tunnel_ip": "10.0.0.1",
+      "last_t": 0.005,
+      "replies": 1,
+      "reply_codes": {
+        "Success": 1
+      },
+      "reply_frames": [
+        2
+      ],
+      "request_frames": [
+        1
+      ],
+      "requests": 1,
+      "result": "registered",
+      "spoke_nbma": "198.51.100.2",
+      "spoke_tunnel_ip": "10.0.0.2"
+    },
+    {
+      "first_t": 0.1,
+      "hub_nbma": "192.0.2.1",
+      "hub_tunnel_ip": "10.0.0.1",
+      "last_t": 0.105,
+      "replies": 1,
+      "reply_codes": {
+        "Success": 1
+      },
+      "reply_frames": [
+        4
+      ],
+      "request_frames": [
+        3
+      ],
+      "requests": 1,
+      "result": "registered",
+      "spoke_nbma": "203.0.113.3",
+      "spoke_tunnel_ip": "10.0.0.3"
+    },
+    {
+      "first_t": 0.2,
+      "hub_nbma": "192.0.2.1",
+      "hub_tunnel_ip": "10.0.0.1",
+      "last_t": 0.205,
+      "replies": 1,
+      "reply_codes": {
+        "Administratively Prohibited": 1
+      },
+      "reply_frames": [
+        6
+      ],
+      "request_frames": [
+        5
+      ],
+      "requests": 1,
+      "result": "refused",
+      "spoke_nbma": "192.0.2.44",
+      "spoke_tunnel_ip": "10.0.0.4"
+    }
+  ],
+  "registrations_omitted": 0,
+  "resolutions": [
+    {
+      "answers": [
+        {
+          "answered_by": "203.0.113.3",
+          "client_nbma": "203.0.113.3",
+          "client_tunnel_ip": "10.0.0.3",
+          "code": 0,
+          "code_name": "Success",
+          "frame": 12,
+          "prefix_length": 24
+        }
+      ],
+      "first_t": 1.01,
+      "replies": 1,
+      "reply_frames": [
+        12
+      ],
+      "request_frames": [
+        10,
+        11
+      ],
+      "request_id": 50331649,
+      "requester_nbma": "198.51.100.2",
+      "requester_tunnel_ip": "10.0.0.2",
+      "requests_seen": 2,
+      "result": "resolved",
+      "target": "10.1.3.1"
+    },
+    {
+      "answers": [],
+      "first_t": 2.0,
+      "replies": 0,
+      "reply_frames": [],
+      "request_frames": [
+        13
+      ],
+      "request_id": 50331650,
+      "requester_nbma": "198.51.100.2",
+      "requester_tunnel_ip": "10.0.0.2",
+      "requests_seen": 1,
+      "result": "error_indication",
+      "target": "10.9.9.9"
+    }
+  ],
+  "resolutions_omitted": 0,
+  "spoke_to_spoke_tunnels": [
+    {
+      "endpoints": [
+        "198.51.100.2",
+        "203.0.113.3"
+      ],
+      "first_t": 1.02,
+      "packets": 2
+    }
+  ],
+  "spokes": [
+    {
+      "hubs": [
+        "192.0.2.1"
+      ],
+      "nbma": "198.51.100.2",
+      "tunnel_ip": "10.0.0.2"
+    },
+    {
+      "hubs": [
+        "192.0.2.1"
+      ],
+      "nbma": "203.0.113.3",
+      "tunnel_ip": "10.0.0.3"
+    },
+    {
+      "hubs": [
+        "192.0.2.1"
+      ],
+      "nbma": "192.0.2.44",
+      "tunnel_ip": "10.0.0.4"
+    }
+  ],
+  "status": "problem",
+  "summary": {
+    "gre_packets": 15,
+    "gre_tunnels": 8,
+    "hubs": 1,
+    "nhrp_messages": {
+      "error_indication": 1,
+      "registration_reply": 3,
+      "registration_request": 3,
+      "resolution_reply": 1,
+      "resolution_request": 3,
+      "traffic_indication": 1
+    },
+    "spoke_to_spoke_tunnels": 1,
+    "spokes": 3,
+    "spokes_registered": 2
+  },
+  "tunnels": [
+    {
+      "bytes": 359,
+      "dst": "192.0.2.1",
+      "first_t": 0.0,
+      "frames": [
+        1,
+        7,
+        10,
+        13
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "ipv4": 1,
+        "nhrp": 3
+      },
+      "keyless_packets": 0,
+      "last_t": 2.0,
+      "packets": 4,
+      "src": "198.51.100.2"
+    },
+    {
+      "bytes": 338,
+      "dst": "198.51.100.2",
+      "first_t": 0.005,
+      "frames": [
+        2,
+        9,
+        14
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "nhrp": 3
+      },
+      "keyless_packets": 0,
+      "last_t": 2.005,
+      "packets": 3,
+      "src": "192.0.2.1"
+    },
+    {
+      "bytes": 94,
+      "dst": "192.0.2.1",
+      "first_t": 0.1,
+      "frames": [
+        3
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "nhrp": 1
+      },
+      "keyless_packets": 0,
+      "last_t": 0.1,
+      "packets": 1,
+      "src": "203.0.113.3"
+    },
+    {
+      "bytes": 265,
+      "dst": "203.0.113.3",
+      "first_t": 0.105,
+      "frames": [
+        4,
+        8,
+        11
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "ipv4": 1,
+        "nhrp": 2
+      },
+      "keyless_packets": 0,
+      "last_t": 1.011,
+      "packets": 3,
+      "src": "192.0.2.1"
+    },
+    {
+      "bytes": 94,
+      "dst": "192.0.2.1",
+      "first_t": 0.2,
+      "frames": [
+        5
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "nhrp": 1
+      },
+      "keyless_packets": 0,
+      "last_t": 0.2,
+      "packets": 1,
+      "src": "192.0.2.44"
+    },
+    {
+      "bytes": 94,
+      "dst": "192.0.2.44",
+      "first_t": 0.205,
+      "frames": [
+        6
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "nhrp": 1
+      },
+      "keyless_packets": 0,
+      "last_t": 0.205,
+      "packets": 1,
+      "src": "192.0.2.1"
+    },
+    {
+      "bytes": 102,
+      "dst": "198.51.100.2",
+      "first_t": 1.02,
+      "frames": [
+        12
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "nhrp": 1
+      },
+      "keyless_packets": 0,
+      "last_t": 1.02,
+      "packets": 1,
+      "src": "203.0.113.3"
+    },
+    {
+      "bytes": 76,
+      "dst": "203.0.113.3",
+      "first_t": 3.0,
+      "frames": [
+        15
+      ],
+      "gre_keys": [
+        100
+      ],
+      "inner_protocols": {
+        "ipv4": 1
+      },
+      "keyless_packets": 0,
+      "last_t": 3.0,
+      "packets": 1,
+      "src": "198.51.100.2"
+    }
+  ],
+  "tunnels_omitted": 0,
+  "verdict": "DMVPN overlay: 2 of 3 spoke(s) registered with hub 192.0.2.1 (10.0.0.1); refused: 192.0.2.44; 1 spoke-to-spoke tunnel(s) carried traffic"
+}

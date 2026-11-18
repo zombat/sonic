@@ -1,0 +1,314 @@
+{
+  "bgp": {
+    "present": false
+  },
+  "detector": "routing",
+  "eigrp": {
+    "issues": [
+      {
+        "code": "EIGRP_K_VALUE_MISMATCH",
+        "frames": [],
+        "message": "EIGRP K-values differ in AS 100: 10.0.23.1=[1, 0, 1, 0, 0, 0], 10.0.23.2=[1, 0, 1, 0, 0, 0], 10.0.23.3=[1, 1, 1, 0, 0, 0]; 10.0.23.3 cannot form adjacencies with the others",
+        "severity": "error"
+      },
+      {
+        "code": "EIGRP_NEIGHBOR_SILENT",
+        "frames": [
+          15,
+          18
+        ],
+        "message": "10.0.23.3 went silent 24.6 s before the capture ended without a goodbye (hold time 15 s): it failed or became unreachable",
+        "severity": "error"
+      },
+      {
+        "code": "EIGRP_GOODBYE",
+        "frames": [
+          19
+        ],
+        "message": "10.0.23.2 sent an EIGRP goodbye: the neighbor was shut down, its configuration removed, or its interface is going down",
+        "severity": "warning"
+      },
+      {
+        "code": "EIGRP_QUERIES",
+        "frames": [],
+        "message": "10.0.23.1 sent 1 Query message(s): routes were lost and recomputed",
+        "severity": "info"
+      }
+    ],
+    "links": [
+      {
+        "adjacencies": [
+          {
+            "init_exchanged": true,
+            "restarts": 0,
+            "speakers": [
+              "10.0.23.1",
+              "10.0.23.2"
+            ],
+            "unicast_seen": true
+          },
+          {
+            "init_exchanged": false,
+            "restarts": 0,
+            "speakers": [
+              "10.0.23.1",
+              "10.0.23.3"
+            ],
+            "unicast_seen": false
+          },
+          {
+            "init_exchanged": false,
+            "restarts": 0,
+            "speakers": [
+              "10.0.23.2",
+              "10.0.23.3"
+            ],
+            "unicast_seen": false
+          }
+        ],
+        "mismatches": [
+          {
+            "parameter": "k_values",
+            "values": {
+              "10.0.23.1": [
+                1,
+                0,
+                1,
+                0,
+                0,
+                0
+              ],
+              "10.0.23.2": [
+                1,
+                0,
+                1,
+                0,
+                0,
+                0
+              ],
+              "10.0.23.3": [
+                1,
+                1,
+                1,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        ],
+        "speakers": [
+          {
+            "address": "10.0.23.1",
+            "as": 100,
+            "first_t": 0.0,
+            "goodbyes": 0,
+            "hellos": 9,
+            "hold_time": 15,
+            "init_updates_to": {
+              "10.0.23.2": 1
+            },
+            "k_values": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "last_t": 45.0,
+            "max_gap_s": 6.0,
+            "messages": {
+              "Hello": 9,
+              "Query": 1,
+              "Update": 2
+            },
+            "over_gre": false,
+            "route_tlvs": 2
+          },
+          {
+            "address": "10.0.23.2",
+            "as": 100,
+            "first_t": 0.2,
+            "goodbyes": 1,
+            "hellos": 6,
+            "hold_time": 15,
+            "init_updates_to": {
+              "10.0.23.1": 1
+            },
+            "k_values": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "last_t": 25.0,
+            "max_gap_s": 5.0,
+            "messages": {
+              "Hello": 6,
+              "Update": 1
+            },
+            "over_gre": false,
+            "route_tlvs": 0
+          },
+          {
+            "address": "10.0.23.3",
+            "as": 100,
+            "first_t": 0.4,
+            "goodbyes": 0,
+            "hellos": 5,
+            "hold_time": 15,
+            "init_updates_to": {},
+            "k_values": [
+              1,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "last_t": 20.4,
+            "max_gap_s": 5.0,
+            "messages": {
+              "Hello": 5
+            },
+            "over_gre": false,
+            "route_tlvs": 0
+          }
+        ]
+      }
+    ],
+    "links_omitted": 0,
+    "packets": 24,
+    "present": true,
+    "speakers": 3,
+    "status": "problem",
+    "verdict": "EIGRP: 3 speaker(s), 1 adjacency(ies) formed in the capture; problems: EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT."
+  },
+  "events": [
+    {
+      "detail": "10.0.23.1 sent INIT update to 10.0.23.2 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 4,
+      "protocol": "eigrp",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "10.0.23.2 sent INIT update to 10.0.23.1 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 5,
+      "protocol": "eigrp",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "10.0.23.2 sent an EIGRP goodbye (neighbor shut down or removed)",
+      "event": "goodbye",
+      "frame": 19,
+      "protocol": "eigrp",
+      "t": 25.0,
+      "time": "2026-01-01T00:00:25.000Z"
+    },
+    {
+      "detail": "10.0.23.1 sent a Query (a route was lost and is being recomputed)",
+      "event": "query",
+      "frame": 20,
+      "protocol": "eigrp",
+      "t": 26.0,
+      "time": "2026-01-01T00:00:26.000Z"
+    },
+    {
+      "detail": "10.0.23.3 hold time expired (last packet at 20.4 s); silent until capture end",
+      "event": "neighbor_silent",
+      "frame": 18,
+      "protocol": "eigrp",
+      "t": 35.4,
+      "time": "2026-01-01T00:00:35.400Z"
+    }
+  ],
+  "failover_timeline": [
+    {
+      "detail": "10.0.23.1 sent INIT update to 10.0.23.2 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 4,
+      "protocol": "eigrp",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "10.0.23.2 sent INIT update to 10.0.23.1 (adjacency starting)",
+      "event": "adjacency_init",
+      "frame": 5,
+      "protocol": "eigrp",
+      "t": 0.6,
+      "time": "2026-01-01T00:00:00.600Z"
+    },
+    {
+      "detail": "10.0.23.2 sent an EIGRP goodbye (neighbor shut down or removed)",
+      "event": "goodbye",
+      "frame": 19,
+      "protocol": "eigrp",
+      "t": 25.0,
+      "time": "2026-01-01T00:00:25.000Z"
+    },
+    {
+      "detail": "10.0.23.1 sent a Query (a route was lost and is being recomputed)",
+      "event": "query",
+      "frame": 20,
+      "protocol": "eigrp",
+      "t": 26.0,
+      "time": "2026-01-01T00:00:26.000Z"
+    },
+    {
+      "detail": "10.0.23.3 hold time expired (last packet at 20.4 s); silent until capture end",
+      "event": "neighbor_silent",
+      "frame": 18,
+      "protocol": "eigrp",
+      "t": 35.4,
+      "time": "2026-01-01T00:00:35.400Z"
+    }
+  ],
+  "issues": [
+    {
+      "code": "EIGRP_K_VALUE_MISMATCH",
+      "frames": [],
+      "message": "EIGRP K-values differ in AS 100: 10.0.23.1=[1, 0, 1, 0, 0, 0], 10.0.23.2=[1, 0, 1, 0, 0, 0], 10.0.23.3=[1, 1, 1, 0, 0, 0]; 10.0.23.3 cannot form adjacencies with the others",
+      "protocol": "eigrp",
+      "severity": "error"
+    },
+    {
+      "code": "EIGRP_NEIGHBOR_SILENT",
+      "frames": [
+        15,
+        18
+      ],
+      "message": "10.0.23.3 went silent 24.6 s before the capture ended without a goodbye (hold time 15 s): it failed or became unreachable",
+      "protocol": "eigrp",
+      "severity": "error"
+    },
+    {
+      "code": "EIGRP_GOODBYE",
+      "frames": [
+        19
+      ],
+      "message": "10.0.23.2 sent an EIGRP goodbye: the neighbor was shut down, its configuration removed, or its interface is going down",
+      "protocol": "eigrp",
+      "severity": "warning"
+    },
+    {
+      "code": "EIGRP_QUERIES",
+      "frames": [],
+      "message": "10.0.23.1 sent 1 Query message(s): routes were lost and recomputed",
+      "protocol": "eigrp",
+      "severity": "info"
+    }
+  ],
+  "ospf": {
+    "present": false
+  },
+  "status": "problem",
+  "verdict": "EIGRP: 3 speaker(s), 1 adjacency(ies) formed in the capture; problems: EIGRP_K_VALUE_MISMATCH, EIGRP_NEIGHBOR_SILENT."
+}

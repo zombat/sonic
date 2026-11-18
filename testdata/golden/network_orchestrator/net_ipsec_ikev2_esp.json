@@ -1,0 +1,1459 @@
+{
+  "capture": {
+    "backend": "tshark",
+    "bytes": 5576,
+    "display_filter": null,
+    "duration_s": 8.504,
+    "end": "2026-01-01T00:00:08.504Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 36,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "conversations": {
+    "detector": "conversations",
+    "issues": [],
+    "protocols": [
+      {
+        "bytes": 3660,
+        "packets": 30,
+        "protocol": "esp",
+        "service": null
+      },
+      {
+        "bytes": 1916,
+        "packets": 6,
+        "protocol": "ike",
+        "service": null
+      }
+    ],
+    "protocols_omitted": 0,
+    "status": "ok",
+    "top_conversations": [
+      {
+        "a": "192.0.2.1",
+        "a_to_b": {
+          "bytes": 2756,
+          "packets": 18
+        },
+        "b": "198.51.100.2",
+        "b_to_a": {
+          "bytes": 2820,
+          "packets": 18
+        },
+        "bytes": 5576,
+        "packets": 36,
+        "protocols": {
+          "esp": 30,
+          "ike": 6
+        }
+      }
+    ],
+    "top_conversations_omitted": 0,
+    "top_talkers": [
+      {
+        "address": "198.51.100.2",
+        "bytes_sent": 2820,
+        "packets_sent": 18
+      },
+      {
+        "address": "192.0.2.1",
+        "bytes_sent": 2756,
+        "packets_sent": 18
+      }
+    ],
+    "top_talkers_omitted": 0,
+    "totals": {
+      "address_pairs": 1,
+      "bytes": 5576,
+      "duration_s": 8.504,
+      "hosts_sending": 2,
+      "packets": 36
+    },
+    "verdict": "36 packets, 5576 bytes over 8.504 s; 1 address pair(s); most bytes: esp"
+  },
+  "detectors_not_present": [
+    "gre_nhrp",
+    "dmvpn_phase3",
+    "routing",
+    "reachability",
+    "path_mtu",
+    "tcp",
+    "tls"
+  ],
+  "detectors_requested": [
+    "ipsec",
+    "gre_nhrp",
+    "dmvpn_phase3",
+    "routing",
+    "reachability",
+    "path_mtu",
+    "esp_overhead",
+    "tcp",
+    "tls",
+    "qos",
+    "conversations"
+  ],
+  "detectors_run": [
+    "ipsec",
+    "esp_overhead",
+    "qos",
+    "conversations"
+  ],
+  "dmvpn_phase3": {
+    "cannot_show": [
+      "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+    ],
+    "detector": "dmvpn_phase3",
+    "encrypted_shortcuts": {
+      "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "note": "hub addresses unknown (no NHRP visible): pass hubs to classify the 1 IKE SA(s) negotiated during the capture as spoke-to-spoke shortcuts",
+      "shortcuts": []
+    },
+    "error_indications": [],
+    "flows": [],
+    "flows_omitted": 0,
+    "hub_relayed_without_redirect": [],
+    "hubs": [],
+    "hubs_source": {
+      "from_redirects": [],
+      "from_registrations": [],
+      "given": []
+    },
+    "issues": [],
+    "resolution_thrashing": {
+      "spokes": [],
+      "thrashing": false,
+      "thresholds": {
+        "peak_per_second": 5,
+        "unanswered_repeats_per_target": 5
+      }
+    },
+    "status": "not_present",
+    "verdict": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts."
+  },
+  "esp_overhead": {
+    "assumptions": {
+      "gre_header_bytes": 8,
+      "transport_mtu": 1500,
+      "tunnel_mtu": null
+    },
+    "detector": "esp_overhead",
+    "estimate": true,
+    "flows": [
+      {
+        "confidence": "medium",
+        "consistent_families": [
+          {
+            "alignment": 4,
+            "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  51,
+                  54
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 8,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1426,
+                "overhead_bytes": [
+                  74,
+                  77
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA256-128",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  31,
+                  46
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1430,
+                "overhead_bytes": [
+                  70,
+                  85
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1418,
+                "overhead_bytes": [
+                  82,
+                  97
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA512-256",
+            "icv": 32,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  15,
+                  30
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1414,
+                "overhead_bytes": [
+                  86,
+                  101
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1402,
+                "overhead_bytes": [
+                  98,
+                  113
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 4,
+            "family": "NULL encryption + HMAC-SHA1-96",
+            "icv": 12,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  63,
+                  66
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 0,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1450,
+                "overhead_bytes": [
+                  50,
+                  53
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              }
+            }
+          }
+        ],
+        "df_set_packets": 0,
+        "distinct_sizes": 1,
+        "dst": "192.0.2.1",
+        "estimate": "AES-CBC + HMAC-SHA512-256",
+        "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+        "frames": [
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "largest_outer_packet": 108,
+        "nat_t": false,
+        "packets": 10,
+        "size_histogram": [
+          {
+            "esp_payload": 80,
+            "packets": 10
+          }
+        ],
+        "spi": "0xc0ffee01",
+        "src": "198.51.100.2"
+      },
+      {
+        "confidence": "medium",
+        "consistent_families": [
+          {
+            "alignment": 4,
+            "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  51,
+                  54
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 8,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1426,
+                "overhead_bytes": [
+                  74,
+                  77
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA256-128",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  31,
+                  46
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1430,
+                "overhead_bytes": [
+                  70,
+                  85
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1418,
+                "overhead_bytes": [
+                  82,
+                  97
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA512-256",
+            "icv": 32,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  15,
+                  30
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1414,
+                "overhead_bytes": [
+                  86,
+                  101
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1402,
+                "overhead_bytes": [
+                  98,
+                  113
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 4,
+            "family": "NULL encryption + HMAC-SHA1-96",
+            "icv": 12,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  63,
+                  66
+                ],
+                "packets": 10
+              }
+            ],
+            "iv": 0,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1450,
+                "overhead_bytes": [
+                  50,
+                  53
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              }
+            }
+          }
+        ],
+        "df_set_packets": 0,
+        "distinct_sizes": 1,
+        "dst": "198.51.100.2",
+        "estimate": "AES-CBC + HMAC-SHA512-256",
+        "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+        "frames": [
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "largest_outer_packet": 108,
+        "nat_t": false,
+        "packets": 10,
+        "size_histogram": [
+          {
+            "esp_payload": 80,
+            "packets": 10
+          }
+        ],
+        "spi": "0xc0ffee02",
+        "src": "192.0.2.1"
+      },
+      {
+        "confidence": "medium",
+        "consistent_families": [
+          {
+            "alignment": 4,
+            "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  51,
+                  54
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 8,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1426,
+                "overhead_bytes": [
+                  74,
+                  77
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA256-128",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  31,
+                  46
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1430,
+                "overhead_bytes": [
+                  70,
+                  85
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1418,
+                "overhead_bytes": [
+                  82,
+                  97
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA512-256",
+            "icv": 32,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  15,
+                  30
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1414,
+                "overhead_bytes": [
+                  86,
+                  101
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1402,
+                "overhead_bytes": [
+                  98,
+                  113
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 4,
+            "family": "NULL encryption + HMAC-SHA1-96",
+            "icv": 12,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  63,
+                  66
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 0,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1450,
+                "overhead_bytes": [
+                  50,
+                  53
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              }
+            }
+          }
+        ],
+        "df_set_packets": 0,
+        "distinct_sizes": 1,
+        "dst": "192.0.2.1",
+        "estimate": "AES-CBC + HMAC-SHA512-256",
+        "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+        "frames": [
+          27,
+          29,
+          31,
+          33,
+          35
+        ],
+        "largest_outer_packet": 108,
+        "nat_t": false,
+        "packets": 5,
+        "size_histogram": [
+          {
+            "esp_payload": 80,
+            "packets": 5
+          }
+        ],
+        "spi": "0xc0ffee11",
+        "src": "198.51.100.2"
+      },
+      {
+        "confidence": "medium",
+        "consistent_families": [
+          {
+            "alignment": 4,
+            "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  51,
+                  54
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 8,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1426,
+                "overhead_bytes": [
+                  74,
+                  77
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA256-128",
+            "icv": 16,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  31,
+                  46
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1430,
+                "overhead_bytes": [
+                  70,
+                  85
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1418,
+                "overhead_bytes": [
+                  82,
+                  97
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 16,
+            "family": "AES-CBC + HMAC-SHA512-256",
+            "icv": 32,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  15,
+                  30
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 16,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1414,
+                "overhead_bytes": [
+                  86,
+                  101
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1402,
+                "overhead_bytes": [
+                  98,
+                  113
+                ]
+              }
+            }
+          },
+          {
+            "alignment": 4,
+            "family": "NULL encryption + HMAC-SHA1-96",
+            "icv": 12,
+            "indistinguishable_from": [],
+            "inner_size_bounds": [
+              {
+                "esp_payload": 80,
+                "inner_bytes": [
+                  63,
+                  66
+                ],
+                "packets": 5
+              }
+            ],
+            "iv": 0,
+            "modes": {
+              "transport_over_gre": {
+                "largest_inner_packet_without_fragmentation": 1450,
+                "overhead_bytes": [
+                  50,
+                  53
+                ]
+              },
+              "tunnel": {
+                "largest_inner_packet_without_fragmentation": 1438,
+                "overhead_bytes": [
+                  62,
+                  65
+                ]
+              }
+            }
+          }
+        ],
+        "df_set_packets": 0,
+        "distinct_sizes": 1,
+        "dst": "198.51.100.2",
+        "estimate": "AES-CBC + HMAC-SHA512-256",
+        "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+        "frames": [
+          28,
+          30,
+          32,
+          34,
+          36
+        ],
+        "largest_outer_packet": 108,
+        "nat_t": false,
+        "packets": 5,
+        "size_histogram": [
+          {
+            "esp_payload": 80,
+            "packets": 5
+          }
+        ],
+        "spi": "0xc0ffee12",
+        "src": "192.0.2.1"
+      }
+    ],
+    "flows_omitted": 0,
+    "issues": [],
+    "limits": [
+      "ESP is encrypted: the cipher, tunnel or transport mode, and the inner packets are estimates from packet sizes, never read from the packet. Families with equal IV, ICV and alignment (AES-GCM, AES-CCM, ChaCha20-Poly1305) cannot be told apart.",
+      "Padding is assumed minimal (no TFC padding); an implementation that pads more makes the inner sizes smaller than the bounds shown.",
+      "Tunnel versus transport mode cannot be read from sizes alone; both are computed. The IKE exchange that agreed the mode is encrypted (IKEv2 IKE_AUTH, IKEv1 Quick Mode)."
+    ],
+    "outer_fragmentation": [],
+    "status": "ok",
+    "summary": {
+      "capture_wide_distinct_sizes": 1,
+      "capture_wide_estimate": "AES-CBC + HMAC-SHA512-256",
+      "esp_flows": 4,
+      "esp_fragments": 0,
+      "family_estimates": {
+        "AES-CBC + HMAC-SHA512-256": 4
+      },
+      "flows_dropped_at_cap": 0
+    },
+    "verdict": "4 ESP flow(s); sizes fit AES-CBC + HMAC-SHA512-256 on 4 flow(s) (estimate); no ESP fragmentation, largest outer packet 108 bytes."
+  },
+  "file": "testdata/fixtures/ipsec_ikev2_esp.pcap",
+  "gre_nhrp": {
+    "detector": "gre_nhrp",
+    "dmvpn_phase_hint": "unknown",
+    "error_indications": [],
+    "hubs": [],
+    "issues": [],
+    "purges": {},
+    "redirects": [],
+    "registrations": [],
+    "registrations_omitted": 0,
+    "resolutions": [],
+    "resolutions_omitted": 0,
+    "spoke_to_spoke_tunnels": [],
+    "spokes": [],
+    "status": "not_present",
+    "summary": {
+      "gre_packets": 0,
+      "gre_tunnels": 0,
+      "hubs": 0,
+      "nhrp_messages": {},
+      "spoke_to_spoke_tunnels": 0,
+      "spokes": 0,
+      "spokes_registered": 0
+    },
+    "tunnels": [],
+    "tunnels_omitted": 0,
+    "verdict": "No GRE traffic in this capture."
+  },
+  "ipsec": {
+    "cleartext": [],
+    "detector": "ipsec",
+    "encryption_verdict": "encrypted",
+    "esp_flows": [
+      {
+        "bytes": 1220,
+        "dst": "192.0.2.1",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 1.0,
+        "frames": [
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "last_seq": 10,
+        "last_t": 5.5,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 10,
+        "spi": "0xc0ffee01",
+        "src": "198.51.100.2",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 1220,
+        "dst": "198.51.100.2",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 1.004,
+        "frames": [
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "last_seq": 10,
+        "last_t": 5.504,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 10,
+        "spi": "0xc0ffee02",
+        "src": "192.0.2.1",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 610,
+        "dst": "192.0.2.1",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 6.5,
+        "frames": [
+          27,
+          29,
+          31,
+          33,
+          35
+        ],
+        "last_seq": 5,
+        "last_t": 8.5,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 5,
+        "spi": "0xc0ffee11",
+        "src": "198.51.100.2",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 610,
+        "dst": "198.51.100.2",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 6.504,
+        "frames": [
+          28,
+          30,
+          32,
+          34,
+          36
+        ],
+        "last_seq": 5,
+        "last_t": 8.504,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 5,
+        "spi": "0xc0ffee12",
+        "src": "192.0.2.1",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      }
+    ],
+    "esp_flows_omitted": 0,
+    "ike_sas": [
+      {
+        "detail": "IKE_SA_INIT and IKE_AUTH completed and ESP followed",
+        "diagnosis": {
+          "code": "ok",
+          "text": "established with AES-CBC-256/HMAC-SHA2-256/MODP-2048 (group 14)"
+        },
+        "exchanges": [
+          {
+            "encrypted": false,
+            "exchange": "IKE_SA_INIT",
+            "message_id": 0,
+            "request_frames": [
+              1
+            ],
+            "requests": 1,
+            "response_frames": [
+              2
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 0.0,
+            "unanswered": false
+          },
+          {
+            "encrypted": true,
+            "exchange": "IKE_AUTH",
+            "message_id": 1,
+            "request_frames": [
+              3
+            ],
+            "requests": 1,
+            "response_frames": [
+              4
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 0.03,
+            "unanswered": false
+          },
+          {
+            "encrypted": true,
+            "exchange": "CREATE_CHILD_SA",
+            "message_id": 2,
+            "request_frames": [
+              25
+            ],
+            "requests": 1,
+            "response_frames": [
+              26
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 6.0,
+            "unanswered": false
+          }
+        ],
+        "first_t": 0.0,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          25,
+          26
+        ],
+        "ike_version": 2,
+        "initiator": "198.51.100.2",
+        "initiator_spi": "1111111111111111",
+        "last_t": 6.012,
+        "nat_t": false,
+        "negotiation": {
+          "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+          "chosen_frame": 2,
+          "invalid_ke_payload": [],
+          "ke_group_chosen": 14,
+          "ke_groups_offered": [
+            14
+          ],
+          "liveness": {
+            "answered": 0,
+            "by_sender": {},
+            "checks": 0,
+            "frames": [],
+            "interval_s_by_sender": {},
+            "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+            "pending_at_capture_end": 0,
+            "unanswered": 0,
+            "unanswered_checks": []
+          },
+          "nat_detection": {
+            "first_udp_4500_frame": null,
+            "first_udp_4500_t": null,
+            "ike_auth_udp_ports": [
+              500
+            ],
+            "moved_to_udp_4500": false,
+            "nat_detected": false,
+            "payloads_seen": true,
+            "translated": [],
+            "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+          },
+          "offered_frame": 1,
+          "proposal_chosen": {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          },
+          "proposals_offered": [
+            {
+              "dh_group": [
+                "MODP-2048 (group 14)"
+              ],
+              "encryption": [
+                "AES-CBC-256"
+              ],
+              "esn": [],
+              "integrity": [
+                "HMAC-SHA2-256-128"
+              ],
+              "number": 1,
+              "prf": [
+                "HMAC-SHA2-256"
+              ],
+              "protocol": "IKE",
+              "weak": []
+            }
+          ]
+        },
+        "notifies": [
+          {
+            "error": false,
+            "frame": 1,
+            "from": "198.51.100.2",
+            "name": "NAT_DETECTION_SOURCE_IP",
+            "type": 16388
+          },
+          {
+            "error": false,
+            "frame": 1,
+            "from": "198.51.100.2",
+            "name": "NAT_DETECTION_DESTINATION_IP",
+            "type": 16389
+          },
+          {
+            "error": false,
+            "frame": 2,
+            "from": "192.0.2.1",
+            "name": "NAT_DETECTION_SOURCE_IP",
+            "type": 16388
+          },
+          {
+            "error": false,
+            "frame": 2,
+            "from": "192.0.2.1",
+            "name": "NAT_DETECTION_DESTINATION_IP",
+            "type": 16389
+          }
+        ],
+        "outcome": "established",
+        "rekeys": 1,
+        "responder": "192.0.2.1",
+        "responder_spi": "2222222222222222",
+        "retransmissions": 0,
+        "udp_ports": [
+          500
+        ]
+      }
+    ],
+    "ike_sas_omitted": 0,
+    "issues": [],
+    "nat_traversal": {
+      "esp_in_udp_flows": 0,
+      "ike_packets_on_4500": 0,
+      "in_use": false,
+      "keepalive_frames": [],
+      "nat_detection_payloads_seen": true,
+      "nat_keepalives": 0,
+      "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+    },
+    "negotiation_verdict": "1 IKE SA(s): 1 established",
+    "peer_pairs": [
+      {
+        "cleartext": [],
+        "cleartext_packets": 0,
+        "endpoints": [
+          "192.0.2.1",
+          "198.51.100.2"
+        ],
+        "protected_packets": {
+          "esp": 30,
+          "ike": 6
+        },
+        "verdict": "encrypted"
+      }
+    ],
+    "peer_pairs_omitted": 0,
+    "status": "ok",
+    "summary": {
+      "esp_flows": 4,
+      "esp_packets": 30,
+      "ike_packets": 6,
+      "ike_sas": 1,
+      "ike_sas_established": 1,
+      "nat_keepalives": 0
+    },
+    "verdict": "all inter-site traffic encrypted: 1 peer pair(s), 30 ESP packets, no cleartext between the same endpoints"
+  },
+  "issues": [],
+  "issues_omitted": 0,
+  "overall_status": "ok",
+  "path_mtu": {
+    "black_holes": [],
+    "black_holes_omitted": 0,
+    "detector": "path_mtu",
+    "frag_needed": [],
+    "frag_needed_omitted": 0,
+    "fragments": {
+      "by_pair": [],
+      "by_pair_omitted": 0,
+      "complete": 0,
+      "datagrams": 0,
+      "groups_dropped_at_cap": 0,
+      "incomplete": [],
+      "incomplete_count": 0,
+      "incomplete_omitted": 0,
+      "overlapping": []
+    },
+    "issues": [],
+    "limits": [
+      "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+      "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+      "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+      "IPv6 extension headers (including fragment headers) are not decoded."
+    ],
+    "status": "not_present",
+    "summary": {
+      "black_holes": 0,
+      "df_packets_over_576": 0,
+      "frag_needed_messages": 0,
+      "fragmented_datagrams": 0,
+      "incomplete_datagrams": 0,
+      "largest_df_packet": null,
+      "reassembly_timeouts": 0,
+      "smallest_mtu_advertised": null
+    },
+    "verdict": "No large DF packets, no Fragmentation Needed and no fragments in this capture."
+  },
+  "protocols_present": [
+    "esp",
+    "ike",
+    "udp"
+  ],
+  "qos": {
+    "detector": "qos",
+    "esp_sas": [
+      {
+        "dscp": {
+          "CS0/BE": 10
+        },
+        "dst": "192.0.2.1",
+        "frames": [],
+        "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+        "spi": "0xc0ffee01",
+        "src": "198.51.100.2"
+      },
+      {
+        "dscp": {
+          "CS0/BE": 10
+        },
+        "dst": "198.51.100.2",
+        "frames": [],
+        "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+        "spi": "0xc0ffee02",
+        "src": "192.0.2.1"
+      },
+      {
+        "dscp": {
+          "CS0/BE": 5
+        },
+        "dst": "192.0.2.1",
+        "frames": [],
+        "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+        "spi": "0xc0ffee11",
+        "src": "198.51.100.2"
+      },
+      {
+        "dscp": {
+          "CS0/BE": 5
+        },
+        "dst": "198.51.100.2",
+        "frames": [],
+        "reading": "every packet DSCP 0: either the inner traffic was unmarked or the router does not copy DSCP into ESP; an inside capture tells which",
+        "spi": "0xc0ffee12",
+        "src": "192.0.2.1"
+      }
+    ],
+    "esp_sas_omitted": 0,
+    "gre_tunnels": [],
+    "issues": [],
+    "limits": [
+      "ESP hides the inner header: from one capture the inner DSCP of encrypted traffic is unknown, so 'copied' is inferred from several markings on one SA. Compare an inside and an outside capture with correlate_captures to see the rewrite directly.",
+      "RTP latency is not measurable from one capture point; jitter and loss are what arrived here. RTP is found by its header shape, so a non-RTP UDP flow that looks like RTP for 10+ packets can be counted.",
+      "Clock rate is 8000 Hz for static audio payload types and estimated from timestamps for dynamic ones."
+    ],
+    "marked_flows": [],
+    "marked_flows_omitted": 0,
+    "rtp_streams": [],
+    "rtp_streams_omitted": 0,
+    "status": "ok",
+    "summary": {
+      "ecn_ce_packets": 0,
+      "esp_sas": 4,
+      "flows_dropped_at_cap": 0,
+      "gre_tunnels": 0,
+      "marked_flows": 0,
+      "rtp_streams": 0,
+      "unmarked_flows": 6
+    },
+    "verdict": "ESP: 0 of 4 SA(s) show DSCP copied per packet."
+  },
+  "reachability": {
+    "arp_duplicate_ips": [],
+    "arp_unanswered": [],
+    "arp_unanswered_omitted": 0,
+    "detector": "reachability",
+    "echo": [],
+    "echo_omitted": 0,
+    "icmp_errors": [],
+    "icmp_errors_omitted": 0,
+    "issues": [],
+    "status": "not_present",
+    "summary": {
+      "arp_targets_answered": 0,
+      "arp_targets_unanswered": 0,
+      "echo_lost": 0,
+      "echo_pairs": 0,
+      "echo_replies_matched": 0,
+      "echo_requests": 0,
+      "gratuitous_arp": 0,
+      "icmp_errors": 0,
+      "unmatched_replies": 0
+    },
+    "verdict": "No ICMP or ARP in this capture."
+  },
+  "routing": {
+    "bgp": {
+      "present": false
+    },
+    "detector": "routing",
+    "eigrp": {
+      "present": false
+    },
+    "failover_timeline": [],
+    "issues": [],
+    "ospf": {
+      "present": false
+    },
+    "status": "not_present",
+    "verdict": "No BGP, OSPF or EIGRP in this capture."
+  },
+  "schema": "sonic.network_report/1",
+  "sip": {
+    "note": "no SIP in this capture",
+    "present": false
+  },
+  "status": "success",
+  "tcp": {
+    "connections": [],
+    "connections_omitted": 0,
+    "detector": "tcp",
+    "issues": [],
+    "limits": [
+      "Retransmissions, gaps and RTT are what this capture point saw: a segment lost after the capture point shows as a retransmission here, one lost before it shows as a gap. RTT is from the capture point to the receiver and back, not end to end unless the capture was taken on the sender.",
+      "A connection whose handshake was not captured has no window scale, so window-full checks and options are skipped for it.",
+      "Payload contents are not judged here (see the tls detector for TLS handshakes)."
+    ],
+    "status": "not_present",
+    "summary": {
+      "by_verdict": {
+        "healthy": 0,
+        "loss_on_path": 0,
+        "no_answer": 0,
+        "receive_window_limited": 0,
+        "receiver_buffer_exhausted": 0,
+        "refused": 0,
+        "reset": 0
+      },
+      "connections": 0,
+      "connections_dropped_at_cap": 0,
+      "mss_offered": []
+    },
+    "verdict": "No TCP in this capture."
+  },
+  "timeline": [
+    {
+      "detail": "IKE SA 198.51.100.2 -> 192.0.2.1 established (IKE_AUTH answered, ESP followed)",
+      "detector": "ipsec",
+      "event": "established",
+      "frame": 4,
+      "protocol": "ike",
+      "t": 0.03,
+      "time": "2026-01-01T00:00:00.030Z"
+    },
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.1 (SPI 0xc0ffee01)",
+      "detector": "ipsec",
+      "event": "esp_start",
+      "frame": 5,
+      "protocol": "esp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->198.51.100.2 (SPI 0xc0ffee02)",
+      "detector": "ipsec",
+      "event": "esp_start",
+      "frame": 6,
+      "protocol": "esp",
+      "t": 1.004,
+      "time": "2026-01-01T00:00:01.004Z"
+    },
+    {
+      "detail": "1 rekey exchange(s) on IKE SA 1111111111111111 (198.51.100.2 -> 192.0.2.1)",
+      "detector": "ipsec",
+      "event": "rekey",
+      "frame": null,
+      "protocol": "ike",
+      "t": 6.012,
+      "time": "2026-01-01T00:00:06.012Z"
+    },
+    {
+      "detail": "198.51.100.2->192.0.2.1 ESP SPI 0xc0ffee01 replaced by 0xc0ffee11 (rekey)",
+      "detector": "ipsec",
+      "event": "spi_change",
+      "frame": 27,
+      "protocol": "esp",
+      "t": 6.5,
+      "time": "2026-01-01T00:00:06.500Z"
+    },
+    {
+      "detail": "192.0.2.1->198.51.100.2 ESP SPI 0xc0ffee02 replaced by 0xc0ffee12 (rekey)",
+      "detector": "ipsec",
+      "event": "spi_change",
+      "frame": 28,
+      "protocol": "esp",
+      "t": 6.504,
+      "time": "2026-01-01T00:00:06.504Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "tls": {
+    "baseline": null,
+    "detector": "tls",
+    "issues": [],
+    "limits": [
+      "Only the cleartext handshake is read. In TLS 1.3 everything after the ServerHello is encrypted: the certificate, the server's extensions and any later alert cannot be seen. In TLS 1.2 and older the certificate is visible and is read here.",
+      "Certificate trust (chain to a trusted root, revocation) is not judged; only what the certificate says.",
+      "In TLS 1.3 the server's ALPN choice travels in the encrypted EncryptedExtensions message, so server_chose.alpn is null and an ALPN baseline is checked only for TLS 1.2 and older.",
+      "With Encrypted Client Hello the visible SNI is the outer, public name, not the real server name.",
+      "A handshake split across segments is reassembled from the first bytes of each direction; one that starts before the capture, or whose segments were lost before the capture point, cannot be read.",
+      "QUIC, DTLS and STARTTLS are not decoded."
+    ],
+    "sessions": [],
+    "sessions_omitted": 0,
+    "status": "not_present",
+    "summary": {
+      "baseline_failures": 0,
+      "handshakes": 0,
+      "streams_dropped_at_cap": 0
+    },
+    "verdict": "No TLS handshake in this capture."
+  },
+  "verdicts": {
+    "conversations": "36 packets, 5576 bytes over 8.504 s; 1 address pair(s); most bytes: esp",
+    "dmvpn_phase3": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts.",
+    "esp_overhead": "4 ESP flow(s); sizes fit AES-CBC + HMAC-SHA512-256 on 4 flow(s) (estimate); no ESP fragmentation, largest outer packet 108 bytes.",
+    "gre_nhrp": "No GRE traffic in this capture.",
+    "ipsec": "all inter-site traffic encrypted: 1 peer pair(s), 30 ESP packets, no cleartext between the same endpoints",
+    "path_mtu": "No large DF packets, no Fragmentation Needed and no fragments in this capture.",
+    "qos": "ESP: 0 of 4 SA(s) show DSCP copied per packet.",
+    "reachability": "No ICMP or ARP in this capture.",
+    "routing": "No BGP, OSPF or EIGRP in this capture.",
+    "tcp": "No TCP in this capture.",
+    "tls": "No TLS handshake in this capture."
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "cannot_show": [
+    "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+  ],
+  "detector": "dmvpn_phase3",
+  "encrypted_shortcuts": {
+    "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "note": null,
+    "shortcuts": []
+  },
+  "error_indications": [],
+  "events": [
+    {
+      "detail": "198.51.100.2 10.1.2.1 -> 10.1.3.1: stops before resolution_reply",
+      "event": "phase3_incomplete",
+      "frame": 9,
+      "protocol": "nhrp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "203.0.113.3 10.1.3.1 -> 10.1.2.1: stops before resolution_request",
+      "event": "phase3_incomplete",
+      "frame": 31,
+      "protocol": "nhrp",
+      "t": 6.0,
+      "time": "2026-01-01T00:00:06.000Z"
+    },
+    {
+      "detail": "192.0.2.44 10.1.4.1 -> 10.1.2.1: stops before direct",
+      "event": "phase3_incomplete",
+      "frame": 34,
+      "protocol": "nhrp",
+      "t": 7.0,
+      "time": "2026-01-01T00:00:07.000Z"
+    }
+  ],
+  "flows": [
+    {
+      "diagnosis": "the resolution request was never answered: the remote spoke did not receive it or could not answer (not registered, no route back over the tunnel, or NHRP blocked)",
+      "error_indications": [],
+      "forwarded_by_hub_to": "203.0.113.3",
+      "hub": "192.0.2.1",
+      "missing_step": "resolution_reply",
+      "original_dst": "10.1.3.1",
+      "original_src": "10.1.2.1",
+      "result": "incomplete",
+      "spoke": "198.51.100.2",
+      "steps": {
+        "direct": null,
+        "redirect": {
+          "detail": "Traffic Indication 192.0.2.1 -> 198.51.100.2 for 10.1.2.1 -> 10.1.3.1 (1 sent)",
+          "frame": 9,
+          "t": 1.002
+        },
+        "resolution_reply": null,
+        "resolution_request": {
+          "detail": "10.0.0.2 asks for 10.1.3.1 (request id 100663296)",
+          "frame": 10,
+          "t": 1.01
+        },
+        "via_hub": {
+          "detail": "10.1.2.1 -> 10.1.3.1 inside GRE 198.51.100.2 -> 192.0.2.1, forwarded by the hub to 203.0.113.3",
+          "frame": 7,
+          "t": 1.0
+        }
+      },
+      "timings": {
+        "redirect_after_first_data_ms": 2.0
+      }
+    },
+    {
+      "diagnosis": "the spoke got the redirect but never asked NHRP to resolve the destination: 'ip nhrp shortcut' missing on the spoke, or the redirect was rate limited",
+      "error_indications": [],
+      "forwarded_by_hub_to": "198.51.100.2",
+      "hub": "192.0.2.1",
+      "missing_step": "resolution_request",
+      "original_dst": "10.1.2.1",
+      "original_src": "10.1.3.1",
+      "result": "incomplete",
+      "spoke": "203.0.113.3",
+      "steps": {
+        "direct": null,
+        "redirect": {
+          "detail": "Traffic Indication 192.0.2.1 -> 203.0.113.3 for 10.1.3.1 -> 10.1.2.1 (1 sent)",
+          "frame": 31,
+          "t": 6.002
+        },
+        "resolution_reply": null,
+        "resolution_request": null,
+        "via_hub": {
+          "detail": "10.1.3.1 -> 10.1.2.1 inside GRE 203.0.113.3 -> 192.0.2.1, forwarded by the hub to 198.51.100.2",
+          "frame": 29,
+          "t": 6.0
+        }
+      },
+      "timings": {
+        "redirect_after_first_data_ms": 2.0
+      }
+    },
+    {
+      "diagnosis": "the destination was resolved but no data went directly between the spokes: the spoke-to-spoke tunnel (and its IPsec SA, if protected) never carried traffic, or the flow ended",
+      "error_indications": [],
+      "forwarded_by_hub_to": "198.51.100.2",
+      "hub": "192.0.2.1",
+      "missing_step": "direct",
+      "original_dst": "10.1.2.1",
+      "original_src": "10.1.4.1",
+      "result": "incomplete",
+      "spoke": "192.0.2.44",
+      "steps": {
+        "direct": null,
+        "redirect": {
+          "detail": "Traffic Indication 192.0.2.1 -> 192.0.2.44 for 10.1.4.1 -> 10.1.2.1 (1 sent)",
+          "frame": 34,
+          "t": 7.002
+        },
+        "resolution_reply": {
+          "detail": "198.51.100.2 answers Success: 10.1.2.1 is behind tunnel 10.0.0.2 at NBMA 198.51.100.2 (prefix /24)",
+          "frame": 37,
+          "t": 7.02
+        },
+        "resolution_request": {
+          "detail": "10.0.0.4 asks for 10.1.2.1 (request id 117440513)",
+          "frame": 35,
+          "t": 7.01
+        },
+        "via_hub": {
+          "detail": "10.1.4.1 -> 10.1.2.1 inside GRE 192.0.2.44 -> 192.0.2.1, forwarded by the hub to 198.51.100.2",
+          "frame": 32,
+          "t": 7.0
+        }
+      },
+      "timings": {
+        "redirect_after_first_data_ms": 2.0,
+        "resolution_rtt_ms": 10.0
+      }
+    }
+  ],
+  "flows_omitted": 0,
+  "hub_relayed_without_redirect": [
+    {
+      "first_t": 4.0,
+      "frame": 26,
+      "hub": "192.0.2.1",
+      "inner_dst": "10.1.3.1",
+      "inner_src": "10.1.4.1",
+      "packets_via_hub": 2,
+      "spoke": "192.0.2.44",
+      "to_spoke": "203.0.113.3"
+    }
+  ],
+  "hubs": [
+    "192.0.2.1"
+  ],
+  "hubs_source": {
+    "from_redirects": [
+      "192.0.2.1"
+    ],
+    "from_registrations": [
+      "192.0.2.1"
+    ],
+    "given": []
+  },
+  "issues": [
+    {
+      "code": "PHASE3_MISSING_RESOLUTION_REPLY",
+      "frames": [
+        7,
+        9,
+        10
+      ],
+      "message": "Phase 3 flow 10.1.2.1 -> 10.1.3.1 from spoke 198.51.100.2: stops before resolution_reply: the resolution request was never answered: the remote spoke did not receive it or could not answer (not registered, no route back over the tunnel, or NHRP blocked)",
+      "missing_step": "resolution_reply",
+      "severity": "error",
+      "spoke": "198.51.100.2"
+    },
+    {
+      "code": "PHASE3_MISSING_RESOLUTION_REQUEST",
+      "frames": [
+        29,
+        31
+      ],
+      "message": "Phase 3 flow 10.1.3.1 -> 10.1.2.1 from spoke 203.0.113.3: stops before resolution_request: the spoke got the redirect but never asked NHRP to resolve the destination: 'ip nhrp shortcut' missing on the spoke, or the redirect was rate limited",
+      "missing_step": "resolution_request",
+      "severity": "error",
+      "spoke": "203.0.113.3"
+    },
+    {
+      "code": "PHASE3_MISSING_DIRECT",
+      "frames": [
+        32,
+        34,
+        35,
+        37
+      ],
+      "message": "Phase 3 flow 10.1.4.1 -> 10.1.2.1 from spoke 192.0.2.44: stops before direct: the destination was resolved but no data went directly between the spokes: the spoke-to-spoke tunnel (and its IPsec SA, if protected) never carried traffic, or the flow ended",
+      "missing_step": "direct",
+      "severity": "warning",
+      "spoke": "192.0.2.44"
+    },
+    {
+      "code": "PHASE3_NO_REDIRECT",
+      "frames": [
+        26
+      ],
+      "message": "10.1.4.1 -> 10.1.3.1 went spoke 192.0.2.44 -> hub 192.0.2.1 -> spoke 203.0.113.3 (2 packet(s)) with no NHRP redirect: the hub relayed spoke-to-spoke traffic but sent no NHRP redirect: 'ip nhrp redirect' missing on the hub tunnel, or the traffic did not enter and leave the same tunnel interface",
+      "severity": "warning"
+    },
+    {
+      "code": "NHRP_RESOLUTION_THRASHING",
+      "frames": [
+        10,
+        12,
+        14,
+        16,
+        18
+      ],
+      "message": "spoke 198.51.100.2 sent 8 resolution request(s), peaking at 7 in one second: 10.1.3.1 asked 8 time(s), 8 unanswered. Repeated unanswered resolutions usually mean the remote spoke is unreachable over the tunnel, or a redirect loop",
+      "severity": "warning"
+    }
+  ],
+  "resolution_thrashing": {
+    "spokes": [
+      {
+        "average_per_second": null,
+        "peak_per_second": 1,
+        "requests": 1,
+        "spoke_nbma": "192.0.2.44",
+        "targets": [
+          {
+            "answered": 1,
+            "frames": [
+              35
+            ],
+            "requests": 1,
+            "target": "10.1.2.1",
+            "unanswered": 0
+          }
+        ],
+        "thrashing": false
+      },
+      {
+        "average_per_second": 7.62,
+        "peak_per_second": 7,
+        "requests": 8,
+        "spoke_nbma": "198.51.100.2",
+        "targets": [
+          {
+            "answered": 0,
+            "frames": [
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24
+            ],
+            "requests": 8,
+            "target": "10.1.3.1",
+            "unanswered": 8
+          }
+        ],
+        "thrashing": true
+      }
+    ],
+    "thrashing": true,
+    "thresholds": {
+      "peak_per_second": 5,
+      "unanswered_repeats_per_target": 5
+    }
+  },
+  "status": "problem",
+  "verdict": "Phase 3: 0 of 3 redirected flow(s) completed the Phase 3 sequence; 198.51.100.2 -> 10.1.3.1: stops before resolution_reply; 203.0.113.3 -> 10.1.2.1: stops before resolution_request; 192.0.2.44 -> 10.1.2.1: stops before direct; 1 hub-relayed spoke-to-spoke flow(s) with no redirect; NHRP resolution thrashing"
+}

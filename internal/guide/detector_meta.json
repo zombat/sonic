@@ -1,0 +1,226 @@
+[
+  {
+    "key": "ipsec",
+    "package_dir": "internal/analyze/ipsec",
+    "doc": "Per-SA root-cause diagnostic classification.",
+    "codes": [
+      "CLEARTEXT_BETWEEN_PEERS",
+      "ESP_DUPLICATE_SEQUENCE",
+      "ESP_ONE_WAY",
+      "ESP_SEQUENCE_GAP",
+      "ESP_STALE_SPI",
+      "IKEV1_<...>",
+      "IKE_<...>",
+      "IKE_AUTH_LIKELY_FAILED",
+      "IKE_AUTH_NO_RESPONSE",
+      "IKE_LIVENESS_UNANSWERED",
+      "IKE_NAT_T_MISSING",
+      "IKE_NO_ESP_YET",
+      "IKE_NO_RESPONSE",
+      "IKE_RETRIED",
+      "IKE_SA_COLLISION",
+      "IKE_WEAK_ALGORITHM"
+    ]
+  },
+  {
+    "key": "gre_nhrp",
+    "package_dir": "internal/analyze/grenhrp",
+    "doc": "Packet feeding and state accumulation for GRE/NHRP overlay detection.",
+    "codes": [
+      "GRE_KEY_MISMATCH",
+      "NHRP_ERROR_INDICATION",
+      "NHRP_REGISTRATION_REFUSED",
+      "NHRP_REGISTRATION_UNANSWERED",
+      "NHRP_RESOLUTION_UNANSWERED"
+    ]
+  },
+  {
+    "key": "dmvpn_phase3",
+    "package_dir": "internal/analyze/dmvpn",
+    "doc": "Packet ingestion, prefix matching, and state types for Phase 3 analysis.",
+    "codes": [
+      "NHRP_RESOLUTION_THRASHING",
+      "PHASE3_MISSING_<...>",
+      "PHASE3_NO_REDIRECT",
+      "SHORTCUT_MISSING_<...>"
+    ]
+  },
+  {
+    "key": "routing",
+    "package_dir": "internal/analyze/routing",
+    "doc": "Combines BGP, OSPFv2, and EIGRP analyzers into Detector.",
+    "codes": [
+      "BGP_HOLD_TIME_EXCEEDED",
+      "BGP_MSS_NOT_CLAMPED",
+      "BGP_NOTIFICATION",
+      "BGP_PEER_SILENT",
+      "BGP_SESSION_DOWN",
+      "BGP_SESSION_FLAP",
+      "BGP_TCP_NO_ANSWER",
+      "BGP_TCP_REFUSED",
+      "EIGRP_ADJACENCY_RESTART",
+      "EIGRP_AS_MISMATCH",
+      "EIGRP_GOODBYE",
+      "EIGRP_HOLD_TIME_EXPIRED",
+      "EIGRP_K_VALUE_MISMATCH",
+      "EIGRP_NEIGHBOR_SILENT",
+      "EIGRP_QUERIES",
+      "EIGRP_STUCK_IN_ACTIVE",
+      "OSPF_<...>_STUCK",
+      "OSPF_AREA_MISMATCH",
+      "OSPF_AUTH_TYPE_MISMATCH",
+      "OSPF_DEAD_INTERVAL_MISMATCH",
+      "OSPF_DUPLICATE_ROUTER_ID",
+      "OSPF_HELLO_GAP",
+      "OSPF_HELLO_INTERVAL_MISMATCH",
+      "OSPF_MTU_MISMATCH",
+      "OSPF_NETWORK_MASK_MISMATCH",
+      "OSPF_NO_ADJACENCY",
+      "OSPF_ONE_WAY",
+      "OSPF_ROUTER_SILENT",
+      "OSPF_STUB_FLAG_MISMATCH"
+    ]
+  },
+  {
+    "key": "reachability",
+    "package_dir": "internal/analyze/reach",
+    "doc": "Implements the ReachabilityDetector (ICMP echo/error tracking\nand ARP monitoring) and ConversationDetector.",
+    "codes": [
+      "ARP_DUPLICATE_IP",
+      "ARP_NO_REPLY",
+      "ICMP_<...>",
+      "ICMP_LOSS",
+      "ICMP_NO_REPLY"
+    ]
+  },
+  {
+    "key": "conversations",
+    "package_dir": "internal/analyze/reach",
+    "doc": "Implements ConversationDetector for packet, byte, protocol,\naddress-pair, and top-talker summaries.",
+    "codes": []
+  },
+  {
+    "key": "path_mtu",
+    "package_dir": "internal/analyze/pathmtu",
+    "doc": "Implements PathMtuDetector packet ingestion for DF probes,\nICMP Fragmentation Needed / Packet Too Big, TCP DF segments, and IP fragments.",
+    "codes": [
+      "FRAGMENT_INCOMPLETE",
+      "FRAGMENT_OVERLAP",
+      "FRAGMENT_REASSEMBLY_TIMEOUT",
+      "IP_FRAGMENTATION",
+      "PMTU_BLACK_HOLE",
+      "PMTU_FRAG_NEEDED",
+      "TCP_PMTU_BLACK_HOLE"
+    ]
+  },
+  {
+    "key": "esp_overhead",
+    "package_dir": "internal/analyze/espoverhead",
+    "doc": "Implements EspOverheadDetector for estimating ESP\ncipher families, per-packet tunneling overhead, and outer ESP fragmentation.",
+    "codes": [
+      "ESP_EXCEEDS_TRANSPORT_MTU",
+      "ESP_OUTER_FRAGMENTED",
+      "ESP_SIZES_UNEXPLAINED"
+    ]
+  },
+  {
+    "key": "tcp",
+    "package_dir": "internal/analyze/tcphealth",
+    "doc": "Tracks TCP connection state, ordered segment/pending maps,\nand ICMP error correlations for TcpHealthDetector.",
+    "codes": [
+      "TCP_LOSS",
+      "TCP_MSS_BELOW_1460",
+      "TCP_NO_ANSWER",
+      "TCP_REFUSED",
+      "TCP_RESET",
+      "TCP_WINDOW_FULL",
+      "TCP_ZERO_WINDOW"
+    ]
+  },
+  {
+    "key": "tls",
+    "package_dir": "internal/analyze/tlsinspect",
+    "doc": "Stream reassembly and TLS record/handshake state machine.",
+    "codes": [
+      "<...> -> <...>",
+      "TLS_ALERT",
+      "TLS_BASELINE_ALPN",
+      "TLS_BASELINE_CIPHER",
+      "TLS_BASELINE_SNI",
+      "TLS_BASELINE_VERSION",
+      "TLS_CERT_NOT_VALID",
+      "TLS_CERT_NO_IP_SAN",
+      "TLS_NO_FORWARD_SECRECY",
+      "TLS_NO_SERVER_HELLO",
+      "TLS_OLD_VERSION",
+      "TLS_WEAK_CIPHER_CHOSEN",
+      "TLS_WEAK_OFFERED"
+    ]
+  },
+  {
+    "key": "qos",
+    "package_dir": "internal/analyze/qos",
+    "doc": "Implements QosDetector for per-flow DSCP, GRE/ESP marking\nvisibility, ECN congestion counts, and RTP stream quality scoring.",
+    "codes": [
+      "QOS_ECN_CE",
+      "QOS_GRE_DSCP_NOT_COPIED",
+      "QOS_GRE_DSCP_REWRITTEN",
+      "QOS_RTP_JITTER",
+      "QOS_RTP_LOSS",
+      "QOS_RTP_NOT_EF",
+      "QOS_RTP_UNMARKED"
+    ]
+  },
+  {
+    "key": "cleartext_audit",
+    "package_dir": "internal/analyze/audit",
+    "doc": "Implements the CleartextAuditDetector frame ingestion\nand TCP session routing.",
+    "codes": [
+      "AUDIT_EMPTY_CAPTURE",
+      "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "ENCRYPTED_OUTSIDE_ALLOWLIST",
+      "ENCRYPTED_OUTSIDE_TUNNEL",
+      "ENCRYPTION_UNVERIFIED",
+      "WEAK_ENCRYPTION"
+    ]
+  },
+  {
+    "key": "convergence",
+    "package_dir": "internal/analyze/convergence",
+    "doc": "Detector state, ESP gap analysis, and packet rate calculation.",
+    "codes": [
+      "CONVERGENCE_NOT_SEEN"
+    ]
+  },
+  {
+    "key": "grpc_inspect",
+    "package_dir": "internal/analyze/grpc",
+    "doc": "Orchestrates HTTP/2, gNMI/gNOI, TLS, and credential analysis on captures.",
+    "codes": [
+      "CLEARTEXT_CREDENTIAL",
+      "CREDENTIAL_IN_METADATA",
+      "GNMI_INBAND_ERROR",
+      "GRPC_<...>",
+      "GRPC_CLEARTEXT",
+      "GRPC_MESSAGE_OVER_DEFAULT_LIMIT",
+      "GRPC_NO_STATUS",
+      "GRPC_TLS_NOT_DECRYPTED",
+      "HTTP2_FLOW_CONTROL_STALL",
+      "HTTP2_FRAME_TOO_LARGE",
+      "HTTP2_GOAWAY",
+      "HTTP2_HEADER_LIST_TOO_LARGE",
+      "HTTP2_HPACK_DECODE_FAILED",
+      "HTTP2_MAX_CONCURRENT_STREAMS_EXCEEDED",
+      "HTTP2_PREFACE_UNANSWERED",
+      "HTTP2_RST_STREAM",
+      "HTTP2_TOO_MANY_PINGS",
+      "TCP_RESET_DURING_RPC",
+      "TLS_ALERT",
+      "TLS_CERT_NO_IP_SAN",
+      "TLS_NO_SERVER_HELLO",
+      "TLS_NO_SNI",
+      "TLS_SECRETS_IN_CAPTURE",
+      "TLS_SESSION_NOT_DECRYPTED"
+    ]
+  }
+]

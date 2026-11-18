@@ -1,0 +1,634 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 1,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 3,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554433,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225600.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 2,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": 0,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 4,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554433,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225600.005
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "203.0.113.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 3,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 3,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554434,
+        "src_nbma": "203.0.113.3",
+        "src_proto": "10.0.0.3"
+      },
+      "t": 1767225600.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "203.0.113.3",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 4,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": 0,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 4,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554434,
+        "src_nbma": "203.0.113.3",
+        "src_proto": "10.0.0.3"
+      },
+      "t": 1767225600.105
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "192.0.2.44",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 5,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 3,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554435,
+        "src_nbma": "192.0.2.44",
+        "src_proto": "10.0.0.4"
+      },
+      "t": 1767225600.2
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.44",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 6,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": 4,
+        "dst_proto": "10.0.0.1",
+        "err_code": null,
+        "op": 4,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 33554435,
+        "src_nbma": "192.0.2.44",
+        "src_proto": "10.0.0.4"
+      },
+      "t": 1767225600.205
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 35
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 63
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "icmp": {
+        "code": 0,
+        "dst": "10.1.3.1",
+        "id": 9,
+        "orig": null,
+        "seq": 1,
+        "src": "10.1.2.1",
+        "tunneled": true,
+        "type": 8,
+        "v6": false
+      },
+      "inner": {
+        "dst": "10.1.3.1",
+        "proto": 1,
+        "src": "10.1.2.1"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 7,
+      "t": 1767225601.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 35
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 63
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "icmp": {
+        "code": 0,
+        "dst": "10.1.3.1",
+        "id": 9,
+        "orig": null,
+        "seq": 1,
+        "src": "10.1.2.1",
+        "tunneled": true,
+        "type": 8,
+        "v6": false
+      },
+      "inner": {
+        "dst": "10.1.3.1",
+        "proto": 1,
+        "src": "10.1.2.1"
+      },
+      "ip": {
+        "dst": "203.0.113.3",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 77,
+      "n": 8,
+      "t": 1767225601.001
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 96
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 110,
+      "n": 9,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.1.2.1",
+        "err_code": null,
+        "op": 8,
+        "orig_dst": "10.1.3.1",
+        "orig_src": "10.1.2.1",
+        "prefix": null,
+        "reqid": null,
+        "src_nbma": "192.0.2.1",
+        "src_proto": "10.0.0.1"
+      },
+      "t": 1767225601.002
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 10,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.1.3.1",
+        "err_code": null,
+        "op": 1,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 50331649,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225601.01
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "203.0.113.3",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 11,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.1.3.1",
+        "err_code": null,
+        "op": 1,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 50331649,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225601.011
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "203.0.113.3",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 12,
+      "nhrp": {
+        "client_nbma": "203.0.113.3",
+        "client_proto": "10.0.0.3",
+        "code": 0,
+        "dst_proto": "10.1.3.1",
+        "err_code": null,
+        "op": 2,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": 24,
+        "reqid": 50331649,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225601.02
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 80
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 94,
+      "n": 13,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.9.9.9",
+        "err_code": null,
+        "op": 1,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 50331650,
+        "src_nbma": "198.51.100.2",
+        "src_proto": "10.0.0.2"
+      },
+      "t": 1767225602.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "mf": 0,
+        "off": 0,
+        "tl": 120
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 8193
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 134,
+      "n": 14,
+      "nhrp": {
+        "client_nbma": null,
+        "client_proto": null,
+        "code": null,
+        "dst_proto": "10.0.0.2",
+        "err_code": 6,
+        "op": 7,
+        "orig_dst": null,
+        "orig_src": null,
+        "prefix": null,
+        "reqid": 50331650,
+        "src_nbma": "192.0.2.1",
+        "src_proto": "10.0.0.1"
+      },
+      "t": 1767225602.005
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 34
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 62
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "icmp": {
+        "code": 0,
+        "dst": "10.1.3.1",
+        "id": 9,
+        "orig": null,
+        "seq": 2,
+        "src": "10.1.2.1",
+        "tunneled": true,
+        "type": 8,
+        "v6": false
+      },
+      "inner": {
+        "dst": "10.1.3.1",
+        "proto": 1,
+        "src": "10.1.2.1"
+      },
+      "ip": {
+        "dst": "203.0.113.3",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 76,
+      "n": 15,
+      "t": 1767225603.0
+    }
+  ],
+  "warnings": []
+}

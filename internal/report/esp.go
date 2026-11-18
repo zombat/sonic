@@ -1,0 +1,138 @@
+// Package report formats deterministic console summaries, Markdown reports, and redacted
+// JSON outputs for IPsec ESP decryption inspections matching utils/esp_reporting.py.
+package report
+
+import (
+	"encoding/json"
+	"fmt"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/zombat/sonic/internal/analyze/espdecrypt"
+)
+
+// FormatESPSummary renders the human-readable console summary of an ESP decryption Report.
+func FormatESPSummary(rep espdecrypt.Report) string {
+	if rep.Status != "success" {
+		return fmt.Sprintf("ESP decryption failed: %s\n", rep.Error)
+	}
+	var sb strings.Builder
+	sb.WriteString(strings.Repeat("=", 80) + "\n")
+	sb.WriteString("S.O.N.I.C. IPsec ESP decryption and inner-traffic analysis (tshark, no LLM)\n")
+	sb.WriteString(strings.Repeat("=", 80) + "\n")
+	fmt.Fprintf(&sb, "File: %s\n", rep.File)
+	fmt.Fprintf(&sb, "tshark: %s | SAs: %d | ESP decrypted: %d/%d\n",
+		DerefStr(rep.Capture.Tshark, "none"), rep.Capture.SACount, rep.Capture.ESPDecrypted, rep.Capture.ESPPackets)
+	fmt.Fprintf(&sb, "Overall: %s\n", StatusMark(rep.OverallStatus.String()))
+	fmt.Fprintf(&sb, "Verdict: %s\n\nSecurity Associations:\n", rep.Verdict)
+
+	for _, s := range rep.SecurityAssociations {
+		var modes []string
+		if s.Tunnel > 0 {
+			modes = append(modes, fmt.Sprintf("%d tunnel", s.Tunnel))
+		}
+		if s.Transport > 0 {
+			modes = append(modes, fmt.Sprintf("%d transport", s.Transport))
+		}
+		modeStr := ""
+		if len(modes) > 0 {
+			modeStr = " (" + strings.Join(modes, ", ") + ")"
+		}
+		integ := ""
+		if s.Integrity != nil && *s.Integrity != "" {
+			integ = "/" + *s.Integrity
+		}
+		fmt.Fprintf(&sb, "  %s -> %s SPI %s %s%s: %d/%d decrypted%s, ICV good %d bad %d\n",
+			s.Src, s.Dst, s.SPI, DerefStr(s.Encryption, ""), integ, s.Decrypted, s.Packets, modeStr, s.ICVGood, s.ICVBad)
+		if s.Reason != nil && *s.Reason != "" {
+			fmt.Fprintf(&sb, "      %s\n", *s.Reason)
+		}
+	}
+	if in := rep.InnerAnalysis; in != nil && in.Status == "success" {
+		protos := strings.Join(in.ProtocolsPresent, ", ")
+		if protos == "" {
+			protos = "none"
+		}
+		fmt.Fprintf(&sb, "\nInner traffic (%s):\n", protos)
+		keys := make([]string, 0, len(in.Verdicts))
+		for k := range in.Verdicts {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+		for _, k := range keys {
+			fmt.Fprintf(&sb, "  %s: %s\n", k, in.Verdicts[k])
+		}
+		limit := min(20, len(in.Issues))
+		for _, iss := range in.Issues[:limit] {
+			fmt.Fprintf(&sb, "  [%s] %s/%s: %s\n", iss.Severity, iss.Detector, iss.Code, iss.Message)
+		}
+	}
+	if len(rep.Issues) > 0 {
+		fmt.Fprintf(&sb, "\nIssues (%d):\n", len(rep.Issues))
+		limit := min(30, len(rep.Issues))
+		for _, iss := range rep.Issues[:limit] {
+			fmt.Fprintf(&sb, "  [%s] %s: %s\n", iss.Severity, iss.Code, iss.Message)
+		}
+	}
+	return sb.String()
+}
+
+// BuildESPMarkdown renders an ESP decryption Report as structured Markdown.
+func BuildESPMarkdown(rep espdecrypt.Report) string {
+	if rep.Status != "success" {
+		return fmt.Sprintf("# S.O.N.I.C. ESP decryption report\n\nAnalysis failed: %s\n", rep.Error)
+	}
+	var sb strings.Builder
+	sb.WriteString("# S.O.N.I.C. IPsec ESP decryption and inner-traffic analysis\n\n")
+	fmt.Fprintf(&sb, "**File:** `%s`  \n**tshark:** %s  \n**Overall:** %s  \n**Verdict:** %s\n\n",
+		rep.File, DerefStr(rep.Capture.Tshark, "none"), StatusMark(rep.OverallStatus.String()), rep.Verdict)
+
+	sb.WriteString("## Security Associations\n\n")
+	saRows := make([][]string, 0, len(rep.SecurityAssociations))
+	for _, s := range rep.SecurityAssociations {
+		saRows = append(saRows, []string{
+			s.Src, s.Dst, s.SPI, DerefStr(s.Encryption, ""), DerefStr(s.Integrity, ""),
+			strconv.Itoa(s.Packets), strconv.Itoa(s.Decrypted), strconv.Itoa(s.Tunnel),
+			strconv.Itoa(s.Transport), strconv.Itoa(s.ICVGood), strconv.Itoa(s.ICVBad), DerefStr(s.Reason, ""),
+		})
+	}
+	sb.WriteString(MarkdownTable([]string{"src", "dst", "spi", "encryption", "integrity", "packets", "decrypted", "tunnel", "transport", "icv_good", "icv_bad", "reason"}, saRows) + "\n")
+
+	if in := rep.InnerAnalysis; in != nil && in.Status == "success" {
+		protos := strings.Join(in.ProtocolsPresent, ", ")
+		if protos == "" {
+			protos = "none"
+		}
+		fmt.Fprintf(&sb, "## Inner traffic (decrypted)\n\nProtocols present: %s.\n\n", protos)
+		if len(in.Verdicts) > 0 {
+			keys := make([]string, 0, len(in.Verdicts))
+			for k := range in.Verdicts {
+				keys = append(keys, k)
+			}
+			slices.Sort(keys)
+			vRows := make([][]string, 0, len(keys))
+			for _, k := range keys {
+				vRows = append(vRows, []string{k, in.Verdicts[k]})
+			}
+			sb.WriteString(MarkdownTable([]string{"detector", "verdict"}, vRows) + "\n")
+		}
+		if len(in.Issues) > 0 {
+			sb.WriteString("Inner issues:\n\n")
+			for _, iss := range in.Issues {
+				fmt.Fprintf(&sb, "- **[%s] %s/%s**: %s\n", iss.Severity, iss.Detector, iss.Code, iss.Message)
+			}
+			sb.WriteByte('\n')
+		}
+	}
+	AppendMarkdownIssues(&sb, rep.Issues)
+	AppendMarkdownLimits(&sb, rep.Limits)
+	sb.WriteString("_Generated by S.O.N.I.C. ESP decryption. Frame numbers are of the reconstructed inner capture._\n")
+	return sb.String()
+}
+
+// SaveESPReport writes a redacted JSON or Markdown report for espdecrypt.Report.
+func SaveESPReport(rep espdecrypt.Report, path string) error {
+	raw, err := json.Marshal(rep)
+	return SaveRawReport(raw, err, BuildESPMarkdown(rep), path)
+}

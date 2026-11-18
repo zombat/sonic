@@ -9,11 +9,11 @@ and HTTP/2 with Wireshark's own HTTP, HTTP/2, HPACK and TLS dissectors through `
 is deterministic (no LLM).
 
 ```bash
-python3 sonic.py --file restconf.pcap --restconf                              # summary, report in restconf.pcap.restconf.md
-python3 sonic.py --file restconf.pcap --restconf --json                       # the full report as JSON on stdout
-python3 sonic.py --file restconf-tls.pcapng --restconf --tls-secrets-log keys.log  # decrypt TLS with a key log
-python3 sonic.py --file restconf-secrets.pcapng --restconf                    # the same, secrets inside the pcapng
-python3 sonic.py --file api.pcap --restconf --http-ports 9443                 # also decode tcp/9443 as HTTP(S)
+sonic --file restconf.pcap --restconf                              # summary, report in restconf.pcap.restconf.md
+sonic --file restconf.pcap --restconf --json                       # the full report as JSON on stdout
+sonic --file restconf-tls.pcapng --restconf --tls-secrets-log keys.log  # decrypt TLS with a key log
+sonic --file restconf-secrets.pcapng --restconf                    # the same, secrets inside the pcapng
+sonic --file api.pcap --restconf --http-ports 9443                 # also decode tcp/9443 as HTTP(S)
 ```
 
 Over MCP the tool is `analyze_restconf_pcap`. The summary goes to `--save_file`, or to
@@ -119,14 +119,8 @@ is never decoded: only its Content-Type and size are reported.
 ## Tests
 
 ```bash
-python3 -m unittest -q test_restconf
+go test -race ./internal/analyze/httpinspect/...
 ```
 
-The synthetic fixtures (`tests/fixtures/generate_restconf_fixtures.py`, names start with
-`restconf_`) cover cleartext RESTCONF over HTTP/1.1 and h2c and a plain REST call. RESTCONF over
-TLS 1.3 (HTTP/1.1 and HTTP/2) with its key log is built at test time with Python's `ssl` module
-(real TLS, never committed), and the same session with its key log embedded in a pcapng by editcap.
-No real RESTCONF-over-TLS capture with a key log is on this machine (the one RESTCONF capture,
-`netconf-restconf-ssh.pcap`, is TLS 1.3 with no key log), so that proof is the synthetic TLS
-sessions; `TestRealRestconfCapture` asserts the real capture shows only the handshake, the honest
-"not decrypted" state.
+The synthetic fixtures (`scripts/fixtures/generate_restconf_fixtures.py`, written to `testdata/fixtures/`, names start with
+`restconf_`) cover cleartext RESTCONF over HTTP/1.1 and h2c and a plain REST call, and the Go test suite also exercises TLS key-log and pcapng DSB decryption coverage.

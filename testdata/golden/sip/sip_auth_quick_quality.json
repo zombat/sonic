@@ -1,0 +1,71 @@
+{
+  "file": "testdata/fixtures/sip_auth_synthetic.pcap",
+  "mos_analysis": {
+    "average_mos": 0.0,
+    "best_mos": 0.0,
+    "codec_impact": 0.0,
+    "degradation_factors": [
+      "\u26a0\ufe0f No RTP streams detected for MOS analysis"
+    ],
+    "jitter_impact": 0.0,
+    "latency_impact": 0.0,
+    "overall_category": "Bad",
+    "packet_loss_impact": 0.0,
+    "quality_factors": [],
+    "recommendations": [
+      "\ud83d\udce6 Verify RTP traffic is present in capture",
+      "\ud83d\udd0d Check if media streams use non-standard ports",
+      "\ud83d\udcca Consider extending capture duration"
+    ],
+    "streams": [],
+    "worst_mos": 0.0
+  },
+  "quality_analysis": {
+    "codec_details": {
+      "bandwidth_efficiency": 50.0,
+      "codec_quality": 50.0,
+      "compatibility": 50.0,
+      "negotiation": 100.0
+    },
+    "codec_score": 52.5,
+    "completion_details": {
+      "duration_quality": 100.0,
+      "normal_termination": 100.0,
+      "session_completeness": 100.0,
+      "setup_success": 100.0
+    },
+    "completion_score": 50.0,
+    "degradation_factors": [
+      "\u26a0\ufe0f No RTP streams detected",
+      "\u26a0\ufe0f Low SIP success rate: 50.0%",
+      "\u274c High SIP error rate: 50.0%",
+      "\ud83d\udd13 Weak digest algorithm detected (MD5/unspecified)"
+    ],
+    "grade": "D",
+    "network_details": {
+      "baseline_health": 0.0,
+      "jitter": 100.0,
+      "packet_loss": 100.0,
+      "qos_markings": 0.0,
+      "rtp_streams": 30.0
+    },
+    "network_score": 30.0,
+    "overall_score": 42.35,
+    "protocol_details": {
+      "auth_challenges_401": 1.0,
+      "auth_challenges_407": 0.0,
+      "auth_penalty": 5.0,
+      "auth_responses": 2.0,
+      "authentication": 95.0,
+      "error_rate": 0,
+      "register_failures": 0.0,
+      "response_success": 50.0,
+      "setup_efficiency": 100.0
+    },
+    "protocol_score": 49.5,
+    "quality_factors": [
+      "\ud83d\udd10 SIP authentication in use"
+    ]
+  },
+  "status": "success"
+}

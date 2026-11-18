@@ -1,0 +1,744 @@
+{
+  "cleartext": [],
+  "detector": "ipsec",
+  "encryption_verdict": "encrypted",
+  "esp_flows": [
+    {
+      "bytes": 1342,
+      "dst": "192.0.2.1",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 1.0,
+      "frames": [
+        7,
+        9,
+        15,
+        19,
+        23,
+        29,
+        33,
+        37,
+        39,
+        41
+      ],
+      "last_seq": 11,
+      "last_t": 40.0,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 11,
+      "spi": "0xe1000001",
+      "src": "198.51.100.2",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 1220,
+      "dst": "198.51.100.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 1.004,
+      "frames": [
+        8,
+        11,
+        17,
+        21,
+        26,
+        31,
+        35,
+        38,
+        40,
+        42
+      ],
+      "last_seq": 10,
+      "last_t": 10.004,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 10,
+      "spi": "0xe1000002",
+      "src": "192.0.2.1",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 610,
+      "dst": "192.0.2.1",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 3.0,
+      "frames": [
+        16,
+        20,
+        25,
+        30,
+        34
+      ],
+      "last_seq": 5,
+      "last_t": 7.0,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 5,
+      "spi": "0xe2000001",
+      "src": "203.0.113.3",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 610,
+      "dst": "203.0.113.3",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 3.004,
+      "frames": [
+        18,
+        22,
+        28,
+        32,
+        36
+      ],
+      "last_seq": 5,
+      "last_t": 7.004,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 5,
+      "spi": "0xe2000002",
+      "src": "192.0.2.1",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    }
+  ],
+  "esp_flows_omitted": 0,
+  "events": [
+    {
+      "detail": "IKE SA 198.51.100.2 -> 192.0.2.1 established (IKE_AUTH answered, ESP followed)",
+      "event": "established",
+      "frame": 6,
+      "protocol": "ike",
+      "t": 0.04,
+      "time": "2026-01-01T00:00:00.040Z"
+    },
+    {
+      "detail": "IKE SA 203.0.113.3 -> 192.0.2.1 established (IKE_AUTH answered, ESP followed)",
+      "event": "established",
+      "frame": 14,
+      "protocol": "ike",
+      "t": 2.02,
+      "time": "2026-01-01T00:00:02.020Z"
+    },
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.1 (SPI 0xe1000001)",
+      "event": "esp_start",
+      "frame": 7,
+      "protocol": "esp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->198.51.100.2 (SPI 0xe1000002)",
+      "event": "esp_start",
+      "frame": 8,
+      "protocol": "esp",
+      "t": 1.004,
+      "time": "2026-01-01T00:00:01.004Z"
+    },
+    {
+      "detail": "first ESP 203.0.113.3->192.0.2.1 (SPI 0xe2000001)",
+      "event": "esp_start",
+      "frame": 16,
+      "protocol": "esp",
+      "t": 3.0,
+      "time": "2026-01-01T00:00:03.000Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->203.0.113.3 (SPI 0xe2000002)",
+      "event": "esp_start",
+      "frame": 18,
+      "protocol": "esp",
+      "t": 3.004,
+      "time": "2026-01-01T00:00:03.004Z"
+    }
+  ],
+  "ike_sas": [
+    {
+      "detail": "IKE_SA_INIT and IKE_AUTH completed and ESP followed",
+      "diagnosis": {
+        "code": "ok",
+        "text": "established with AES-GCM-16-256/HMAC-SHA2-512/ECP-256 (group 19) after a DH group retry (offered group 20, responder asked for group 19)"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            1,
+            3
+          ],
+          "requests": 2,
+          "response_frames": [
+            2,
+            4
+          ],
+          "responses": 2,
+          "retransmissions": 0,
+          "t": 0.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            5
+          ],
+          "requests": 1,
+          "response_frames": [
+            6
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 0.04,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 2,
+          "request_frames": [
+            24
+          ],
+          "requests": 1,
+          "response_frames": [
+            27
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 5.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 3,
+          "request_frames": [
+            43
+          ],
+          "requests": 1,
+          "response_frames": [
+            44
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 15.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 4,
+          "request_frames": [
+            45
+          ],
+          "requests": 1,
+          "response_frames": [
+            46
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 25.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 5,
+          "request_frames": [
+            47
+          ],
+          "requests": 1,
+          "response_frames": [
+            48
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 26.0,
+          "unanswered": false
+        }
+      ],
+      "first_t": 0.0,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        24,
+        27,
+        43,
+        44
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.2",
+      "initiator_spi": "a1a1a1a1a1a1a1a1",
+      "last_t": 26.004,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 4,
+        "invalid_ke_payload": [
+          {
+            "frame": 2,
+            "group_offered": 20,
+            "group_requested": 19,
+            "t": 0.008
+          }
+        ],
+        "ke_group_chosen": 19,
+        "ke_groups_offered": [
+          20,
+          19
+        ],
+        "liveness": {
+          "answered": 3,
+          "by_sender": {
+            "198.51.100.2": 3
+          },
+          "checks": 3,
+          "frames": [
+            24,
+            43,
+            45
+          ],
+          "interval_s_by_sender": {
+            "198.51.100.2": 10.0
+          },
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 3,
+        "proposal_chosen": {
+          "dh_group": [
+            "ECP-256 (group 19)"
+          ],
+          "encryption": [
+            "AES-GCM-16-256"
+          ],
+          "esn": [],
+          "integrity": [
+            "(AEAD: integrity is part of the cipher)"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA2-512"
+          ],
+          "protocol": "IKE",
+          "weak": []
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "ECP-256 (group 19)",
+              "ECP-384 (group 20)"
+            ],
+            "encryption": [
+              "AES-GCM-16-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "(AEAD: integrity is part of the cipher)"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-512"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          },
+          {
+            "dh_group": [
+              "MODP-1024 (group 2)"
+            ],
+            "encryption": [
+              "AES-CBC-128"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA1-96"
+            ],
+            "number": 2,
+            "prf": [
+              "HMAC-SHA1"
+            ],
+            "protocol": "IKE",
+            "weak": [
+              "MODP-1024 (group 2)"
+            ]
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": true,
+          "frame": 2,
+          "from": "192.0.2.1",
+          "name": "INVALID_KE_PAYLOAD",
+          "type": 17
+        },
+        {
+          "error": false,
+          "frame": 3,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 3,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 4,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 4,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "established",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "b1b1b1b1b1b1b1b1",
+      "retransmissions": 0,
+      "udp_ports": [
+        500
+      ]
+    },
+    {
+      "detail": "IKE_SA_INIT and IKE_AUTH completed and ESP followed",
+      "diagnosis": {
+        "code": "liveness_lost",
+        "text": "established with 3DES/HMAC-SHA1/MODP-1024 (group 2); later its liveness checks (DPD) went unanswered: the peer stopped answering"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            10
+          ],
+          "requests": 1,
+          "response_frames": [
+            12
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 2.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            13
+          ],
+          "requests": 1,
+          "response_frames": [
+            14
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 2.02,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 2,
+          "request_frames": [
+            49,
+            50,
+            51,
+            52
+          ],
+          "requests": 4,
+          "response_frames": [],
+          "responses": 0,
+          "retransmissions": 3,
+          "t": 30.0,
+          "unanswered": true
+        }
+      ],
+      "first_t": 2.0,
+      "frames": [
+        10,
+        12,
+        13,
+        14,
+        49,
+        50,
+        51,
+        52
+      ],
+      "ike_version": 2,
+      "initiator": "203.0.113.3",
+      "initiator_spi": "a2a2a2a2a2a2a2a2",
+      "last_t": 36.0,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 12,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": 2,
+        "ke_groups_offered": [
+          2
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {
+            "203.0.113.3": 1
+          },
+          "checks": 1,
+          "frames": [
+            49
+          ],
+          "interval_s_by_sender": {
+            "203.0.113.3": null
+          },
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 1,
+          "unanswered_checks": [
+            {
+              "first_t": 30.0,
+              "frame": 49,
+              "from": "203.0.113.3",
+              "last_t": 36.0,
+              "to": "192.0.2.1",
+              "transmissions": 4
+            }
+          ]
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 10,
+        "proposal_chosen": {
+          "dh_group": [
+            "MODP-1024 (group 2)"
+          ],
+          "encryption": [
+            "3DES"
+          ],
+          "esn": [],
+          "integrity": [
+            "HMAC-SHA1-96"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA1"
+          ],
+          "protocol": "IKE",
+          "weak": [
+            "3DES",
+            "MODP-1024 (group 2)"
+          ]
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-1024 (group 2)"
+            ],
+            "encryption": [
+              "3DES"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA1-96"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA1"
+            ],
+            "protocol": "IKE",
+            "weak": [
+              "3DES",
+              "MODP-1024 (group 2)"
+            ]
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 10,
+          "from": "203.0.113.3",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 10,
+          "from": "203.0.113.3",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 12,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 12,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "established",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "b2b2b2b2b2b2b2b2",
+      "retransmissions": 3,
+      "udp_ports": [
+        500
+      ]
+    }
+  ],
+  "ike_sas_omitted": 0,
+  "issues": [
+    {
+      "code": "IKE_LIVENESS_UNANSWERED",
+      "frames": [
+        49
+      ],
+      "message": "203.0.113.3 sent 1 liveness check(s) (DPD, 4 transmission(s)) to 192.0.2.1 with no reply; DPD declares the peer dead after its retries and tears the SA down (heuristic: an empty encrypted INFORMATIONAL, the content cannot be read)",
+      "peer": "192.0.2.1",
+      "severity": "warning"
+    },
+    {
+      "code": "IKE_RETRIED",
+      "frames": [
+        2,
+        4
+      ],
+      "message": "IKE_SA_INIT 198.51.100.2 -> 192.0.2.1 succeeded after a retry (INVALID_KE_PAYLOAD)",
+      "severity": "info"
+    },
+    {
+      "algorithms": [
+        "3DES",
+        "MODP-1024 (group 2)"
+      ],
+      "code": "IKE_WEAK_ALGORITHM",
+      "frames": [
+        12
+      ],
+      "message": "IKE SA 203.0.113.3 -> 192.0.2.1 negotiated 3DES, MODP-1024 (group 2), which RFC 8247 says not to use",
+      "severity": "info"
+    }
+  ],
+  "nat_traversal": {
+    "esp_in_udp_flows": 0,
+    "ike_packets_on_4500": 0,
+    "in_use": false,
+    "keepalive_frames": [],
+    "nat_detection_payloads_seen": true,
+    "nat_keepalives": 0,
+    "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+  },
+  "negotiation_verdict": "2 IKE SA(s): 2 established",
+  "peer_pairs": [
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.2"
+      ],
+      "protected_packets": {
+        "esp": 21,
+        "ike": 14
+      },
+      "verdict": "encrypted"
+    },
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "203.0.113.3"
+      ],
+      "protected_packets": {
+        "esp": 10,
+        "ike": 8
+      },
+      "verdict": "encrypted"
+    }
+  ],
+  "peer_pairs_omitted": 0,
+  "status": "warning",
+  "summary": {
+    "esp_flows": 4,
+    "esp_packets": 31,
+    "ike_packets": 22,
+    "ike_sas": 2,
+    "ike_sas_established": 2,
+    "nat_keepalives": 0
+  },
+  "verdict": "all inter-site traffic encrypted: 2 peer pair(s), 31 ESP packets, no cleartext between the same endpoints"
+}

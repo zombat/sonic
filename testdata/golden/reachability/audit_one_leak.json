@@ -1,0 +1,94 @@
+{
+  "arp_duplicate_ips": [],
+  "arp_unanswered": [
+    {
+      "first_t": 3.5,
+      "frames": [
+        16
+      ],
+      "requested_by": [
+        "198.51.100.2"
+      ],
+      "requests": 1,
+      "target": "198.51.100.1"
+    }
+  ],
+  "arp_unanswered_omitted": 0,
+  "detector": "reachability",
+  "echo": [
+    {
+      "answered": 0,
+      "dst": "203.0.113.1",
+      "duplicate_requests_seen": 0,
+      "first_t": 3.25,
+      "frames": [
+        14
+      ],
+      "ipv6": false,
+      "loss_percent": 100.0,
+      "lost": 1,
+      "outages": [
+        {
+          "duration_s": null,
+          "end_t": 3.25,
+          "first_frame": 14,
+          "last_frame": 14,
+          "lost_requests": 1,
+          "next_reply_frame": null,
+          "recovered_t": null,
+          "start_t": 3.25
+        }
+      ],
+      "pending_at_capture_end": 0,
+      "rtt_ms": null,
+      "sent": 1,
+      "src": "198.51.100.2",
+      "tunneled": false,
+      "verdict": "no_reply"
+    }
+  ],
+  "echo_omitted": 0,
+  "events": [
+    {
+      "detail": "ping 198.51.100.2 -> 203.0.113.1: 1 consecutive request(s) unanswered, not recovered by capture end",
+      "event": "outage",
+      "frame": 14,
+      "protocol": "icmp",
+      "t": 3.25,
+      "time": "2026-01-01T00:00:03.250Z"
+    }
+  ],
+  "icmp_errors": [],
+  "icmp_errors_omitted": 0,
+  "issues": [
+    {
+      "code": "ICMP_NO_REPLY",
+      "frames": [
+        14
+      ],
+      "message": "ping 198.51.100.2 -> 203.0.113.1: 1 request(s), no reply seen at this capture point (destination down, path broken, or replies take another path)",
+      "severity": "error"
+    },
+    {
+      "code": "ARP_NO_REPLY",
+      "frames": [
+        16
+      ],
+      "message": "ARP for 198.51.100.1 asked 1 time(s) by 198.51.100.2, never answered (host down, wrong subnet, or not on this segment)",
+      "severity": "warning"
+    }
+  ],
+  "status": "problem",
+  "summary": {
+    "arp_targets_answered": 0,
+    "arp_targets_unanswered": 1,
+    "echo_lost": 1,
+    "echo_pairs": 1,
+    "echo_replies_matched": 0,
+    "echo_requests": 1,
+    "gratuitous_arp": 0,
+    "icmp_errors": 0,
+    "unmatched_replies": 0
+  },
+  "verdict": "ping loss: 198.51.100.2->203.0.113.1 1/1 lost; ARP unanswered for 198.51.100.1"
+}

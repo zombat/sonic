@@ -1,0 +1,145 @@
+{
+  "cannot_show": [
+    "On a transport-link capture of a protected tunnel, BGP, NHRP and the user traffic travel inside ESP: routing reaction and traffic resumption are then inferred from ESP packet rates, not read from BGP.",
+    "A liveness check (DPD) is recognised by size because its payload is encrypted.",
+    "An event time from the runbook host and the capture's timestamps come from different clocks; a skew between them shifts every delta measured from the event.",
+    "Only this capture point is seen: a failure elsewhere shows only through its effect on these links."
+  ],
+  "detector": "convergence",
+  "driver": {
+    "mechanism": "dpd",
+    "reason": "DPD gave up on the failed peer 11.05 s after the start, before the routing reaction; no BGP hold expiry was seen first"
+  },
+  "event_t": null,
+  "event_time": null,
+  "events": [
+    {
+      "detail": "last ESP 192.0.2.1 -> 198.51.100.2 before 30.0 s of silence (until capture end)",
+      "event": "esp_stopped",
+      "frame": 672,
+      "protocol": "convergence",
+      "t": 29.95,
+      "time": "2026-01-01T00:00:29.950Z"
+    },
+    {
+      "detail": "liveness check (DPD) 198.51.100.2 -> 192.0.2.1 unanswered, 4 transmission(s)",
+      "event": "dpd_unanswered",
+      "frame": 734,
+      "protocol": "convergence",
+      "t": 35.0,
+      "time": "2026-01-01T00:00:35.000Z"
+    },
+    {
+      "detail": "last DPD retransmission to 192.0.2.1; the SA is deleted after it",
+      "event": "dpd_gave_up",
+      "frame": 734,
+      "protocol": "convergence",
+      "t": 41.0,
+      "time": "2026-01-01T00:00:41.000Z"
+    },
+    {
+      "detail": "surviving tunnels 198.51.100.2 <-> 192.0.2.2, 192.0.2.2 <-> 198.51.100.2 reach 20.0 packets/s (baseline 2.2, lost 20.2): traffic moved to the surviving path",
+      "event": "traffic_shift",
+      "frame": null,
+      "protocol": "convergence",
+      "t": 42.0,
+      "time": "2026-01-01T00:00:42.000Z"
+    }
+  ],
+  "failed_peer": "192.0.2.1",
+  "failed_peer_source": "inferred: the first peer whose ESP stopped",
+  "issues": [],
+  "measurements": {
+    "detection": {
+      "delta_s": 11.05,
+      "detail": "last DPD retransmission to 192.0.2.1; the SA is deleted after it",
+      "frame": 734,
+      "signal": "dpd_gave_up",
+      "t": 41.0
+    },
+    "event_to_detection_s": 11.05,
+    "event_to_first_failure_sign_s": 0.0,
+    "event_to_first_update_s": null,
+    "event_to_traffic_resumed_s": 12.05,
+    "first_failure_sign": {
+      "delta_s": 0.0,
+      "detail": "last ESP 192.0.2.1 -> 198.51.100.2 before 30.0 s of silence (until capture end)",
+      "frame": 672,
+      "signal": "esp_stopped",
+      "t": 29.95
+    },
+    "first_update_on_surviving_path": null,
+    "origin": "first_failure_sign",
+    "origin_t": 29.95,
+    "traffic_resumed": {
+      "delta_s": 12.05,
+      "detail": "surviving tunnels 198.51.100.2 <-> 192.0.2.2, 192.0.2.2 <-> 198.51.100.2 reach 20.0 packets/s (baseline 2.2, lost 20.2): traffic moved to the surviving path",
+      "frame": null,
+      "signal": "traffic_shift",
+      "t": 42.0
+    }
+  },
+  "status": "ok",
+  "timeline": [
+    {
+      "delta_s": 0.0,
+      "detail": "last ESP 192.0.2.1 -> 198.51.100.2 before 30.0 s of silence (until capture end)",
+      "frame": 672,
+      "peer": "192.0.2.1",
+      "phase": "failure",
+      "signal": "esp_stopped",
+      "t": 29.95,
+      "time": "2026-01-01T00:00:29.950Z"
+    },
+    {
+      "delta_s": 5.05,
+      "detail": "liveness check (DPD) 198.51.100.2 -> 192.0.2.1 unanswered, 4 transmission(s)",
+      "frame": 734,
+      "peer": "192.0.2.1",
+      "phase": "failure",
+      "signal": "dpd_unanswered",
+      "t": 35.0,
+      "time": "2026-01-01T00:00:35.000Z"
+    },
+    {
+      "delta_s": 11.05,
+      "detail": "last DPD retransmission to 192.0.2.1; the SA is deleted after it",
+      "frame": 734,
+      "peer": "192.0.2.1",
+      "phase": "detection",
+      "signal": "dpd_gave_up",
+      "t": 41.0,
+      "time": "2026-01-01T00:00:41.000Z"
+    },
+    {
+      "delta_s": 12.05,
+      "detail": "surviving tunnels 198.51.100.2 <-> 192.0.2.2, 192.0.2.2 <-> 198.51.100.2 reach 20.0 packets/s (baseline 2.2, lost 20.2): traffic moved to the surviving path",
+      "frame": null,
+      "peer": null,
+      "phase": "recovery",
+      "signal": "traffic_shift",
+      "t": 42.0,
+      "time": "2026-01-01T00:00:42.000Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "traffic_shift": {
+    "detail": "surviving tunnels 198.51.100.2 <-> 192.0.2.2, 192.0.2.2 <-> 198.51.100.2 reach 20.0 packets/s (baseline 2.2, lost 20.2): traffic moved to the surviving path",
+    "frame": null,
+    "lost_rate_pps": 20.2,
+    "method": "first second after the failure in which the surviving tunnels carry their 10 s baseline plus 50% of the failed tunnel's rate, for two seconds running (heuristic on ESP packet rates)",
+    "surviving_baseline_pps": 2.2,
+    "surviving_pairs": [
+      [
+        "198.51.100.2",
+        "192.0.2.2"
+      ],
+      [
+        "192.0.2.2",
+        "198.51.100.2"
+      ]
+    ],
+    "t_abs": 1767225642.0
+  },
+  "verdict": "Convergence from the first failure sign: failed peer 192.0.2.1; detected after 11.05 s (dpd_gave_up); traffic resumed after 12.05 s (traffic_shift); driver: dpd"
+}

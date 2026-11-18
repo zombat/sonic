@@ -1,0 +1,246 @@
+{
+  "cannot_show": [
+    "On a transport-link capture of a protected tunnel, BGP, NHRP and the user traffic travel inside ESP: routing reaction and traffic resumption are then inferred from ESP packet rates, not read from BGP.",
+    "A liveness check (DPD) is recognised by size because its payload is encrypted.",
+    "An event time from the runbook host and the capture's timestamps come from different clocks; a skew between them shifts every delta measured from the event.",
+    "Only this capture point is seen: a failure elsewhere shows only through its effect on these links."
+  ],
+  "detector": "convergence",
+  "driver": {
+    "mechanism": "bgp_hold_timer",
+    "reason": "the BGP hold timer expired 31.478 s after the start"
+  },
+  "event_t": null,
+  "event_time": null,
+  "events": [
+    {
+      "detail": "BGP UPDATE 10.255.0.1 on 10.255.0.1 <-> 10.255.0.11: 2 announced, 0 withdrawn",
+      "event": "bgp_update",
+      "frame": 8,
+      "protocol": "convergence",
+      "t": 0.1,
+      "time": "2026-01-01T00:00:00.100Z"
+    },
+    {
+      "detail": "last BGP message from 10.255.0.4 before its session dropped",
+      "event": "bgp_last_message",
+      "frame": 29,
+      "protocol": "convergence",
+      "t": 1.522,
+      "time": "2026-01-01T00:00:01.522Z"
+    },
+    {
+      "detail": "BGP 10.255.0.3 <-> 10.255.0.11 down: TCP RST with no NOTIFICATION before it",
+      "event": "bgp_down",
+      "frame": 37,
+      "protocol": "convergence",
+      "t": 15.0,
+      "time": "2026-01-01T00:00:15.000Z"
+    },
+    {
+      "detail": "BGP 10.255.0.4 <-> 10.255.0.11 down: 10.255.0.4 was silent 31.478 s (hold time 30 s) before the TCP close and no NOTIFICATION was captured: the hold timer most likely expired",
+      "event": "bgp_down",
+      "frame": 51,
+      "protocol": "convergence",
+      "t": 33.0,
+      "time": "2026-01-01T00:00:33.000Z"
+    },
+    {
+      "detail": "last BGP message from 10.255.0.1 before its session dropped",
+      "event": "bgp_last_message",
+      "frame": 68,
+      "protocol": "convergence",
+      "t": 40.002,
+      "time": "2026-01-01T00:00:40.002Z"
+    },
+    {
+      "detail": "ping 10.1.11.1 -> 10.1.1.1: 30 request(s) unanswered",
+      "event": "icmp_outage",
+      "frame": 72,
+      "protocol": "convergence",
+      "t": 41.0,
+      "time": "2026-01-01T00:00:41.000Z"
+    },
+    {
+      "detail": "NOTIFICATION Hold Timer Expired 10.255.0.11 -> 10.255.0.1",
+      "event": "bgp_hold_expired",
+      "frame": 107,
+      "protocol": "convergence",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "BGP 10.255.0.1 <-> 10.255.0.11 down: a NOTIFICATION 'Hold Timer Expired' was sent: the other side was silent for the whole hold time",
+      "event": "bgp_down",
+      "frame": 107,
+      "protocol": "convergence",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "BGP UPDATE 10.255.0.2 on 10.255.0.2 <-> 10.255.0.11: 2 announced, 0 withdrawn",
+      "event": "bgp_update",
+      "frame": 112,
+      "protocol": "convergence",
+      "t": 70.5,
+      "time": "2026-01-01T00:01:10.500Z"
+    },
+    {
+      "detail": "ping 10.1.11.1 -> 10.1.1.1 answered again",
+      "event": "icmp_recovered",
+      "frame": 114,
+      "protocol": "convergence",
+      "t": 71.02,
+      "time": "2026-01-01T00:01:11.020Z"
+    }
+  ],
+  "failed_peer": "10.255.0.4",
+  "failed_peer_source": "inferred: the BGP speaker that went quiet before its session dropped",
+  "issues": [],
+  "measurements": {
+    "detection": {
+      "delta_s": 31.478,
+      "detail": "BGP 10.255.0.4 <-> 10.255.0.11 down: 10.255.0.4 was silent 31.478 s (hold time 30 s) before the TCP close and no NOTIFICATION was captured: the hold timer most likely expired",
+      "frame": 51,
+      "signal": "bgp_down",
+      "t": 33.0
+    },
+    "event_to_detection_s": 31.478,
+    "event_to_first_failure_sign_s": 0.0,
+    "event_to_first_update_s": 68.978,
+    "event_to_traffic_resumed_s": 69.498,
+    "first_failure_sign": {
+      "delta_s": 0.0,
+      "detail": "last BGP message from 10.255.0.4 before its session dropped",
+      "frame": 29,
+      "signal": "bgp_last_message",
+      "t": 1.522
+    },
+    "first_update_on_surviving_path": {
+      "delta_s": 68.978,
+      "detail": "BGP UPDATE 10.255.0.2 on 10.255.0.2 <-> 10.255.0.11: 2 announced, 0 withdrawn",
+      "frame": 112,
+      "signal": "bgp_update",
+      "t": 70.5
+    },
+    "origin": "first_failure_sign",
+    "origin_t": 1.522,
+    "traffic_resumed": {
+      "delta_s": 69.498,
+      "detail": "ping 10.1.11.1 -> 10.1.1.1 answered again",
+      "frame": 114,
+      "signal": "icmp_recovered",
+      "t": 71.02
+    }
+  },
+  "status": "ok",
+  "timeline": [
+    {
+      "delta_s": -1.422,
+      "detail": "BGP UPDATE 10.255.0.1 on 10.255.0.1 <-> 10.255.0.11: 2 announced, 0 withdrawn",
+      "frame": 8,
+      "peer": "10.255.0.1",
+      "phase": "reaction",
+      "signal": "bgp_update",
+      "t": 0.1,
+      "time": "2026-01-01T00:00:00.100Z"
+    },
+    {
+      "delta_s": 0.0,
+      "detail": "last BGP message from 10.255.0.4 before its session dropped",
+      "frame": 29,
+      "peer": "10.255.0.4",
+      "phase": "failure",
+      "signal": "bgp_last_message",
+      "t": 1.522,
+      "time": "2026-01-01T00:00:01.522Z"
+    },
+    {
+      "delta_s": 13.478,
+      "detail": "BGP 10.255.0.3 <-> 10.255.0.11 down: TCP RST with no NOTIFICATION before it",
+      "frame": 37,
+      "peer": "10.255.0.11",
+      "phase": "detection",
+      "signal": "bgp_down",
+      "t": 15.0,
+      "time": "2026-01-01T00:00:15.000Z"
+    },
+    {
+      "delta_s": 31.478,
+      "detail": "BGP 10.255.0.4 <-> 10.255.0.11 down: 10.255.0.4 was silent 31.478 s (hold time 30 s) before the TCP close and no NOTIFICATION was captured: the hold timer most likely expired",
+      "frame": 51,
+      "peer": "10.255.0.4",
+      "phase": "detection",
+      "signal": "bgp_down",
+      "t": 33.0,
+      "time": "2026-01-01T00:00:33.000Z"
+    },
+    {
+      "delta_s": 38.48,
+      "detail": "last BGP message from 10.255.0.1 before its session dropped",
+      "frame": 68,
+      "peer": "10.255.0.1",
+      "phase": "failure",
+      "signal": "bgp_last_message",
+      "t": 40.002,
+      "time": "2026-01-01T00:00:40.002Z"
+    },
+    {
+      "delta_s": 39.478,
+      "detail": "ping 10.1.11.1 -> 10.1.1.1: 30 request(s) unanswered",
+      "frame": 72,
+      "peer": null,
+      "phase": "failure",
+      "signal": "icmp_outage",
+      "t": 41.0,
+      "time": "2026-01-01T00:00:41.000Z"
+    },
+    {
+      "delta_s": 68.478,
+      "detail": "NOTIFICATION Hold Timer Expired 10.255.0.11 -> 10.255.0.1",
+      "frame": 107,
+      "peer": "10.255.0.1",
+      "phase": "detection",
+      "signal": "bgp_hold_expired",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "delta_s": 68.478,
+      "detail": "BGP 10.255.0.1 <-> 10.255.0.11 down: a NOTIFICATION 'Hold Timer Expired' was sent: the other side was silent for the whole hold time",
+      "frame": 107,
+      "peer": "10.255.0.1",
+      "phase": "detection",
+      "signal": "bgp_down",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "delta_s": 68.978,
+      "detail": "BGP UPDATE 10.255.0.2 on 10.255.0.2 <-> 10.255.0.11: 2 announced, 0 withdrawn",
+      "frame": 112,
+      "peer": "10.255.0.2",
+      "phase": "reaction",
+      "signal": "bgp_update",
+      "t": 70.5,
+      "time": "2026-01-01T00:01:10.500Z"
+    },
+    {
+      "delta_s": 69.498,
+      "detail": "ping 10.1.11.1 -> 10.1.1.1 answered again",
+      "frame": 114,
+      "peer": null,
+      "phase": "recovery",
+      "signal": "icmp_recovered",
+      "t": 71.02,
+      "time": "2026-01-01T00:01:11.020Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "traffic_shift": {
+    "detail": "no surviving ESP tunnel from the same local router to compare",
+    "surviving_pairs": [],
+    "t_abs": null
+  },
+  "verdict": "Convergence from the first failure sign: failed peer 10.255.0.4; detected after 31.478 s (bgp_down); first UPDATE on the surviving path after 68.978 s; traffic resumed after 69.498 s (icmp_recovered); driver: bgp_hold_timer"
+}

@@ -1,0 +1,545 @@
+{
+  "cleartext": [],
+  "detector": "ipsec",
+  "encryption_verdict": "encrypted",
+  "esp_flows": [
+    {
+      "bytes": 50264,
+      "dst": "192.0.2.1",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 0.0,
+      "frames": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        15,
+        17,
+        19,
+        21
+      ],
+      "last_seq": 412,
+      "last_t": 41.1,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 412,
+      "spi": "0xf1000001",
+      "src": "198.51.100.2",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 36600,
+      "dst": "198.51.100.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 0.05,
+      "frames": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        13,
+        16,
+        18,
+        20,
+        22
+      ],
+      "last_seq": 300,
+      "last_t": 29.95,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 300,
+      "spi": "0xf1000002",
+      "src": "192.0.2.1",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 27450,
+      "dst": "192.0.2.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 0.5,
+      "frames": [
+        12,
+        34,
+        56,
+        78,
+        100,
+        126,
+        148,
+        170,
+        192,
+        214
+      ],
+      "last_seq": 225,
+      "last_t": 59.9,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 225,
+      "spi": "0xf2000001",
+      "src": "198.51.100.2",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    },
+    {
+      "bytes": 27450,
+      "dst": "198.51.100.2",
+      "duplicate_sequence_numbers": 0,
+      "first_seq": 1,
+      "first_t": 0.55,
+      "frames": [
+        14,
+        36,
+        58,
+        80,
+        102,
+        128,
+        150,
+        172,
+        194,
+        216
+      ],
+      "last_seq": 225,
+      "last_t": 59.95,
+      "missing_sequence_numbers": 0,
+      "out_of_order": 0,
+      "packets": 225,
+      "spi": "0xf2000002",
+      "src": "192.0.2.2",
+      "stale_frames": [],
+      "stale_packets": 0,
+      "udp_encapsulated": false
+    }
+  ],
+  "esp_flows_omitted": 0,
+  "events": [
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.1 (SPI 0xf1000001)",
+      "event": "esp_start",
+      "frame": 1,
+      "protocol": "esp",
+      "t": 0.0,
+      "time": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->198.51.100.2 (SPI 0xf1000002)",
+      "event": "esp_start",
+      "frame": 2,
+      "protocol": "esp",
+      "t": 0.05,
+      "time": "2026-01-01T00:00:00.050Z"
+    },
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.2 (SPI 0xf2000001)",
+      "event": "esp_start",
+      "frame": 12,
+      "protocol": "esp",
+      "t": 0.5,
+      "time": "2026-01-01T00:00:00.500Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.2->198.51.100.2 (SPI 0xf2000002)",
+      "event": "esp_start",
+      "frame": 14,
+      "protocol": "esp",
+      "t": 0.55,
+      "time": "2026-01-01T00:00:00.550Z"
+    }
+  ],
+  "ike_sas": [
+    {
+      "detail": "IKE SA was already up when the capture began; ESP is flowing",
+      "diagnosis": {
+        "code": "liveness_lost",
+        "text": "IKE SA was already up when the capture began; ESP is flowing; later its liveness checks (DPD) went unanswered: the peer stopped answering"
+      },
+      "exchanges": [
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 10,
+          "request_frames": [
+            112
+          ],
+          "requests": 1,
+          "response_frames": [
+            113
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 5.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 11,
+          "request_frames": [
+            336
+          ],
+          "requests": 1,
+          "response_frames": [
+            337
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 15.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 12,
+          "request_frames": [
+            560
+          ],
+          "requests": 1,
+          "response_frames": [
+            561
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 25.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 13,
+          "request_frames": [
+            734,
+            761,
+            786,
+            811
+          ],
+          "requests": 4,
+          "response_frames": [],
+          "responses": 0,
+          "retransmissions": 3,
+          "t": 35.0,
+          "unanswered": true
+        }
+      ],
+      "first_t": 5.0,
+      "frames": [
+        112,
+        113,
+        336,
+        337,
+        560,
+        561,
+        734,
+        761,
+        786,
+        811
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.2",
+      "initiator_spi": "9191919191919191",
+      "last_t": 41.0,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": null,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": null,
+        "ke_groups_offered": [],
+        "liveness": {
+          "answered": 3,
+          "by_sender": {
+            "198.51.100.2": 4
+          },
+          "checks": 4,
+          "frames": [
+            112,
+            336,
+            560,
+            734
+          ],
+          "interval_s_by_sender": {
+            "198.51.100.2": 10.0
+          },
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 1,
+          "unanswered_checks": [
+            {
+              "first_t": 35.0,
+              "frame": 734,
+              "from": "198.51.100.2",
+              "last_t": 41.0,
+              "to": "192.0.2.1",
+              "transmissions": 4
+            }
+          ]
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": false,
+          "translated": [],
+          "verdict": "no NAT detection payloads seen (IKE_SA_INIT not captured, or the peer does not send them)"
+        },
+        "offered_frame": null,
+        "proposal_chosen": null,
+        "proposals_offered": []
+      },
+      "notifies": [],
+      "outcome": "established",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "9292929292929292",
+      "retransmissions": 3,
+      "udp_ports": [
+        500
+      ]
+    },
+    {
+      "detail": "IKE SA was already up when the capture began; ESP is flowing",
+      "diagnosis": {
+        "code": "ok",
+        "text": "IKE SA was already up when the capture began; ESP is flowing"
+      },
+      "exchanges": [
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 10,
+          "request_frames": [
+            120
+          ],
+          "requests": 1,
+          "response_frames": [
+            121
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 5.3,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 11,
+          "request_frames": [
+            344
+          ],
+          "requests": 1,
+          "response_frames": [
+            345
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 15.3,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 12,
+          "request_frames": [
+            568
+          ],
+          "requests": 1,
+          "response_frames": [
+            569
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 25.3,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 13,
+          "request_frames": [
+            738
+          ],
+          "requests": 1,
+          "response_frames": [
+            739
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 35.3,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 14,
+          "request_frames": [
+            888
+          ],
+          "requests": 1,
+          "response_frames": [
+            889
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 45.3,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "INFORMATIONAL",
+          "message_id": 15,
+          "request_frames": [
+            1090
+          ],
+          "requests": 1,
+          "response_frames": [
+            1091
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 55.3,
+          "unanswered": false
+        }
+      ],
+      "first_t": 5.3,
+      "frames": [
+        120,
+        121,
+        344,
+        345,
+        568,
+        569,
+        738,
+        739,
+        888,
+        889
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.2",
+      "initiator_spi": "9393939393939393",
+      "last_t": 55.304,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": null,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": null,
+        "ke_groups_offered": [],
+        "liveness": {
+          "answered": 6,
+          "by_sender": {
+            "198.51.100.2": 6
+          },
+          "checks": 6,
+          "frames": [
+            120,
+            344,
+            568,
+            738,
+            888,
+            1090
+          ],
+          "interval_s_by_sender": {
+            "198.51.100.2": 10.0
+          },
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": false,
+          "translated": [],
+          "verdict": "no NAT detection payloads seen (IKE_SA_INIT not captured, or the peer does not send them)"
+        },
+        "offered_frame": null,
+        "proposal_chosen": null,
+        "proposals_offered": []
+      },
+      "notifies": [],
+      "outcome": "established",
+      "rekeys": 0,
+      "responder": "192.0.2.2",
+      "responder_spi": "9494949494949494",
+      "retransmissions": 0,
+      "udp_ports": [
+        500
+      ]
+    }
+  ],
+  "ike_sas_omitted": 0,
+  "issues": [
+    {
+      "code": "IKE_LIVENESS_UNANSWERED",
+      "frames": [
+        734
+      ],
+      "message": "198.51.100.2 sent 1 liveness check(s) (DPD, 4 transmission(s)) to 192.0.2.1 with no reply; DPD declares the peer dead after its retries and tears the SA down (heuristic: an empty encrypted INFORMATIONAL, the content cannot be read)",
+      "peer": "192.0.2.1",
+      "severity": "warning"
+    }
+  ],
+  "nat_traversal": {
+    "esp_in_udp_flows": 0,
+    "ike_packets_on_4500": 0,
+    "in_use": false,
+    "keepalive_frames": [],
+    "nat_detection_payloads_seen": false,
+    "nat_keepalives": 0,
+    "verdict": "NAT-T not in use"
+  },
+  "negotiation_verdict": "2 IKE SA(s): 2 established",
+  "peer_pairs": [
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.2"
+      ],
+      "protected_packets": {
+        "esp": 712,
+        "ike": 10
+      },
+      "verdict": "encrypted"
+    },
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.2",
+        "198.51.100.2"
+      ],
+      "protected_packets": {
+        "esp": 450,
+        "ike": 12
+      },
+      "verdict": "encrypted"
+    }
+  ],
+  "peer_pairs_omitted": 0,
+  "status": "warning",
+  "summary": {
+    "esp_flows": 4,
+    "esp_packets": 1162,
+    "ike_packets": 22,
+    "ike_sas": 2,
+    "ike_sas_established": 2,
+    "nat_keepalives": 0
+  },
+  "verdict": "all inter-site traffic encrypted: 2 peer pair(s), 1162 ESP packets, no cleartext between the same endpoints"
+}

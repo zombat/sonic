@@ -1,0 +1,321 @@
+{
+  "captures": [
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:10.020Z",
+      "label": "inside",
+      "packets": 18,
+      "path": "testdata/fixtures/dp_corr_inside.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "unmatched_packets": 18,
+      "warnings": []
+    },
+    {
+      "backend": "tshark",
+      "clock_offset_s": 100.0,
+      "end": "2026-01-01T00:01:50.020Z",
+      "label": "outside",
+      "packets": 18,
+      "path": "testdata/fixtures/dp_corr_outside.pcap",
+      "start": "2026-01-01T00:01:40.000Z",
+      "unmatched_packets": 18,
+      "warnings": []
+    }
+  ],
+  "connections": [
+    {
+      "detail": "tcp 10.0.0.10:40000 -> 198.51.100.80:443: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "tcp 10.0.0.10:40000 -> 198.51.100.80:443"
+      },
+      "first_t": 0.0,
+      "flow": "tcp 10.0.0.10:40000 -> 198.51.100.80:443",
+      "frames": {
+        "inside": [
+          1
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "inside": 2
+        }
+      },
+      "request": {
+        "seen_at": {
+          "inside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "tcp 10.0.0.11:40001 -> 198.51.100.81:443: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "tcp 10.0.0.11:40001 -> 198.51.100.81:443"
+      },
+      "first_t": 1.0,
+      "flow": "tcp 10.0.0.11:40001 -> 198.51.100.81:443",
+      "frames": {
+        "inside": [
+          6
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "icmp 10.0.0.12 -> 198.51.100.82 id 257: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "icmp 10.0.0.12 -> 198.51.100.82 id 257"
+      },
+      "first_t": 4.5,
+      "flow": "icmp 10.0.0.12 -> 198.51.100.82 id 257",
+      "frames": {
+        "inside": [
+          9
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "udp 10.0.0.12:33434 -> 198.51.100.82:33434: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33434 -> 198.51.100.82:33434"
+      },
+      "first_t": 5.0,
+      "flow": "udp 10.0.0.12:33434 -> 198.51.100.82:33434",
+      "frames": {
+        "inside": [
+          10
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "udp 10.0.0.12:33435 -> 198.51.100.82:33435: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33435 -> 198.51.100.82:33435"
+      },
+      "first_t": 6.0,
+      "flow": "udp 10.0.0.12:33435 -> 198.51.100.82:33435",
+      "frames": {
+        "inside": [
+          11
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "udp 10.0.0.12:33436 -> 198.51.100.82:33436: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "udp 10.0.0.12:33436 -> 198.51.100.82:33436"
+      },
+      "first_t": 7.0,
+      "flow": "udp 10.0.0.12:33436 -> 198.51.100.82:33436",
+      "frames": {
+        "inside": [
+          12
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "inside": 1
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "icmp 10.0.0.13 -> 198.51.100.80 id 4660: seen only at inside",
+      "endpoints_by_capture": {
+        "inside": "icmp 10.0.0.13 -> 198.51.100.80 id 4660"
+      },
+      "first_t": 8.0,
+      "flow": "icmp 10.0.0.13 -> 198.51.100.80 id 4660",
+      "frames": {
+        "inside": [
+          13
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "inside": 3
+        }
+      },
+      "request": {
+        "seen_at": {
+          "inside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "tcp 203.0.113.5:61000 -> 198.51.100.80:443: seen only at outside",
+      "endpoints_by_capture": {
+        "outside": "tcp 203.0.113.5:61000 -> 198.51.100.80:443"
+      },
+      "first_t": 100.0005,
+      "flow": "tcp 203.0.113.5:61000 -> 198.51.100.80:443",
+      "frames": {
+        "outside": [
+          1
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "outside": 2
+        }
+      },
+      "request": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "tcp 203.0.113.5:61001 -> 198.51.100.81:443: seen only at outside",
+      "endpoints_by_capture": {
+        "outside": "tcp 203.0.113.5:61001 -> 198.51.100.81:443"
+      },
+      "first_t": 101.0005,
+      "flow": "tcp 203.0.113.5:61001 -> 198.51.100.81:443",
+      "frames": {
+        "outside": [
+          6
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "request": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "icmp 203.0.113.5 -> 198.51.100.82 id 32770: seen only at outside",
+      "endpoints_by_capture": {
+        "outside": "icmp 203.0.113.5 -> 198.51.100.82 id 32770"
+      },
+      "first_t": 104.5005,
+      "flow": "icmp 203.0.113.5 -> 198.51.100.82 id 32770",
+      "frames": {
+        "outside": [
+          12
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": null,
+      "request": {
+        "seen_at": {
+          "outside": 1
+        }
+      },
+      "verdict": "not_on_other_paths"
+    },
+    {
+      "detail": "icmp 203.0.113.5 -> 198.51.100.80 id 32769: seen only at outside",
+      "endpoints_by_capture": {
+        "outside": "icmp 203.0.113.5 -> 198.51.100.80 id 32769"
+      },
+      "first_t": 108.0005,
+      "flow": "icmp 203.0.113.5 -> 198.51.100.80 id 32769",
+      "frames": {
+        "outside": [
+          13
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "request": {
+        "seen_at": {
+          "outside": 3
+        }
+      },
+      "verdict": "not_on_other_paths"
+    }
+  ],
+  "connections_omitted": 0,
+  "dscp_changes": [],
+  "issues": [],
+  "limits": [
+    "Only packets that reached at least one capture point are known; a packet dropped before the first capture point is invisible.",
+    "Matching relies on fields NAT normally keeps (TCP sequence numbers, ESP SPI/sequence, payload hashes, IP identification). A device that randomizes TCP sequence numbers or rewrites payloads (an ALG) breaks matching for those flows.",
+    "Times between capture points include the difference between the capturing clocks; captures written by one host (for example the CML controller) share a clock.",
+    "A packet is held for matching for window_s seconds and at most max_packets_held packets are held; a packet that reaches the next capture point later than that, or after an early eviction, counts as unmatched.",
+    "seen_only_at is an observation, not a verdict on intent: a flow that never needed to cross the other capture points looks the same as one that was dropped."
+  ],
+  "matching": {
+    "evicted_early": 0,
+    "flows_dropped_at_cap": 0,
+    "max_packets_held": 200000,
+    "packets_matched": 0,
+    "window_s": 2.0
+  },
+  "nat": [],
+  "nat_omitted": 0,
+  "schema": "sonic.correlation_report/1",
+  "status": "success",
+  "summary": {
+    "by_verdict": {
+      "not_on_other_paths": 11
+    },
+    "connections": 11,
+    "dscp_changes": 0,
+    "nat_translations": 0
+  },
+  "transit": [],
+  "verdict": "No packet was seen in more than one capture. If the captures overlap in time and carry the same traffic, their clocks may differ by more than window_s: pass clock_offsets_s."
+}

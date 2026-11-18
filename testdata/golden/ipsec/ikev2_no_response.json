@@ -1,0 +1,229 @@
+{
+  "cleartext": [],
+  "detector": "ipsec",
+  "encryption_verdict": "no_esp",
+  "esp_flows": [],
+  "esp_flows_omitted": 0,
+  "events": [
+    {
+      "detail": "IKE_SA_INIT 198.51.100.2 -> 192.0.2.1 unanswered",
+      "event": "no_response",
+      "frame": 1,
+      "protocol": "ike",
+      "t": 0.0,
+      "time": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "ike_sas": [
+    {
+      "detail": "IKE_SA_INIT sent 4 time(s), never answered",
+      "diagnosis": {
+        "code": "no_reply",
+        "text": "no reply: 192.0.2.1 never answered IKE_SA_INIT from 198.51.100.2 (peer down, UDP 500 filtered, wrong peer address, or no IKEv2 policy matching the front-door VRF)"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "requests": 4,
+          "response_frames": [],
+          "responses": 0,
+          "retransmissions": 3,
+          "t": 0.0,
+          "unanswered": true
+        }
+      ],
+      "first_t": 0.0,
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.2",
+      "initiator_spi": "4444444444444444",
+      "last_t": 14.0,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": null,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": null,
+        "ke_groups_offered": [
+          14,
+          14,
+          14,
+          14
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {},
+          "checks": 0,
+          "frames": [],
+          "interval_s_by_sender": {},
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 4,
+        "proposal_chosen": null,
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 3,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 3,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 4,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 4,
+          "from": "198.51.100.2",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "no_response",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": null,
+      "retransmissions": 3,
+      "udp_ports": [
+        500
+      ]
+    }
+  ],
+  "ike_sas_omitted": 0,
+  "issues": [
+    {
+      "code": "IKE_NO_RESPONSE",
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "initiator": "198.51.100.2",
+      "message": "192.0.2.1 never answered IKE_SA_INIT from 198.51.100.2 (4 request(s), 3 retransmission(s)): UDP 500 blocked, wrong peer address, or IKE not configured on the peer",
+      "responder": "192.0.2.1",
+      "severity": "error"
+    }
+  ],
+  "nat_traversal": {
+    "esp_in_udp_flows": 0,
+    "ike_packets_on_4500": 0,
+    "in_use": false,
+    "keepalive_frames": [],
+    "nat_detection_payloads_seen": true,
+    "nat_keepalives": 0,
+    "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+  },
+  "negotiation_verdict": "1 IKE SA(s): 1 no response",
+  "peer_pairs": [
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.2"
+      ],
+      "protected_packets": {
+        "ike": 4
+      },
+      "verdict": "ike_only"
+    }
+  ],
+  "peer_pairs_omitted": 0,
+  "status": "problem",
+  "summary": {
+    "esp_flows": 0,
+    "esp_packets": 0,
+    "ike_packets": 4,
+    "ike_sas": 1,
+    "ike_sas_established": 0,
+    "nat_keepalives": 0
+  },
+  "verdict": "no ESP between IKE peers 192.0.2.1<->198.51.100.2: the tunnel carried no protected traffic (or failed to come up); IKE: 1 IKE SA(s): 1 no response"
+}

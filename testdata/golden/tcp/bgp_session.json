@@ -1,0 +1,463 @@
+{
+  "connections": [
+    {
+      "client": "10.255.0.1:40004",
+      "detail": "10.255.0.4:179 answered the SYN with RST: nothing listening, or a firewall rejecting the connection",
+      "directions": {
+        "client_to_server": {
+          "bytes": 0,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.1:40004",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": null,
+          "rtt_ms": null,
+          "sack_permitted": false,
+          "segments_with_data": 0,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        },
+        "server_to_client": {
+          "bytes": 0,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.4:179",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": null,
+          "rtt_ms": null,
+          "sack_permitted": false,
+          "segments_with_data": 0,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        }
+      },
+      "first_t": 3.0,
+      "frames": [
+        18,
+        19
+      ],
+      "handshake": {
+        "capture_point_to_client_ms": null,
+        "capture_point_to_server_ms": null,
+        "syn_count": 1,
+        "syn_frames": [
+          18
+        ],
+        "synack_frame": null
+      },
+      "handshake_seen": true,
+      "last_t": 3.001,
+      "other_conditions": [],
+      "over_gre": false,
+      "packets": 2,
+      "server": "10.255.0.4:179",
+      "verdict": "refused"
+    },
+    {
+      "client": "10.255.0.1:40001",
+      "detail": "reset by 10.255.0.2:179 after 152 byte(s) from it",
+      "directions": {
+        "client_to_server": {
+          "bytes": 215,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.1:40001",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 200.0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 1000.0,
+          "rtt_ms": {
+            "max": 2.0,
+            "median": 2.0,
+            "min": 1.0,
+            "p95": 2.0,
+            "samples": 5
+          },
+          "sack_permitted": false,
+          "segments_with_data": 8,
+          "srtt_ms": 1.875,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        },
+        "server_to_client": {
+          "bytes": 152,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.2:179",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 18536.4,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 18536.4,
+          "rtt_ms": {
+            "max": 9999.0,
+            "median": 78.0,
+            "min": 8.0,
+            "p95": 9999.0,
+            "samples": 5
+          },
+          "sack_permitted": false,
+          "segments_with_data": 5,
+          "srtt_ms": 2343.362,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        }
+      },
+      "first_t": 0.0,
+      "frames": [
+        26
+      ],
+      "handshake": {
+        "capture_point_to_client_ms": 1.0,
+        "capture_point_to_server_ms": 1.0,
+        "syn_count": 1,
+        "syn_frames": [
+          1
+        ],
+        "synack_frame": 2
+      },
+      "handshake_seen": true,
+      "last_t": 40.7,
+      "other_conditions": [],
+      "over_gre": false,
+      "packets": 18,
+      "server": "10.255.0.2:179",
+      "verdict": "reset"
+    },
+    {
+      "client": "10.255.0.3:40003",
+      "detail": "no retransmissions, gaps, zero windows or resets seen",
+      "directions": {
+        "client_to_server": {
+          "bytes": 43,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.3:40003",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 200.0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 1000.0,
+          "rtt_ms": {
+            "max": 1.0,
+            "median": 1.0,
+            "min": 1.0,
+            "p95": 1.0,
+            "samples": 1
+          },
+          "sack_permitted": false,
+          "segments_with_data": 1,
+          "srtt_ms": 1.0,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        },
+        "server_to_client": {
+          "bytes": 23,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.1:179",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": null,
+          "rtt_ms": null,
+          "sack_permitted": false,
+          "segments_with_data": 1,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        }
+      },
+      "first_t": 2.0,
+      "frames": [],
+      "handshake": {
+        "capture_point_to_client_ms": 1.0,
+        "capture_point_to_server_ms": 1.0,
+        "syn_count": 1,
+        "syn_frames": [
+          12
+        ],
+        "synack_frame": 13
+      },
+      "handshake_seen": true,
+      "last_t": 2.012,
+      "other_conditions": [],
+      "over_gre": false,
+      "packets": 6,
+      "server": "10.255.0.1:179",
+      "verdict": "healthy"
+    },
+    {
+      "client": "10.255.0.1:40002",
+      "detail": "no retransmissions, gaps, zero windows or resets seen",
+      "directions": {
+        "client_to_server": {
+          "bytes": 183,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.1:40002",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 200.0,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 1000.0,
+          "rtt_ms": {
+            "max": 2.0,
+            "median": 2.0,
+            "min": 1.0,
+            "p95": 2.0,
+            "samples": 5
+          },
+          "sack_permitted": false,
+          "segments_with_data": 6,
+          "srtt_ms": 1.875,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        },
+        "server_to_client": {
+          "bytes": 152,
+          "duplicate_ack_runs_of_3": 0,
+          "duplicate_acks_sent": 0,
+          "fast_retransmissions": 0,
+          "frames": {
+            "duplicate_acks": [],
+            "gaps": [],
+            "retransmissions": [],
+            "window_full": [],
+            "zero_window": []
+          },
+          "from": "10.255.0.2:179",
+          "gap_bytes": 0,
+          "gaps_before_capture_point": 0,
+          "linux_rto_ms": 9350.3,
+          "mss": null,
+          "observed_retransmission_timeout_ms": null,
+          "out_of_order": 0,
+          "retransmissions": 0,
+          "rfc6298_rto_ms": 9350.3,
+          "rtt_ms": {
+            "max": 9888.0,
+            "median": 78.0,
+            "min": 8.0,
+            "p95": 9888.0,
+            "samples": 5
+          },
+          "sack_permitted": false,
+          "segments_with_data": 5,
+          "srtt_ms": 1155.862,
+          "timeout_retransmissions": 0,
+          "timestamps": false,
+          "window_full_events": 0,
+          "window_scale": null,
+          "zero_window_advertisements": 0,
+          "zero_window_open_at_end": false,
+          "zero_window_seconds": 0.0
+        }
+      },
+      "first_t": 45.7,
+      "frames": [],
+      "handshake": {
+        "capture_point_to_client_ms": 1.0,
+        "capture_point_to_server_ms": 1.0,
+        "syn_count": 1,
+        "syn_frames": [
+          27
+        ],
+        "synack_frame": 28
+      },
+      "handshake_seen": true,
+      "last_t": 56.2,
+      "other_conditions": [],
+      "over_gre": false,
+      "packets": 14,
+      "server": "10.255.0.2:179",
+      "verdict": "healthy"
+    }
+  ],
+  "connections_omitted": 0,
+  "detector": "tcp",
+  "events": [
+    {
+      "detail": "10.255.0.1:40001 -> 10.255.0.2:179: RST from 10.255.0.2:179",
+      "event": "rst",
+      "frame": 26,
+      "protocol": "tcp",
+      "t": 40.7,
+      "time": "2026-01-01T00:00:40.700Z"
+    },
+    {
+      "detail": "10.255.0.1:40004 -> 10.255.0.4:179: 10.255.0.4:179 answered the SYN with RST: nothing listening, or a firewall rejecting the connection",
+      "event": "refused",
+      "frame": 18,
+      "protocol": "tcp",
+      "t": 3.0,
+      "time": "2026-01-01T00:00:03.000Z"
+    },
+    {
+      "detail": "10.255.0.1:40004 -> 10.255.0.4:179: RST from 10.255.0.4:179",
+      "event": "rst",
+      "frame": 19,
+      "protocol": "tcp",
+      "t": 3.001,
+      "time": "2026-01-01T00:00:03.001Z"
+    }
+  ],
+  "issues": [
+    {
+      "code": "TCP_REFUSED",
+      "connections": 1,
+      "frames": [
+        18,
+        19
+      ],
+      "message": "1 connection(s) SYN answered by RST. 10.255.0.1:40004 -> 10.255.0.4:179: 10.255.0.4:179 answered the SYN with RST: nothing listening, or a firewall rejecting the connection",
+      "severity": "warning"
+    },
+    {
+      "code": "TCP_RESET",
+      "connections": 1,
+      "frames": [
+        26
+      ],
+      "message": "1 connection(s) reset mid-connection. 10.255.0.1:40001 -> 10.255.0.2:179: reset by 10.255.0.2:179 after 152 byte(s) from it",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "Retransmissions, gaps and RTT are what this capture point saw: a segment lost after the capture point shows as a retransmission here, one lost before it shows as a gap. RTT is from the capture point to the receiver and back, not end to end unless the capture was taken on the sender.",
+    "A connection whose handshake was not captured has no window scale, so window-full checks and options are skipped for it.",
+    "Payload contents are not judged here (see the tls detector for TLS handshakes)."
+  ],
+  "status": "warning",
+  "summary": {
+    "by_verdict": {
+      "healthy": 2,
+      "loss_on_path": 0,
+      "no_answer": 0,
+      "receive_window_limited": 0,
+      "receiver_buffer_exhausted": 0,
+      "refused": 1,
+      "reset": 1
+    },
+    "connections": 4,
+    "connections_dropped_at_cap": 0,
+    "mss_offered": []
+  },
+  "verdict": "4 TCP connection(s): 1 refused, 1 reset."
+}

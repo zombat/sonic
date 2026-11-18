@@ -1,0 +1,1169 @@
+{
+  "capture": {
+    "decode_as": [
+      "tcp.port==9339,http2"
+    ],
+    "decode_as_reasons": {
+      "tcp/9339": "preface"
+    },
+    "display_filter": null,
+    "end": "2026-01-01T00:00:04.211Z",
+    "http2_packets": 22,
+    "keylog_file_given": false,
+    "max_packets": null,
+    "proto_paths": [],
+    "reread_without_out_of_order": [],
+    "start": "2026-01-01T00:00:00.000Z",
+    "tls_secrets": {
+      "key_log_file": false,
+      "pcapng_decryption_secrets_blocks": 0,
+      "sessions_in_key_log": 0,
+      "sessions_in_pcapng": 0,
+      "source": null
+    },
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "warnings": []
+  },
+  "connections": [
+    {
+      "client": "10.20.0.10:51000",
+      "credential_keys": [
+        "password",
+        "username",
+        "x-api-key"
+      ],
+      "detected_by": "preface",
+      "duration_s": 4.181,
+      "first_frame": 4,
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "flow_control": {
+        "followed": true,
+        "stalls": [
+          {
+            "data_waiting": true,
+            "duration_s": 1.5,
+            "ended_by": null,
+            "frame": 14,
+            "method": "/gnmi.gNMI/Subscribe",
+            "reopened_frame": 15,
+            "resolved": true,
+            "sender": "server",
+            "stream_id": 7,
+            "t": 0.42,
+            "window": "stream"
+          }
+        ]
+      },
+      "frames_by_type": {
+        "DATA": 11,
+        "HEADERS": 14,
+        "MAGIC": 1,
+        "RST_STREAM": 4,
+        "SETTINGS": 4,
+        "WINDOW_UPDATE": 2
+      },
+      "goaways": [],
+      "max_concurrent_streams_used": 3,
+      "metadata_keys": [
+        "password",
+        "username",
+        "x-api-key",
+        "x-trace-context"
+      ],
+      "oversize_frames": [
+        {
+          "frame": 21,
+          "from": "client",
+          "length": 20000,
+          "peer_max_frame_size": 16384,
+          "stream_id": 13,
+          "type": "DATA"
+        }
+      ],
+      "oversize_header_lists": [
+        {
+          "frame": 21,
+          "from": "client",
+          "header_list_size": 9588,
+          "peer_limit": 8192,
+          "stream_id": 13
+        }
+      ],
+      "pings": {},
+      "protocol": "grpc",
+      "rpc_status": {
+        "OK": 1,
+        "RESOURCE_EXHAUSTED": 1,
+        "UNAUTHENTICATED": 1,
+        "UNIMPLEMENTED": 1,
+        "incomplete": 1,
+        "reset": 3
+      },
+      "rpcs": 8,
+      "rst_streams": [
+        {
+          "after_end": false,
+          "error": "REFUSED_STREAM",
+          "error_code": 7,
+          "frame": 19,
+          "from": "server",
+          "method": "/gnoi.system.System/Reboot",
+          "stream_id": 11
+        },
+        {
+          "after_end": false,
+          "error": "CANCEL",
+          "error_code": 8,
+          "frame": 20,
+          "from": "client",
+          "method": "/gnmi.gNMI/Set",
+          "stream_id": 9
+        },
+        {
+          "after_end": false,
+          "error": "FRAME_SIZE_ERROR",
+          "error_code": 6,
+          "frame": 22,
+          "from": "server",
+          "method": "/gnoi.file.File/Put",
+          "stream_id": 13
+        },
+        {
+          "after_end": true,
+          "error": "CANCEL",
+          "error_code": 8,
+          "frame": 25,
+          "from": "client",
+          "method": "/gnmi.gNMI/Set",
+          "stream_id": 15
+        }
+      ],
+      "server": "10.20.0.1:9339",
+      "server_known_by": "syn",
+      "service": "tcp/9339",
+      "service_name": "gnmi-gnoi (IANA)",
+      "services": [
+        "gnmi.gNMI",
+        "gnoi.file.File",
+        "gnoi.system.System"
+      ],
+      "settings": {
+        "client": {
+          "initial_window_size": 8192,
+          "max_header_list_size": 16384
+        },
+        "server": {
+          "max_concurrent_streams": 2,
+          "max_frame_size": 16384,
+          "max_header_list_size": 8192
+        }
+      },
+      "t": 0.03,
+      "tcp_resets": [],
+      "transport": "cleartext"
+    }
+  ],
+  "connections_omitted": 0,
+  "credentials": [
+    {
+      "cleartext": true,
+      "first_frame": 7,
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        7,
+        9,
+        11,
+        13,
+        17,
+        18,
+        21
+      ],
+      "key": "username",
+      "requests": 7,
+      "service": "tcp/9339",
+      "transport": "cleartext",
+      "value": "masked"
+    },
+    {
+      "cleartext": true,
+      "first_frame": 7,
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        7,
+        9,
+        11,
+        13,
+        17,
+        18,
+        21
+      ],
+      "key": "password",
+      "requests": 7,
+      "service": "tcp/9339",
+      "transport": "cleartext",
+      "value": "masked"
+    },
+    {
+      "cleartext": true,
+      "first_frame": 23,
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        23
+      ],
+      "key": "x-api-key",
+      "requests": 1,
+      "service": "tcp/9339",
+      "transport": "cleartext",
+      "value": "masked"
+    }
+  ],
+  "file": "testdata/fixtures/grpc_h2_trouble.pcap",
+  "issues": [
+    {
+      "code": "GRPC_UNIMPLEMENTED",
+      "frames": [
+        9,
+        10
+      ],
+      "grpc_status": 12,
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): /gnmi.gNMI/Get: UNIMPLEMENTED (unsupported encoding: JSON): the server does not implement this RPC, or an option it asked for (for gNMI often an encoding). The request asked for encoding JSON (the field was absent, which means JSON); Capabilities on this connection lists only JSON_IETF, PROTO, ASCII",
+      "method": "/gnmi.gNMI/Get",
+      "severity": "error"
+    },
+    {
+      "code": "GRPC_UNAUTHENTICATED",
+      "frames": [
+        11,
+        12
+      ],
+      "grpc_status": 16,
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): /gnmi.gNMI/Get: UNAUTHENTICATED (authentication failed): the server rejected the credentials: check the username and password metadata (gNMI sends them as 'username' and 'password'), a token, or the client certificate",
+      "method": "/gnmi.gNMI/Get",
+      "severity": "error"
+    },
+    {
+      "code": "GRPC_RESOURCE_EXHAUSTED",
+      "frames": [
+        23,
+        24
+      ],
+      "grpc_status": 8,
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): /gnmi.gNMI/Set: RESOURCE_EXHAUSTED (grpc: received message larger than max (5000000 vs. 4194304)): a limit was hit: a message over the receiver's maximum size (4 MiB by default), too many streams, or rate limiting; a message of 5000000 bytes exceeds the 4 MiB default: raise the receiver's max receive message size or ask for less (a narrower path, or Subscribe instead of Get). gNMI Set is all or none: none of its operations were applied",
+      "method": "/gnmi.gNMI/Set",
+      "severity": "error"
+    },
+    {
+      "code": "CLEARTEXT_CREDENTIAL",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        7,
+        9,
+        11,
+        13,
+        17,
+        18,
+        21
+      ],
+      "key": "username",
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): gRPC metadata key 'username' sent in cleartext in 7 request(s) (value masked): anyone on the path can read it; use TLS",
+      "severity": "error"
+    },
+    {
+      "code": "CLEARTEXT_CREDENTIAL",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        7,
+        9,
+        11,
+        13,
+        17,
+        18,
+        21
+      ],
+      "key": "password",
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): gRPC metadata key 'password' sent in cleartext in 7 request(s) (value masked): anyone on the path can read it; use TLS",
+      "severity": "error"
+    },
+    {
+      "code": "CLEARTEXT_CREDENTIAL",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": [
+        23
+      ],
+      "key": "x-api-key",
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): gRPC metadata key 'x-api-key' sent in cleartext in 1 request(s) (value masked): anyone on the path can read it; use TLS",
+      "severity": "error"
+    },
+    {
+      "code": "HTTP2_RST_STREAM",
+      "error": "REFUSED_STREAM",
+      "frames": [
+        19
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM REFUSED_STREAM from the server on stream 11 (/gnoi.system.System/Reboot): the server refused the stream before processing it (too many concurrent streams, or shutting down): safe to retry; gRPC reports it as UNAVAILABLE",
+      "severity": "error"
+    },
+    {
+      "code": "HTTP2_RST_STREAM",
+      "error": "FRAME_SIZE_ERROR",
+      "frames": [
+        22
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM FRAME_SIZE_ERROR from the server on stream 13 (/gnoi.file.File/Put): a frame was larger than the receiver's SETTINGS_MAX_FRAME_SIZE",
+      "severity": "error"
+    },
+    {
+      "code": "HTTP2_FRAME_TOO_LARGE",
+      "frames": [
+        21
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): the client sent a DATA frame of 20000 bytes, over the peer's SETTINGS_MAX_FRAME_SIZE 16384: the peer must fail the connection with FRAME_SIZE_ERROR",
+      "severity": "error"
+    },
+    {
+      "code": "GRPC_MESSAGE_OVER_DEFAULT_LIMIT",
+      "frames": [
+        23,
+        24
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): /gnmi.gNMI/Set request message of 5000000 bytes exceeds the common 4 MiB default receive limit (grpc-go, grpc-java, C core); the receiver fails it with RESOURCE_EXHAUSTED unless its limit was raised",
+      "method": "/gnmi.gNMI/Set",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_CLEARTEXT",
+      "frames": [
+        4
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): grpc over cleartext HTTP/2 (h2c): every request, response and metadata value crosses the network readable",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_RST_STREAM",
+      "error": "CANCEL",
+      "frames": [
+        20
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM CANCEL from the client on stream 9 (/gnmi.gNMI/Set): the stream was cancelled: from the client usually a deadline or a cancelled call (gRPC CANCELLED or DEADLINE_EXCEEDED), from the server an aborted handler",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_FLOW_CONTROL_STALL",
+      "frames": [
+        14
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): the server's stream flow-control window reached 0 on stream 7 (/gnmi.gNMI/Subscribe) with data waiting, for 1.5 s until a WINDOW_UPDATE (frame 15): the receiver reads slower than the sender writes",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_HEADER_LIST_TOO_LARGE",
+      "frames": [
+        21
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): the client sent a header list of 9588 bytes on stream 13, over the peer's SETTINGS_MAX_HEADER_LIST_SIZE 8192 (large metadata): expect RESOURCE_EXHAUSTED or INTERNAL",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_MAX_CONCURRENT_STREAMS_EXCEEDED",
+      "frames": [
+        18
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): 3 streams open at once, over the server's SETTINGS_MAX_CONCURRENT_STREAMS 2: the excess is refused (REFUSED_STREAM, gRPC UNAVAILABLE) or queued by the client",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_NO_STATUS",
+      "frames": [
+        13
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): /gnmi.gNMI/Subscribe: a long-lived stream (STREAM) still open when the capture ended, 3 response message(s) so far (normal)",
+      "method": "/gnmi.gNMI/Subscribe",
+      "severity": "info"
+    },
+    {
+      "code": "HTTP2_RST_STREAM",
+      "error": "CANCEL",
+      "frames": [
+        25
+      ],
+      "message": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM CANCEL from the client on stream 15 (/gnmi.gNMI/Set): after the server had already ended the stream with its status: the client closing its half (normal cleanup)",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "Wireshark needs the start of each HTTP/2 connection: HPACK headers are compressed against a table both sides build from the first request on, so a capture that begins mid-connection may show headers as undecodable and RPCs without a method.",
+    "Without a key log (or TLS secrets embedded in a pcapng), TLS-wrapped gRPC shows only the handshake: no method, status or metadata. In TLS 1.3 the certificate is encrypted too.",
+    "A session's secret is matched by its ClientHello random: a session whose ClientHello is not in the capture cannot be decrypted, whatever the key log holds.",
+    "Plaintext HTTP/2 is found by its preface on any port and assumed on the well-known gRPC ports; HTTP/2 that upgraded from HTTP/1.1 (Upgrade: h2c) on another port is not decoded.",
+    "Flow control is followed only when the connection's start was captured (the initial windows are in it).",
+    "A gRPC message over 4 MiB is flagged against the common default receive limit; the receiver's real limit is configuration and is not on the wire.",
+    "Message contents are decoded only for gNMI and gNOI system.Time (paths, encodings, modes, counts); values are never decoded. Other services show sizes and counts, or Wireshark's protobuf view with .proto files."
+  ],
+  "overall_status": "problem",
+  "rpcs": [
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "response": {
+          "gnmi_version": "0.10.0",
+          "model_names": [
+            "openconfig-interfaces 1.0.0",
+            "openconfig-system 1.0.0"
+          ],
+          "models": 2,
+          "supported_encodings": [
+            "JSON_IETF",
+            "PROTO",
+            "ASCII"
+          ]
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Capabilities: OK: gNMI 0.10.0, encodings JSON_IETF, PROTO, ASCII, 2 model(s)",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "first_response": 8,
+        "request": 7,
+        "trailers": 8
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": 0,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "OK",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnmi.gNMI/Capabilities",
+      "outcome": "ok",
+      "request": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 0,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 95,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 95,
+        "messages": 1
+      },
+      "rpc": "Capabilities",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 1,
+      "t": 0.1,
+      "timing": {
+        "to_end_ms": 20.0,
+        "to_first_response_ms": 20.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 8,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "request": {
+          "encoding": "JSON",
+          "encoding_field_present": false,
+          "paths": [
+            "/system/state/hostname"
+          ],
+          "type": "ALL"
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Get: UNIMPLEMENTED (unsupported encoding: JSON): the server does not implement this RPC, or an option it asked for (for gNMI often an encoding). The request asked for encoding JSON (the field was absent, which means JSON); Capabilities on this connection lists only JSON_IETF, PROTO, ASCII",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "first_response": 10,
+        "request": 9,
+        "trailers": 10
+      },
+      "grpc_encoding": null,
+      "grpc_message": "unsupported encoding: JSON",
+      "grpc_status": 12,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "UNIMPLEMENTED",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnmi.gNMI/Get",
+      "outcome": "error",
+      "request": {
+        "bytes": 33,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 33,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Get",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 3,
+      "t": 0.2,
+      "timing": {
+        "to_end_ms": 10.0,
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": true,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 9,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "request": {
+          "encoding": "JSON_IETF",
+          "encoding_field_present": true,
+          "paths": [
+            "/interfaces"
+          ],
+          "type": "ALL"
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Get: UNAUTHENTICATED (authentication failed): the server rejected the credentials: check the username and password metadata (gNMI sends them as 'username' and 'password'), a token, or the client certificate",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "first_response": 12,
+        "request": 11,
+        "trailers": 12
+      },
+      "grpc_encoding": null,
+      "grpc_message": "authentication failed",
+      "grpc_status": 16,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "UNAUTHENTICATED",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnmi.gNMI/Get",
+      "outcome": "error",
+      "request": {
+        "bytes": 18,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 18,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Get",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 5,
+      "t": 0.3,
+      "timing": {
+        "to_end_ms": 10.0,
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": true,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 11,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "decode_errors": [
+          "response at frame 14: unsupported wire type 3"
+        ],
+        "request": {
+          "encoding": "JSON_IETF",
+          "encoding_field_present": true,
+          "mode": "STREAM",
+          "subscription_count": 1,
+          "subscriptions": [
+            {
+              "mode": "SAMPLE",
+              "path": "/interfaces/interface/state/counters",
+              "sample_interval_s": 10.0
+            }
+          ],
+          "updates_only": false
+        },
+        "response": {
+          "deletes": 0,
+          "messages": 2,
+          "notifications": 1,
+          "sync_response": true,
+          "updates": 1
+        },
+        "responses_not_decoded": 1
+      },
+      "diagnosis": "/gnmi.gNMI/Subscribe: a long-lived stream (STREAM) still open when the capture ended, 3 response message(s) so far (normal)",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "first_response": 14,
+        "request": 13
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 300.0,
+      "http_status": 200,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnmi.gNMI/Subscribe",
+      "outcome": "incomplete",
+      "request": {
+        "bytes": 64,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 64,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 12044,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 12013,
+        "messages": 3
+      },
+      "rpc": "Subscribe",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 7,
+      "t": 0.4,
+      "timing": {
+        "to_first_response_ms": 20.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 13,
+          "message_type": null
+        },
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 14,
+          "message_type": null
+        },
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 14,
+          "message_type": null
+        },
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 16,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "request": {
+          "delete": {
+            "count": 0,
+            "paths": []
+          },
+          "replace": {
+            "count": 0,
+            "paths": []
+          },
+          "union_replace": {
+            "count": 0,
+            "paths": []
+          },
+          "update": {
+            "count": 1,
+            "paths": [
+              "/system/config/hostname"
+            ]
+          }
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Set: stream reset by the client with CANCEL (the stream was cancelled: from the client usually a deadline or a cancelled call (gRPC CANCELLED or DEADLINE_EXCEEDED), from the server an aborted handler); the reset came at the deadline (2.0 s): the client gave up waiting; whether the target applied the Set is unknown (it may have committed before the cancel): read the paths back with Get",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "request": 17
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 2.0,
+      "http_status": null,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnmi.gNMI/Set",
+      "outcome": "reset",
+      "request": {
+        "bytes": 36,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 36,
+        "messages": 1
+      },
+      "reset": {
+        "after_end": false,
+        "error": "CANCEL",
+        "error_code": 8,
+        "frame": 20,
+        "from": "client",
+        "method": "/gnmi.gNMI/Set",
+        "stream_id": 9
+      },
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Set",
+      "service": "gnmi.gNMI",
+      "state_changing": true,
+      "stream_id": 9,
+      "t": 2.0,
+      "timing": {
+        "to_end_ms": 2000.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 17,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "diagnosis": "/gnoi.system.System/Reboot: stream reset by the server with REFUSED_STREAM (the server refused the stream before processing it (too many concurrent streams, or shutting down): safe to retry; gRPC reports it as UNAVAILABLE)",
+      "family": "gNOI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "request": 18
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 15.0,
+      "http_status": null,
+      "metadata_keys": [
+        "password",
+        "username"
+      ],
+      "method": "/gnoi.system.System/Reboot",
+      "outcome": "reset",
+      "request": {
+        "bytes": 2,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 2,
+        "messages": 1
+      },
+      "reset": {
+        "after_end": false,
+        "error": "REFUSED_STREAM",
+        "error_code": 7,
+        "frame": 19,
+        "from": "server",
+        "method": "/gnoi.system.System/Reboot",
+        "stream_id": 11
+      },
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Reboot",
+      "service": "gnoi.system.System",
+      "state_changing": true,
+      "stream_id": 11,
+      "t": 2.1,
+      "timing": {
+        "to_end_ms": 1.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 18,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "decoded": {
+        "decode_errors": [
+          "request at frame 21: unsupported wire type 6"
+        ]
+      },
+      "diagnosis": "/gnoi.file.File/Put: stream reset by the server with FRAME_SIZE_ERROR (a frame was larger than the receiver's SETTINGS_MAX_FRAME_SIZE)",
+      "family": "gNOI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "request": 21
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 15.0,
+      "http_status": null,
+      "metadata_keys": [
+        "password",
+        "username",
+        "x-trace-context"
+      ],
+      "method": "/gnoi.file.File/Put",
+      "outcome": "reset",
+      "request": {
+        "bytes": 19995,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 19995,
+        "messages": 1
+      },
+      "reset": {
+        "after_end": false,
+        "error": "FRAME_SIZE_ERROR",
+        "error_code": 6,
+        "frame": 22,
+        "from": "server",
+        "method": "/gnoi.file.File/Put",
+        "stream_id": 13
+      },
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Put",
+      "service": "gnoi.file.File",
+      "state_changing": true,
+      "stream_id": 13,
+      "t": 4.1,
+      "timing": {
+        "to_end_ms": 10.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 21,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.20.0.1:9339",
+      "content_type": "application/grpc",
+      "diagnosis": "/gnmi.gNMI/Set: RESOURCE_EXHAUSTED (grpc: received message larger than max (5000000 vs. 4194304)): a limit was hit: a message over the receiver's maximum size (4 MiB by default), too many streams, or rate limiting; a message of 5000000 bytes exceeds the 4 MiB default: raise the receiver's max receive message size or ask for less (a narrower path, or Subscribe instead of Get). gNMI Set is all or none: none of its operations were applied",
+      "family": "gNMI",
+      "flow": "10.20.0.10:51000 -> 10.20.0.1:9339",
+      "frames": {
+        "first_response": 24,
+        "request": 23,
+        "trailers": 24
+      },
+      "grpc_encoding": null,
+      "grpc_message": "grpc: received message larger than max (5000000 vs. 4194304)",
+      "grpc_status": 8,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "RESOURCE_EXHAUSTED",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [
+        "x-api-key"
+      ],
+      "method": "/gnmi.gNMI/Set",
+      "outcome": "error",
+      "request": {
+        "bytes": 5000000,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 5000000,
+        "messages": 1
+      },
+      "reset": {
+        "after_end": true,
+        "error": "CANCEL",
+        "error_code": 8,
+        "frame": 25,
+        "from": "client",
+        "method": "/gnmi.gNMI/Set",
+        "stream_id": 15
+      },
+      "reset_after_end": true,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Set",
+      "service": "gnmi.gNMI",
+      "state_changing": true,
+      "stream_id": 15,
+      "t": 4.2,
+      "timing": {
+        "to_end_ms": 10.0,
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": true,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0"
+    }
+  ],
+  "rpcs_omitted": 0,
+  "schema": "sonic.grpc_report/1",
+  "status": "success",
+  "summary": {
+    "cleartext_credentials": 3,
+    "connections": 1,
+    "rpc_status": {
+      "OK": 1,
+      "RESOURCE_EXHAUSTED": 1,
+      "UNAUTHENTICATED": 1,
+      "UNIMPLEMENTED": 1,
+      "incomplete": 1,
+      "reset": 3
+    },
+    "rpcs": 8
+  },
+  "timeline": [
+    {
+      "detail": "/gnmi.gNMI/Capabilities OK",
+      "event": "rpc",
+      "frame": 7,
+      "protocol": "grpc",
+      "t": 0.1,
+      "time": "2026-01-01T00:00:00.100Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Get UNIMPLEMENTED",
+      "event": "rpc",
+      "frame": 9,
+      "protocol": "grpc",
+      "t": 0.2,
+      "time": "2026-01-01T00:00:00.200Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Get UNAUTHENTICATED",
+      "event": "rpc",
+      "frame": 11,
+      "protocol": "grpc",
+      "t": 0.3,
+      "time": "2026-01-01T00:00:00.300Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Subscribe incomplete",
+      "event": "rpc",
+      "frame": 13,
+      "protocol": "grpc",
+      "t": 0.4,
+      "time": "2026-01-01T00:00:00.400Z"
+    },
+    {
+      "detail": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): the server's stream flow-control window reached 0 on stream 7 (/gnmi.gNMI/Subscribe) with data waiting, for 1.5 s until a WINDOW_UPDATE (frame 15): the receiver reads slower than the sender writes",
+      "event": "flow_control_stall",
+      "frame": 14,
+      "protocol": "http2",
+      "t": 0.42,
+      "time": "2026-01-01T00:00:00.420Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Set on 10.20.0.10:51000 -> 10.20.0.1:9339: reset",
+      "event": "state_changing_rpc",
+      "frame": 17,
+      "protocol": "grpc",
+      "t": 2.0,
+      "time": "2026-01-01T00:00:02.000Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Set reset",
+      "event": "rpc",
+      "frame": 17,
+      "protocol": "grpc",
+      "t": 2.0,
+      "time": "2026-01-01T00:00:02.000Z"
+    },
+    {
+      "detail": "/gnoi.system.System/Reboot on 10.20.0.10:51000 -> 10.20.0.1:9339: reset",
+      "event": "state_changing_rpc",
+      "frame": 18,
+      "protocol": "grpc",
+      "t": 2.1,
+      "time": "2026-01-01T00:00:02.100Z"
+    },
+    {
+      "detail": "/gnoi.system.System/Reboot reset",
+      "event": "rpc",
+      "frame": 18,
+      "protocol": "grpc",
+      "t": 2.1,
+      "time": "2026-01-01T00:00:02.100Z"
+    },
+    {
+      "detail": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM REFUSED_STREAM from the server on stream 11 (/gnoi.system.System/Reboot): the server refused the stream before processing it (too many concurrent streams, or shutting down): safe to retry; gRPC reports it as UNAVAILABLE",
+      "event": "rst_stream",
+      "frame": 19,
+      "protocol": "http2",
+      "t": 2.101,
+      "time": "2026-01-01T00:00:02.101Z"
+    },
+    {
+      "detail": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM CANCEL from the client on stream 9 (/gnmi.gNMI/Set): the stream was cancelled: from the client usually a deadline or a cancelled call (gRPC CANCELLED or DEADLINE_EXCEEDED), from the server an aborted handler",
+      "event": "rst_stream",
+      "frame": 20,
+      "protocol": "http2",
+      "t": 4.0,
+      "time": "2026-01-01T00:00:04.000Z"
+    },
+    {
+      "detail": "/gnoi.file.File/Put on 10.20.0.10:51000 -> 10.20.0.1:9339: reset",
+      "event": "state_changing_rpc",
+      "frame": 21,
+      "protocol": "grpc",
+      "t": 4.1,
+      "time": "2026-01-01T00:00:04.100Z"
+    },
+    {
+      "detail": "/gnoi.file.File/Put reset",
+      "event": "rpc",
+      "frame": 21,
+      "protocol": "grpc",
+      "t": 4.1,
+      "time": "2026-01-01T00:00:04.100Z"
+    },
+    {
+      "detail": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM FRAME_SIZE_ERROR from the server on stream 13 (/gnoi.file.File/Put): a frame was larger than the receiver's SETTINGS_MAX_FRAME_SIZE",
+      "event": "rst_stream",
+      "frame": 22,
+      "protocol": "http2",
+      "t": 4.11,
+      "time": "2026-01-01T00:00:04.110Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Set on 10.20.0.10:51000 -> 10.20.0.1:9339: RESOURCE_EXHAUSTED",
+      "event": "state_changing_rpc",
+      "frame": 23,
+      "protocol": "grpc",
+      "t": 4.2,
+      "time": "2026-01-01T00:00:04.200Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Set RESOURCE_EXHAUSTED",
+      "event": "rpc",
+      "frame": 23,
+      "protocol": "grpc",
+      "t": 4.2,
+      "time": "2026-01-01T00:00:04.200Z"
+    },
+    {
+      "detail": "10.20.0.10:51000 -> 10.20.0.1:9339 (tcp/9339): RST_STREAM CANCEL from the client on stream 15 (/gnmi.gNMI/Set): after the server had already ended the stream with its status: the client closing its half (normal cleanup)",
+      "event": "rst_stream",
+      "frame": 25,
+      "protocol": "http2",
+      "t": 4.211,
+      "time": "2026-01-01T00:00:04.211Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "tls_decryption": {
+    "decrypted": 0,
+    "secrets_source": null,
+    "sessions": [],
+    "sessions_omitted": 0,
+    "total": 0,
+    "verdict": "No TLS session in this capture."
+  },
+  "verdict": "1 cleartext gRPC connection(s) (tcp/9339). 8 RPC(s): 3 reset, 1 OK, 1 UNIMPLEMENTED, 1 UNAUTHENTICATED, 1 incomplete, 1 RESOURCE_EXHAUSTED. Credentials in cleartext metadata: password, username, x-api-key (values masked)."
+}

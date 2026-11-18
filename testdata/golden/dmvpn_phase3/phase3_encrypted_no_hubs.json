@@ -1,0 +1,34 @@
+{
+  "cannot_show": [
+    "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+  ],
+  "detector": "dmvpn_phase3",
+  "encrypted_shortcuts": {
+    "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+    "note": "hub addresses unknown (no NHRP visible): pass hubs to classify the 2 IKE SA(s) negotiated during the capture as spoke-to-spoke shortcuts",
+    "shortcuts": []
+  },
+  "error_indications": [],
+  "events": [],
+  "flows": [],
+  "flows_omitted": 0,
+  "hub_relayed_without_redirect": [],
+  "hubs": [],
+  "hubs_source": {
+    "from_redirects": [],
+    "from_registrations": [],
+    "given": []
+  },
+  "issues": [],
+  "resolution_thrashing": {
+    "spokes": [],
+    "thrashing": false,
+    "thresholds": {
+      "peak_per_second": 5,
+      "unanswered_repeats_per_target": 5
+    }
+  },
+  "status": "not_present",
+  "verdict": "No GRE/NHRP visible; 2 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts."
+}

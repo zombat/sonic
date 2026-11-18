@@ -1,0 +1,682 @@
+{
+  "assumptions": {
+    "gre_header_bytes": 8,
+    "transport_mtu": 1500,
+    "tunnel_mtu": null
+  },
+  "detector": "esp_overhead",
+  "estimate": true,
+  "events": [],
+  "flows": [
+    {
+      "confidence": "medium",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                51,
+                54
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1426,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA256-128",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                31,
+                46
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1430,
+              "overhead_bytes": [
+                70,
+                85
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1418,
+              "overhead_bytes": [
+                82,
+                97
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA512-256",
+          "icv": 32,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                15,
+                30
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1414,
+              "overhead_bytes": [
+                86,
+                101
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1402,
+              "overhead_bytes": [
+                98,
+                113
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                63,
+                66
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1450,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 1,
+      "dst": "192.0.2.1",
+      "estimate": "AES-CBC + HMAC-SHA512-256",
+      "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+      "frames": [
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23
+      ],
+      "largest_outer_packet": 108,
+      "nat_t": false,
+      "packets": 10,
+      "size_histogram": [
+        {
+          "esp_payload": 80,
+          "packets": 10
+        }
+      ],
+      "spi": "0xc0ffee01",
+      "src": "198.51.100.2"
+    },
+    {
+      "confidence": "medium",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                51,
+                54
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1426,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA256-128",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                31,
+                46
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1430,
+              "overhead_bytes": [
+                70,
+                85
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1418,
+              "overhead_bytes": [
+                82,
+                97
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA512-256",
+          "icv": 32,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                15,
+                30
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1414,
+              "overhead_bytes": [
+                86,
+                101
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1402,
+              "overhead_bytes": [
+                98,
+                113
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                63,
+                66
+              ],
+              "packets": 10
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1450,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 1,
+      "dst": "198.51.100.2",
+      "estimate": "AES-CBC + HMAC-SHA512-256",
+      "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+      "frames": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24
+      ],
+      "largest_outer_packet": 108,
+      "nat_t": false,
+      "packets": 10,
+      "size_histogram": [
+        {
+          "esp_payload": 80,
+          "packets": 10
+        }
+      ],
+      "spi": "0xc0ffee02",
+      "src": "192.0.2.1"
+    },
+    {
+      "confidence": "medium",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                51,
+                54
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1426,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA256-128",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                31,
+                46
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1430,
+              "overhead_bytes": [
+                70,
+                85
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1418,
+              "overhead_bytes": [
+                82,
+                97
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA512-256",
+          "icv": 32,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                15,
+                30
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1414,
+              "overhead_bytes": [
+                86,
+                101
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1402,
+              "overhead_bytes": [
+                98,
+                113
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                63,
+                66
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1450,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 1,
+      "dst": "192.0.2.1",
+      "estimate": "AES-CBC + HMAC-SHA512-256",
+      "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+      "frames": [
+        27,
+        29,
+        31,
+        33,
+        35
+      ],
+      "largest_outer_packet": 108,
+      "nat_t": false,
+      "packets": 5,
+      "size_histogram": [
+        {
+          "esp_payload": 80,
+          "packets": 5
+        }
+      ],
+      "spi": "0xc0ffee11",
+      "src": "198.51.100.2"
+    },
+    {
+      "confidence": "medium",
+      "consistent_families": [
+        {
+          "alignment": 4,
+          "family": "AES-GCM / AES-CCM / ChaCha20-Poly1305 (16-byte ICV)",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                51,
+                54
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 8,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1426,
+              "overhead_bytes": [
+                74,
+                77
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA256-128",
+          "icv": 16,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                31,
+                46
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1430,
+              "overhead_bytes": [
+                70,
+                85
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1418,
+              "overhead_bytes": [
+                82,
+                97
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 16,
+          "family": "AES-CBC + HMAC-SHA512-256",
+          "icv": 32,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                15,
+                30
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 16,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1414,
+              "overhead_bytes": [
+                86,
+                101
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1402,
+              "overhead_bytes": [
+                98,
+                113
+              ]
+            }
+          }
+        },
+        {
+          "alignment": 4,
+          "family": "NULL encryption + HMAC-SHA1-96",
+          "icv": 12,
+          "indistinguishable_from": [],
+          "inner_size_bounds": [
+            {
+              "esp_payload": 80,
+              "inner_bytes": [
+                63,
+                66
+              ],
+              "packets": 5
+            }
+          ],
+          "iv": 0,
+          "modes": {
+            "transport_over_gre": {
+              "largest_inner_packet_without_fragmentation": 1450,
+              "overhead_bytes": [
+                50,
+                53
+              ]
+            },
+            "tunnel": {
+              "largest_inner_packet_without_fragmentation": 1438,
+              "overhead_bytes": [
+                62,
+                65
+              ]
+            }
+          }
+        }
+      ],
+      "df_set_packets": 0,
+      "distinct_sizes": 1,
+      "dst": "198.51.100.2",
+      "estimate": "AES-CBC + HMAC-SHA512-256",
+      "estimate_basis": "every ESP flow in the capture, assuming one cipher profile",
+      "frames": [
+        28,
+        30,
+        32,
+        34,
+        36
+      ],
+      "largest_outer_packet": 108,
+      "nat_t": false,
+      "packets": 5,
+      "size_histogram": [
+        {
+          "esp_payload": 80,
+          "packets": 5
+        }
+      ],
+      "spi": "0xc0ffee12",
+      "src": "192.0.2.1"
+    }
+  ],
+  "flows_omitted": 0,
+  "issues": [],
+  "limits": [
+    "ESP is encrypted: the cipher, tunnel or transport mode, and the inner packets are estimates from packet sizes, never read from the packet. Families with equal IV, ICV and alignment (AES-GCM, AES-CCM, ChaCha20-Poly1305) cannot be told apart.",
+    "Padding is assumed minimal (no TFC padding); an implementation that pads more makes the inner sizes smaller than the bounds shown.",
+    "Tunnel versus transport mode cannot be read from sizes alone; both are computed. The IKE exchange that agreed the mode is encrypted (IKEv2 IKE_AUTH, IKEv1 Quick Mode)."
+  ],
+  "outer_fragmentation": [],
+  "status": "ok",
+  "summary": {
+    "capture_wide_distinct_sizes": 1,
+    "capture_wide_estimate": "AES-CBC + HMAC-SHA512-256",
+    "esp_flows": 4,
+    "esp_fragments": 0,
+    "family_estimates": {
+      "AES-CBC + HMAC-SHA512-256": 4
+    },
+    "flows_dropped_at_cap": 0
+  },
+  "verdict": "4 ESP flow(s); sizes fit AES-CBC + HMAC-SHA512-256 on 4 flow(s) (estimate); no ESP fragmentation, largest outer packet 108 bytes."
+}

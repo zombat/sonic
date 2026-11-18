@@ -1,0 +1,63 @@
+{
+  "detector": "conversations",
+  "events": [],
+  "issues": [],
+  "protocols": [
+    {
+      "bytes": 3660,
+      "packets": 30,
+      "protocol": "esp",
+      "service": null
+    },
+    {
+      "bytes": 1916,
+      "packets": 6,
+      "protocol": "ike",
+      "service": null
+    }
+  ],
+  "protocols_omitted": 0,
+  "status": "ok",
+  "top_conversations": [
+    {
+      "a": "192.0.2.1",
+      "a_to_b": {
+        "bytes": 2756,
+        "packets": 18
+      },
+      "b": "198.51.100.2",
+      "b_to_a": {
+        "bytes": 2820,
+        "packets": 18
+      },
+      "bytes": 5576,
+      "packets": 36,
+      "protocols": {
+        "esp": 30,
+        "ike": 6
+      }
+    }
+  ],
+  "top_conversations_omitted": 0,
+  "top_talkers": [
+    {
+      "address": "198.51.100.2",
+      "bytes_sent": 2820,
+      "packets_sent": 18
+    },
+    {
+      "address": "192.0.2.1",
+      "bytes_sent": 2756,
+      "packets_sent": 18
+    }
+  ],
+  "top_talkers_omitted": 0,
+  "totals": {
+    "address_pairs": 1,
+    "bytes": 5576,
+    "duration_s": 8.504,
+    "hosts_sending": 2,
+    "packets": 36
+  },
+  "verdict": "36 packets, 5576 bytes over 8.504 s; 1 address pair(s); most bytes: esp"
+}

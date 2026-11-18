@@ -1,97 +1,69 @@
 # Testing S.O.N.I.C.
 
-This page is the reference for the test suite: what runs, how to run it, what needs extra setup, and how the fixtures are made. The counts were measured with `pytest --collect-only` and a full run, and are updated when tests change.
+S.O.N.I.C. is verified by a pure-Go `-race` unit, integration, golden-snapshot, live stdio E2E, and fuzz test suite requiring only `Go 1.27+` and `tshark` on `PATH`.
 
-## Current status
+## Current Status
 
-| | |
-|---|---|
-| Tests collected | **275** |
-| Last full run | **274 passed, 1 skipped**, 266 subtests passed, about 100 s |
-| Skipped | `test_grpc.py`: the gNMI `.proto` test, when the protos are not on disk |
-| Warnings | 9, from pydantic class-based `config` and fastmcp's `openWorldHint` (deprecations, not failures) |
+| Check | Scope / Result | Command |
+|---|---|---|
+| Go packages (`cmd/*`, `internal/*`) | **37 passed**, `90.1%` to `96.5%` statement coverage (`-race`) | `make test` |
+| Go fuzzers (LLM/AI, TLS/SSH/IKE, wire PCAP/PCAPNG, EK, SIP/SDP, policies, report/TUI) | **20 fuzz targets passed** (`1s` smoke runs) | `make fuzz` |
+| Golden snapshot checks (`extract`, `audit`, `cmd/sonic`, `mcpserver`, analyzers) | **All passed** against `testdata/golden/` (`-race`) | `make parity` |
+| Child-binary CLI & MCP stdio E2E tests | Real compiled `sonic`, `sonic-mcp`, and `tests/stub_llm_mcp_server.go` subprocesses over OS pipes | Included in `make test` |
+| Cross-platform `go vet` & archive builds | `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64` | `make release` |
 
-The only skip is the gNMI protobuf test. It needs `.proto` files, which the `--fetch-grpc-protos` flag downloads. CI will run without them, so the skip is expected there too.
-
-## Running the tests
+## Running the Tests
 
 ```bash
-# Everything (the usual way)
-python3 -m pytest -q
+# Full Go race and coverage suite across all 37 packages
+make test
 
-# One file, with the stdlib runner (test_grpc.py documents this)
-python3 -m unittest -q test_grpc
+# Go vet and release archives + SHA256SUMS (6 platforms)
+make vet
+make release
 
-# With coverage (CI does the same)
-python3 -m pytest -q --cov --cov-report=term --cov-report=xml
+# Golden JSON snapshot verification and snapshot regeneration
+make parity
+make update-golden
+
+# Go fuzz smoke tests across all 20 parser and sanitization targets
+make fuzz
 ```
 
-Optional environment variables for the tests that use real captures:
-
-| Variable | Used by | Effect |
-|---|---|---|
-| `SONIC_GRPC_CAPTURES` | `test_grpc.py` | Directory of real gRPC captures. Without it, those tests are skipped. |
-| `SONIC_PROTO_PATH` | `test_grpc.py` | Directory of gNMI `.proto` files. Enables the protobuf-view test. |
-
-Real captures are not in the repository. The TLS-secrets test on a real SR Linux capture runs only where `SONIC_GRPC_CAPTURES` points at it, and it reads the expected values from the capture with tshark at test time.
+Note on memory limits: the Makefile sets `GOMAXPROCS=4 GOMEMLIMIT=2400MiB` and `-p 1` for sequential package race runs cleanly on constrained hosts.
 
 ## Requirements
 
-- **tshark** on the `PATH`. The network, gRPC and data-plane tests call it. The SIP detectors also have a scapy backend, and the tests run both backends where both exist.
-- Python packages from `requirements.txt` and `requirements-dev.txt`.
-- Nothing needs network access, an LLM or an API key. The MCP tests start the server over stdio with a stub LLM (`tests/stub_llm_mcp_server.py`).
+- **tshark** on `PATH` (dissection backend used across extraction and protocol tests).
+- **Go 1.27+** (per [go.mod](../go.mod)) with zero external Go modules.
+- No live LLM endpoint or cloud API key is required. Go tests use local `httptest` servers, in-process stub `llm.Completer` mocks, and [tests/stub_llm_mcp_server.go](../tests/stub_llm_mcp_server.go) for stdio streaming verification.
 
-## Test files
+## Go Packages Covered
 
-Counts come from `pytest --collect-only`.
+| Area | Packages | Coverage Range (`-race`) |
+|---|---|---:|
+| CLI & MCP Entry Points | `cmd/sonic` (`92.7%`), `cmd/sonic-mcp` (`96.0%`) | `92.7% - 96.0%` |
+| LLM & AI Factory Layer | `internal/llm` (`91.1%`), `internal/ai` (`91.7%`) | `91.1% - 91.7%` |
+| MCP, Policy Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.0%`), `internal/gate` (`96.5%`), `internal/tui` (`90.6%`) | `90.6% - 96.5%` |
+| Core & Safety Infrastructure | `extract` (`90.2%`), `report` (`90.7%`), `redact` (`94.3%`), `wsconfig` (`90.1%`), `tshark` (`93.3%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.1% - 94.3%` |
+| Analyzers (`internal/analyze/*`) | 22 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `diff`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
 
-| File | Tests | What it covers |
-|---|---:|---|
-| `test_control_plane.py` | 44 | Control-plane detectors (IPsec, GRE/NHRP, DMVPN, routing, reachability, convergence, cleartext audit) on the tshark and scapy backends, argument checks, real lab captures when present |
-| `test_network_detectors.py` | 45 | Network and VPN detectors and the orchestrator on both backends, edge cases, fixtures |
-| `test_dataplane_detectors.py` | 41 | Data-plane detectors (path MTU, ESP, TCP, TLS handshakes, QoS), correlation and merged timeline, both backends, real lab captures when present |
-| `test_grpc.py` | 41 | gRPC analysis: gNMI decoding, HTTP/2 framing, synthetic fixtures, TLS secrets and credential scrubbing, the real TLS capture, the Wireshark protobuf view, proto fetching |
-| `test_tls_audit.py` | 29 | TLS handshake knowledge and encryption findings on both backends, real TLS capture, generated fixtures |
-| `test_mcp_guidance.py` | 25 | MCP instructions, generated skill, entry points, LLM provider resolution, CLI model options |
-| `test_credentials.py` | 17 | Env-file parsing, key loading, LLM configuration, MCP output without keys, separate processes |
-| `test_phase3_reporting.py` | 15 | SIP authentication reports: security posture, upgrade recommendations, realm-to-server mapping, sequence diagrams |
-| `test_network_mcp.py` | 13 | The network tools called directly and through the MCP stdio handshake |
-| `test_auth_diagnostics.py` | 3 | SIP authentication diagnostics |
-| `test_mcp_stdio.py` | 2 | stdout carries only JSON-RPC over stdio |
-| **Total** | **275** | |
+## Synthetic Fixtures and Golden Snapshots
 
-## Fixtures
-
-Captures are built, not stored, so the suite runs on a fresh clone.
-
-- `tests/fixtures/*.pcap` holds about 45 small synthetic captures. Each is produced by one of four generators:
-  - `generate_fixtures.py`: network and VPN captures (names start with the detector).
-  - `generate_dataplane_fixtures.py`: data-plane captures (names start with `dp_`).
-  - `generate_grpc_fixtures.py`: gRPC captures (names start with `grpc_`).
-  - `generate_tls_audit_fixtures.py`: TLS audit captures.
-- Each generator writes identical bytes on every run. CI checks this: it runs the generators and fails if git sees a change.
-- The TLS 1.3 key-log tests build their sessions at test time with Python's `ssl` module. Nothing is committed for them.
-- `samples/` holds no captures, so older documentation that cites `samples/*.pcapng` cannot be run from the repository.
-
-Rebuild the fixtures with:
+- `testdata/fixtures/` holds **52** committed deterministic `.pcap` captures.
+- `scripts/fixtures/` preserves the **8** developer-only Scapy generator scripts (`generate_fixtures.py`, `generate_dataplane_fixtures.py`, `generate_grpc_fixtures.py`, `generate_tls_audit_fixtures.py`, `generate_aaa_fixtures.py`, `generate_esp_fixtures.py`, `generate_restconf_fixtures.py`, and `generate_snmp_fixtures.py`) for rare fixture additions; CI requires zero Python dependencies and tests directly against `testdata/fixtures/`.
+- `testdata/golden/` stores committed normalized JSON baseline snapshots verified by [internal/parity](../internal/parity). When an analyzer intentionally changes JSON output, regenerate snapshots with:
 
 ```bash
-for g in tests/fixtures/generate_*.py; do python3 "$g"; done
+make update-golden    # runs go test -p 1 -count=1 ./... -update
 ```
 
-## Continuous integration
+## Optional Real Captures
 
-`.github/workflows/ci.yml` runs on every push and pull request:
+Optional local tests run when `SONIC_GRPC_CAPTURES` points to real lab captures or `SONIC_PROTO_PATH` points to custom protobuf directories, and skip automatically otherwise.
 
-- **test**: Python 3.10 to 3.13 on Ubuntu, tshark installed, `pytest` with coverage. The coverage XML is uploaded as an artifact.
-- **lint**: `black --check` and `flake8`. This job does not yet block merges, because the existing code does not pass either tool.
-- **fixtures**: regenerates the fixtures and fails if the output changes.
+## Continuous Integration and Releases
 
-CodeQL runs separately, and `pip-audit` reports dependency vulnerabilities without blocking. See `docs/ARCHITECTURE.md` (section 6) for the pipeline diagram.
-
-## Adding a test
-
-- Put it in the file for the area it covers. Use `unittest.TestCase`, which the suite already uses throughout.
-- If it needs a capture, add a generator to `tests/fixtures/` and make it deterministic. Do not commit a binary you cannot rebuild.
-- If it needs a real capture, gate it on an environment variable and skip when the variable is unset, the way `test_grpc.py` does.
-- Update the count in this file and in the README table when the total changes.
+- **[ci.yml](../.github/workflows/ci.yml)** runs on every push to `main` and pull request: installs `tshark`, enforces `gofmt -l .`, runs cross-OS `go vet` across all 6 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`), runs `make test` (`-race`) and `make fuzz`, and builds `make build release`.
+- **[release.yml](../.github/workflows/release.yml)** triggers on `v*` tags: runs the full Go gate (`gofmt`, `vet`, `test`, `fuzz`), builds all 6 platform archives + `SHA256SUMS` with `VERSION=${{ github.ref_name }}`, and publishes GitHub Release artifacts.
+- **GitHub CodeQL Default Setup** runs automated CodeQL security and quality scanning over Go source on pushes and pull requests.

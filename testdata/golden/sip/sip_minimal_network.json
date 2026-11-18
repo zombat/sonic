@@ -1,0 +1,465 @@
+{
+  "capture": {
+    "backend": "tshark",
+    "bytes": 1640,
+    "display_filter": null,
+    "duration_s": 5.1,
+    "end": "2026-01-01T00:00:05.100Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 5,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "conversations": {
+    "detector": "conversations",
+    "issues": [],
+    "protocols": [
+      {
+        "bytes": 1640,
+        "packets": 5,
+        "protocol": "udp/5060",
+        "service": "sip"
+      }
+    ],
+    "protocols_omitted": 0,
+    "status": "ok",
+    "top_conversations": [
+      {
+        "a": "10.5.5.1",
+        "a_to_b": {
+          "bytes": 584,
+          "packets": 2
+        },
+        "b": "10.5.5.10",
+        "b_to_a": {
+          "bytes": 1056,
+          "packets": 3
+        },
+        "bytes": 1640,
+        "packets": 5,
+        "protocols": {
+          "udp/5060": 5
+        }
+      }
+    ],
+    "top_conversations_omitted": 0,
+    "top_talkers": [
+      {
+        "address": "10.5.5.10",
+        "bytes_sent": 1056,
+        "packets_sent": 3
+      },
+      {
+        "address": "10.5.5.1",
+        "bytes_sent": 584,
+        "packets_sent": 2
+      }
+    ],
+    "top_talkers_omitted": 0,
+    "totals": {
+      "address_pairs": 1,
+      "bytes": 1640,
+      "duration_s": 5.1,
+      "hosts_sending": 2,
+      "packets": 5
+    },
+    "verdict": "5 packets, 1640 bytes over 5.1 s; 1 address pair(s); most bytes: udp/5060"
+  },
+  "detectors_not_present": [
+    "ipsec",
+    "gre_nhrp",
+    "dmvpn_phase3",
+    "routing",
+    "reachability",
+    "path_mtu",
+    "esp_overhead",
+    "tcp",
+    "tls",
+    "qos"
+  ],
+  "detectors_requested": [
+    "ipsec",
+    "gre_nhrp",
+    "dmvpn_phase3",
+    "routing",
+    "reachability",
+    "path_mtu",
+    "esp_overhead",
+    "tcp",
+    "tls",
+    "qos",
+    "conversations"
+  ],
+  "detectors_run": [
+    "conversations"
+  ],
+  "dmvpn_phase3": {
+    "cannot_show": [
+      "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+    ],
+    "detector": "dmvpn_phase3",
+    "encrypted_shortcuts": {
+      "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "note": null,
+      "shortcuts": []
+    },
+    "error_indications": [],
+    "flows": [],
+    "flows_omitted": 0,
+    "hub_relayed_without_redirect": [],
+    "hubs": [],
+    "hubs_source": {
+      "from_redirects": [],
+      "from_registrations": [],
+      "given": []
+    },
+    "issues": [],
+    "resolution_thrashing": {
+      "spokes": [],
+      "thrashing": false,
+      "thresholds": {
+        "peak_per_second": 5,
+        "unanswered_repeats_per_target": 5
+      }
+    },
+    "status": "not_present",
+    "verdict": "No GRE/NHRP and no spoke-to-spoke IKE in this capture."
+  },
+  "esp_overhead": {
+    "assumptions": {
+      "gre_header_bytes": 8,
+      "transport_mtu": 1500,
+      "tunnel_mtu": null
+    },
+    "detector": "esp_overhead",
+    "estimate": true,
+    "flows": [],
+    "flows_omitted": 0,
+    "issues": [],
+    "limits": [
+      "ESP is encrypted: the cipher, tunnel or transport mode, and the inner packets are estimates from packet sizes, never read from the packet. Families with equal IV, ICV and alignment (AES-GCM, AES-CCM, ChaCha20-Poly1305) cannot be told apart.",
+      "Padding is assumed minimal (no TFC padding); an implementation that pads more makes the inner sizes smaller than the bounds shown.",
+      "Tunnel versus transport mode cannot be read from sizes alone; both are computed. The IKE exchange that agreed the mode is encrypted (IKEv2 IKE_AUTH, IKEv1 Quick Mode)."
+    ],
+    "outer_fragmentation": [],
+    "status": "not_present",
+    "summary": {
+      "capture_wide_distinct_sizes": 0,
+      "capture_wide_estimate": "AES-CBC + HMAC-SHA512-256",
+      "esp_flows": 0,
+      "esp_fragments": 0,
+      "family_estimates": {},
+      "flows_dropped_at_cap": 0
+    },
+    "verdict": "No ESP in this capture."
+  },
+  "file": "testdata/fixtures/sip_minimal.pcap",
+  "gre_nhrp": {
+    "detector": "gre_nhrp",
+    "dmvpn_phase_hint": "unknown",
+    "error_indications": [],
+    "hubs": [],
+    "issues": [],
+    "purges": {},
+    "redirects": [],
+    "registrations": [],
+    "registrations_omitted": 0,
+    "resolutions": [],
+    "resolutions_omitted": 0,
+    "spoke_to_spoke_tunnels": [],
+    "spokes": [],
+    "status": "not_present",
+    "summary": {
+      "gre_packets": 0,
+      "gre_tunnels": 0,
+      "hubs": 0,
+      "nhrp_messages": {},
+      "spoke_to_spoke_tunnels": 0,
+      "spokes": 0,
+      "spokes_registered": 0
+    },
+    "tunnels": [],
+    "tunnels_omitted": 0,
+    "verdict": "No GRE traffic in this capture."
+  },
+  "ipsec": {
+    "cleartext": [],
+    "detector": "ipsec",
+    "encryption_verdict": "not_present",
+    "esp_flows": [],
+    "esp_flows_omitted": 0,
+    "ike_sas": [],
+    "ike_sas_omitted": 0,
+    "issues": [],
+    "nat_traversal": {
+      "esp_in_udp_flows": 0,
+      "ike_packets_on_4500": 0,
+      "in_use": false,
+      "keepalive_frames": [],
+      "nat_detection_payloads_seen": false,
+      "nat_keepalives": 0,
+      "verdict": "NAT-T not in use"
+    },
+    "negotiation_verdict": "no IKE seen",
+    "peer_pairs": [],
+    "peer_pairs_omitted": 0,
+    "status": "not_present",
+    "summary": {
+      "esp_flows": 0,
+      "esp_packets": 0,
+      "ike_packets": 0,
+      "ike_sas": 0,
+      "ike_sas_established": 0,
+      "nat_keepalives": 0
+    },
+    "verdict": "No IPsec (IKE/ESP) or GRE tunnel traffic in this capture."
+  },
+  "issues": [],
+  "issues_omitted": 0,
+  "overall_status": "not_present",
+  "path_mtu": {
+    "black_holes": [],
+    "black_holes_omitted": 0,
+    "detector": "path_mtu",
+    "frag_needed": [],
+    "frag_needed_omitted": 0,
+    "fragments": {
+      "by_pair": [],
+      "by_pair_omitted": 0,
+      "complete": 0,
+      "datagrams": 0,
+      "groups_dropped_at_cap": 0,
+      "incomplete": [],
+      "incomplete_count": 0,
+      "incomplete_omitted": 0,
+      "overlapping": []
+    },
+    "issues": [],
+    "limits": [
+      "Only what crossed this capture point is visible: a Fragmentation Needed sent towards a host on another segment, or dropped by an ACL before this point, is invisible here, so a black hole verdict means 'no ICMP seen here', not proof that no router sent one.",
+      "A vanished probe can be loss rather than MTU; the black hole verdict needs smaller probes to the same destination answered and larger ones never answered.",
+      "Fragments captured on one side of the reassembling host show whether pieces arrived here; whether the host reassembled them is not visible.",
+      "IPv6 extension headers (including fragment headers) are not decoded."
+    ],
+    "status": "not_present",
+    "summary": {
+      "black_holes": 0,
+      "df_packets_over_576": 0,
+      "frag_needed_messages": 0,
+      "fragmented_datagrams": 0,
+      "incomplete_datagrams": 0,
+      "largest_df_packet": null,
+      "reassembly_timeouts": 0,
+      "smallest_mtu_advertised": null
+    },
+    "verdict": "No large DF packets, no Fragmentation Needed and no fragments in this capture."
+  },
+  "protocols_present": [
+    "sip",
+    "udp"
+  ],
+  "qos": {
+    "detector": "qos",
+    "esp_sas": [],
+    "esp_sas_omitted": 0,
+    "gre_tunnels": [],
+    "issues": [],
+    "limits": [
+      "ESP hides the inner header: from one capture the inner DSCP of encrypted traffic is unknown, so 'copied' is inferred from several markings on one SA. Compare an inside and an outside capture with correlate_captures to see the rewrite directly.",
+      "RTP latency is not measurable from one capture point; jitter and loss are what arrived here. RTP is found by its header shape, so a non-RTP UDP flow that looks like RTP for 10+ packets can be counted.",
+      "Clock rate is 8000 Hz for static audio payload types and estimated from timestamps for dynamic ones."
+    ],
+    "marked_flows": [],
+    "marked_flows_omitted": 0,
+    "rtp_streams": [],
+    "rtp_streams_omitted": 0,
+    "status": "not_present",
+    "summary": {
+      "ecn_ce_packets": 0,
+      "esp_sas": 0,
+      "flows_dropped_at_cap": 0,
+      "gre_tunnels": 0,
+      "marked_flows": 0,
+      "rtp_streams": 0,
+      "unmarked_flows": 2
+    },
+    "verdict": "No DSCP marking, tunnel, ESP or RTP to judge."
+  },
+  "reachability": {
+    "arp_duplicate_ips": [],
+    "arp_unanswered": [],
+    "arp_unanswered_omitted": 0,
+    "detector": "reachability",
+    "echo": [],
+    "echo_omitted": 0,
+    "icmp_errors": [],
+    "icmp_errors_omitted": 0,
+    "issues": [],
+    "status": "not_present",
+    "summary": {
+      "arp_targets_answered": 0,
+      "arp_targets_unanswered": 0,
+      "echo_lost": 0,
+      "echo_pairs": 0,
+      "echo_replies_matched": 0,
+      "echo_requests": 0,
+      "gratuitous_arp": 0,
+      "icmp_errors": 0,
+      "unmatched_replies": 0
+    },
+    "verdict": "No ICMP or ARP in this capture."
+  },
+  "routing": {
+    "bgp": {
+      "present": false
+    },
+    "detector": "routing",
+    "eigrp": {
+      "present": false
+    },
+    "failover_timeline": [],
+    "issues": [],
+    "ospf": {
+      "present": false
+    },
+    "status": "not_present",
+    "verdict": "No BGP, OSPF or EIGRP in this capture."
+  },
+  "schema": "sonic.network_report/1",
+  "sip": {
+    "mos_analysis": {
+      "average_mos": 0.0,
+      "best_mos": 0.0,
+      "codec_impact": 0.0,
+      "degradation_factors": [
+        "\u26a0\ufe0f No RTP streams detected for MOS analysis"
+      ],
+      "jitter_impact": 0.0,
+      "latency_impact": 0.0,
+      "overall_category": "Bad",
+      "packet_loss_impact": 0.0,
+      "quality_factors": [],
+      "recommendations": [
+        "\ud83d\udce6 Verify RTP traffic is present in capture",
+        "\ud83d\udd0d Check if media streams use non-standard ports",
+        "\ud83d\udcca Consider extending capture duration"
+      ],
+      "streams": [],
+      "worst_mos": 0.0
+    },
+    "note": "SIP/RTP quality from the existing S.O.N.I.C. SIP path; use analyze_pcap for the full LLM-assisted SIP call analysis",
+    "present": true,
+    "quality_analysis": {
+      "codec_details": {
+        "bandwidth_efficiency": 50.0,
+        "codec_quality": 50.0,
+        "compatibility": 50.0,
+        "negotiation": 100.0
+      },
+      "codec_score": 52.5,
+      "completion_details": {
+        "duration_quality": 100.0,
+        "normal_termination": 100.0,
+        "session_completeness": 100.0,
+        "setup_success": 100.0
+      },
+      "completion_score": 50.0,
+      "degradation_factors": [
+        "\u26a0\ufe0f No RTP streams detected"
+      ],
+      "grade": "D",
+      "network_details": {
+        "baseline_health": 0.0,
+        "jitter": 100.0,
+        "packet_loss": 100.0,
+        "qos_markings": 0.0,
+        "rtp_streams": 30.0
+      },
+      "network_score": 30.0,
+      "overall_score": 57.5,
+      "protocol_details": {
+        "auth_challenges_401": 0.0,
+        "auth_challenges_407": 0.0,
+        "auth_penalty": 0.0,
+        "auth_responses": 0.0,
+        "authentication": 100.0,
+        "error_rate": 100.0,
+        "register_failures": 0.0,
+        "response_success": 100.0,
+        "setup_efficiency": 100.0
+      },
+      "protocol_score": 100.0,
+      "quality_factors": [
+        "\u2705 Excellent SIP response success rate",
+        "\u2705 No SIP protocol errors"
+      ]
+    }
+  },
+  "status": "success",
+  "tcp": {
+    "connections": [],
+    "connections_omitted": 0,
+    "detector": "tcp",
+    "issues": [],
+    "limits": [
+      "Retransmissions, gaps and RTT are what this capture point saw: a segment lost after the capture point shows as a retransmission here, one lost before it shows as a gap. RTT is from the capture point to the receiver and back, not end to end unless the capture was taken on the sender.",
+      "A connection whose handshake was not captured has no window scale, so window-full checks and options are skipped for it.",
+      "Payload contents are not judged here (see the tls detector for TLS handshakes)."
+    ],
+    "status": "not_present",
+    "summary": {
+      "by_verdict": {
+        "healthy": 0,
+        "loss_on_path": 0,
+        "no_answer": 0,
+        "receive_window_limited": 0,
+        "receiver_buffer_exhausted": 0,
+        "refused": 0,
+        "reset": 0
+      },
+      "connections": 0,
+      "connections_dropped_at_cap": 0,
+      "mss_offered": []
+    },
+    "verdict": "No TCP in this capture."
+  },
+  "timeline": [],
+  "timeline_omitted": 0,
+  "tls": {
+    "baseline": null,
+    "detector": "tls",
+    "issues": [],
+    "limits": [
+      "Only the cleartext handshake is read. In TLS 1.3 everything after the ServerHello is encrypted: the certificate, the server's extensions and any later alert cannot be seen. In TLS 1.2 and older the certificate is visible and is read here.",
+      "Certificate trust (chain to a trusted root, revocation) is not judged; only what the certificate says.",
+      "In TLS 1.3 the server's ALPN choice travels in the encrypted EncryptedExtensions message, so server_chose.alpn is null and an ALPN baseline is checked only for TLS 1.2 and older.",
+      "With Encrypted Client Hello the visible SNI is the outer, public name, not the real server name.",
+      "A handshake split across segments is reassembled from the first bytes of each direction; one that starts before the capture, or whose segments were lost before the capture point, cannot be read.",
+      "QUIC, DTLS and STARTTLS are not decoded."
+    ],
+    "sessions": [],
+    "sessions_omitted": 0,
+    "status": "not_present",
+    "summary": {
+      "baseline_failures": 0,
+      "handshakes": 0,
+      "streams_dropped_at_cap": 0
+    },
+    "verdict": "No TLS handshake in this capture."
+  },
+  "verdicts": {
+    "conversations": "5 packets, 1640 bytes over 5.1 s; 1 address pair(s); most bytes: udp/5060",
+    "dmvpn_phase3": "No GRE/NHRP and no spoke-to-spoke IKE in this capture.",
+    "esp_overhead": "No ESP in this capture.",
+    "gre_nhrp": "No GRE traffic in this capture.",
+    "ipsec": "No IPsec (IKE/ESP) or GRE tunnel traffic in this capture.",
+    "path_mtu": "No large DF packets, no Fragmentation Needed and no fragments in this capture.",
+    "qos": "No DSCP marking, tunnel, ESP or RTP to judge.",
+    "reachability": "No ICMP or ARP in this capture.",
+    "routing": "No BGP, OSPF or EIGRP in this capture.",
+    "tcp": "No TCP in this capture.",
+    "tls": "No TLS handshake in this capture."
+  }
+}

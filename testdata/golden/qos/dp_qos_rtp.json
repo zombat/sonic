@@ -1,0 +1,313 @@
+{
+  "detector": "qos",
+  "esp_sas": [],
+  "esp_sas_omitted": 0,
+  "events": [
+    {
+      "detail": "RTP 10.8.8.80:16384 -> 10.9.9.90:20000 SSRC 0x11111111: 2.0% loss",
+      "event": "loss",
+      "frame": 1,
+      "protocol": "rtp",
+      "t": 0.0,
+      "time": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "gre_tunnels": [
+    {
+      "copied": 0,
+      "frames": [
+        249,
+        251,
+        253,
+        255,
+        257
+      ],
+      "inner_marked_outer_zero": 5,
+      "outer_dst": "192.0.2.1",
+      "outer_src": "198.51.100.2",
+      "packets_with_inner_ipv4": 5,
+      "pairs": [
+        {
+          "inner": "EF",
+          "outer": "CS0/BE",
+          "packets": 5
+        }
+      ],
+      "rewritten": 0
+    },
+    {
+      "copied": 5,
+      "frames": [],
+      "inner_marked_outer_zero": 0,
+      "outer_dst": "198.51.100.2",
+      "outer_src": "192.0.2.1",
+      "packets_with_inner_ipv4": 5,
+      "pairs": [
+        {
+          "inner": "AF41",
+          "outer": "AF41",
+          "packets": 5
+        }
+      ],
+      "rewritten": 0
+    }
+  ],
+  "issues": [
+    {
+      "code": "QOS_GRE_DSCP_NOT_COPIED",
+      "frames": [
+        249,
+        251,
+        253,
+        255,
+        257
+      ],
+      "message": "GRE 198.51.100.2 -> 192.0.2.1: 5 packet(s) marked inside but DSCP 0 on the delivery header: WAN QoS cannot see the class (check tunnel tos / qos pre-classify)",
+      "severity": "warning"
+    },
+    {
+      "code": "QOS_RTP_LOSS",
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "message": "RTP 10.8.8.80:16384 -> 10.9.9.90:20000 SSRC 0x11111111: 2 of 100 packets lost (2.0%)",
+      "severity": "warning"
+    },
+    {
+      "code": "QOS_RTP_NOT_EF",
+      "frames": [
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "message": "RTP 10.9.9.90:20000 -> 10.8.8.80:16384 SSRC 0x22222222 (G.711) carries CS0/BE, not EF (46): voice will queue with best effort",
+      "severity": "warning"
+    },
+    {
+      "code": "QOS_ECN_CE",
+      "frames": [
+        259,
+        260,
+        261
+      ],
+      "message": "3 packet(s) marked ECN Congestion Experienced: a queue on the path was congested",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "ESP hides the inner header: from one capture the inner DSCP of encrypted traffic is unknown, so 'copied' is inferred from several markings on one SA. Compare an inside and an outside capture with correlate_captures to see the rewrite directly.",
+    "RTP latency is not measurable from one capture point; jitter and loss are what arrived here. RTP is found by its header shape, so a non-RTP UDP flow that looks like RTP for 10+ packets can be counted.",
+    "Clock rate is 8000 Hz for static audio payload types and estimated from timestamps for dynamic ones."
+  ],
+  "marked_flows": [
+    {
+      "dscp": {
+        "EF": 98
+      },
+      "dst": "10.9.9.90",
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "packets": 98,
+      "protocol": "udp/16384",
+      "src": "10.8.8.80"
+    },
+    {
+      "dscp": {
+        "EF": 50
+      },
+      "dst": "10.9.9.90",
+      "frames": [
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208
+      ],
+      "packets": 50,
+      "protocol": "udp/16386",
+      "src": "10.8.8.80"
+    },
+    {
+      "dscp": {
+        "AF41": 5
+      },
+      "dst": "198.51.100.2",
+      "frames": [
+        250,
+        252,
+        254,
+        256,
+        258
+      ],
+      "packets": 5,
+      "protocol": "gre/ipv4",
+      "src": "192.0.2.1"
+    }
+  ],
+  "marked_flows_omitted": 0,
+  "rtp_streams": [
+    {
+      "clock_rate": 8000,
+      "clock_rate_source": "static",
+      "codec": "G.711",
+      "dscp": {
+        "EF": 98
+      },
+      "dst": "10.9.9.90:20000",
+      "duplicates": 0,
+      "duration_s": 1.98,
+      "expected": 100,
+      "first_t": 0.0,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "jitter_ms": {
+        "final": 0.675,
+        "max": 0.675,
+        "mean": 0.555
+      },
+      "latency": "not measurable from one capture point",
+      "loss_percent": 2.0,
+      "lost": 2,
+      "mos_estimate": 4.3,
+      "out_of_order": 0,
+      "over_gre": false,
+      "packets": 98,
+      "payload_type": 0,
+      "src": "10.8.8.80:16384",
+      "ssrc": "0x11111111"
+    },
+    {
+      "clock_rate": 48000,
+      "clock_rate_source": "estimated",
+      "codec": "Unknown",
+      "dscp": {
+        "EF": 50
+      },
+      "dst": "10.9.9.90:20002",
+      "duplicates": 0,
+      "duration_s": 0.98,
+      "expected": 50,
+      "first_t": 0.005,
+      "frames": [
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208
+      ],
+      "jitter_ms": {
+        "final": 0.0,
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "latency": "not measurable from one capture point",
+      "loss_percent": 0.0,
+      "lost": 0,
+      "mos_estimate": 4.09,
+      "out_of_order": 0,
+      "over_gre": false,
+      "packets": 50,
+      "payload_type": 111,
+      "src": "10.8.8.80:16386",
+      "ssrc": "0x33333333"
+    },
+    {
+      "clock_rate": 8000,
+      "clock_rate_source": "static",
+      "codec": "G.711",
+      "dscp": {
+        "CS0/BE": 100
+      },
+      "dst": "10.8.8.80:16384",
+      "duplicates": 0,
+      "duration_s": 1.995,
+      "expected": 100,
+      "first_t": 0.01,
+      "frames": [
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "jitter_ms": {
+        "final": 14.975,
+        "max": 14.975,
+        "mean": 12.731
+      },
+      "latency": "not measurable from one capture point",
+      "loss_percent": 0.0,
+      "lost": 0,
+      "mos_estimate": 4.38,
+      "out_of_order": 0,
+      "over_gre": false,
+      "packets": 100,
+      "payload_type": 0,
+      "src": "10.9.9.90:20000",
+      "ssrc": "0x22222222"
+    }
+  ],
+  "rtp_streams_omitted": 0,
+  "status": "warning",
+  "summary": {
+    "ecn_ce_packets": 3,
+    "esp_sas": 0,
+    "flows_dropped_at_cap": 0,
+    "gre_tunnels": 2,
+    "marked_flows": 3,
+    "rtp_streams": 3,
+    "unmarked_flows": 3
+  },
+  "verdict": "3 marked flow(s), 3 unmarked; GRE: 5 packet(s) lose their marking; 3 RTP stream(s), worst MOS estimate 4.09."
+}

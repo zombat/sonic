@@ -1,0 +1,111 @@
+{
+  "detector": "conversations",
+  "events": [],
+  "issues": [],
+  "protocols": [
+    {
+      "bytes": 2440,
+      "packets": 20,
+      "protocol": "esp",
+      "service": null
+    },
+    {
+      "bytes": 564,
+      "packets": 2,
+      "protocol": "ike",
+      "service": null
+    },
+    {
+      "bytes": 101,
+      "packets": 1,
+      "protocol": "gre/ipv4",
+      "service": null
+    },
+    {
+      "bytes": 58,
+      "packets": 1,
+      "protocol": "loopback",
+      "service": null
+    },
+    {
+      "bytes": 50,
+      "packets": 1,
+      "protocol": "icmp",
+      "service": null
+    },
+    {
+      "bytes": 42,
+      "packets": 1,
+      "protocol": "arp",
+      "service": null
+    },
+    {
+      "bytes": 34,
+      "packets": 1,
+      "protocol": "cdp",
+      "service": null
+    }
+  ],
+  "protocols_omitted": 0,
+  "status": "ok",
+  "top_conversations": [
+    {
+      "a": "192.0.2.1",
+      "a_to_b": {
+        "bytes": 1502,
+        "packets": 11
+      },
+      "b": "198.51.100.2",
+      "b_to_a": {
+        "bytes": 1603,
+        "packets": 12
+      },
+      "bytes": 3105,
+      "packets": 23,
+      "protocols": {
+        "esp": 20,
+        "gre/ipv4": 1,
+        "ike": 2
+      }
+    },
+    {
+      "a": "198.51.100.2",
+      "a_to_b": {
+        "bytes": 50,
+        "packets": 1
+      },
+      "b": "203.0.113.1",
+      "b_to_a": {
+        "bytes": 0,
+        "packets": 0
+      },
+      "bytes": 50,
+      "packets": 1,
+      "protocols": {
+        "icmp": 1
+      }
+    }
+  ],
+  "top_conversations_omitted": 0,
+  "top_talkers": [
+    {
+      "address": "198.51.100.2",
+      "bytes_sent": 1653,
+      "packets_sent": 13
+    },
+    {
+      "address": "192.0.2.1",
+      "bytes_sent": 1502,
+      "packets_sent": 11
+    }
+  ],
+  "top_talkers_omitted": 0,
+  "totals": {
+    "address_pairs": 2,
+    "bytes": 3289,
+    "duration_s": 5.502,
+    "hosts_sending": 2,
+    "packets": 27
+  },
+  "verdict": "27 packets, 3289 bytes over 5.502 s; 2 address pair(s); most bytes: esp"
+}

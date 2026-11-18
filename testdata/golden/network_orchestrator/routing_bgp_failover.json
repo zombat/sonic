@@ -1,0 +1,1184 @@
+{
+  "capture": {
+    "backend": "tshark",
+    "bytes": 8109,
+    "display_filter": null,
+    "duration_s": 80.502,
+    "end": "2026-01-01T00:01:20.502Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 134,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "detectors_not_present": [],
+  "detectors_requested": [
+    "routing",
+    "reachability"
+  ],
+  "detectors_run": [
+    "routing",
+    "reachability"
+  ],
+  "failover_timeline": [
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: session established (hold time 30 s)",
+      "event": "established",
+      "frame": 7,
+      "protocol": "bgp",
+      "t": 0.022,
+      "time": "2026-01-01T00:00:00.022Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: 10.255.0.1 announced 2 prefix(es)",
+      "event": "update",
+      "frame": 8,
+      "protocol": "bgp",
+      "t": 0.1,
+      "time": "2026-01-01T00:00:00.100Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: session established (hold time 30 s)",
+      "event": "established",
+      "frame": 15,
+      "protocol": "bgp",
+      "t": 0.522,
+      "time": "2026-01-01T00:00:00.522Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: session established (hold time 30 s)",
+      "event": "established",
+      "frame": 22,
+      "protocol": "bgp",
+      "t": 1.022,
+      "time": "2026-01-01T00:00:01.022Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: session established (hold time 30 s)",
+      "event": "established",
+      "frame": 29,
+      "protocol": "bgp",
+      "t": 1.522,
+      "time": "2026-01-01T00:00:01.522Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: session down (TCP RST from 10.255.0.3)",
+      "event": "down",
+      "frame": 37,
+      "protocol": "bgp",
+      "t": 15.0,
+      "time": "2026-01-01T00:00:15.000Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: session down (TCP RST from 10.255.0.11)",
+      "event": "down",
+      "frame": 51,
+      "protocol": "bgp",
+      "t": 33.0,
+      "time": "2026-01-01T00:00:33.000Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: NOTIFICATION 10.255.0.11->10.255.0.1: Hold Timer Expired",
+      "event": "notification",
+      "frame": 107,
+      "protocol": "bgp",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: session down (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+      "event": "down",
+      "frame": 107,
+      "protocol": "bgp",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: 10.255.0.2 announced 2 prefix(es)",
+      "event": "update",
+      "frame": 112,
+      "protocol": "bgp",
+      "t": 70.5,
+      "time": "2026-01-01T00:01:10.500Z"
+    }
+  ],
+  "file": "testdata/fixtures/bgp_failover.pcap",
+  "issues": [
+    {
+      "bgp_code": 4,
+      "bgp_subcode": 0,
+      "code": "BGP_NOTIFICATION",
+      "detector": "routing",
+      "frames": [
+        107
+      ],
+      "message": "10.255.0.11 sent NOTIFICATION to 10.255.0.1: Hold Timer Expired (no KEEPALIVE or UPDATE arrived within the hold time: peer down, path to it lost, or TCP 179 filtered)",
+      "name": "Hold Timer Expired",
+      "protocol": "bgp",
+      "severity": "error"
+    },
+    {
+      "code": "BGP_SESSION_DOWN",
+      "detector": "routing",
+      "frames": [
+        8,
+        30,
+        31
+      ],
+      "message": "BGP session 10.255.0.1 <-> 10.255.0.11 was established and is down at the end of the capture (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+      "protocol": "bgp",
+      "severity": "error"
+    },
+    {
+      "code": "BGP_SESSION_DOWN",
+      "detector": "routing",
+      "frames": [
+        34,
+        35,
+        37
+      ],
+      "message": "BGP session 10.255.0.3 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.3)",
+      "protocol": "bgp",
+      "severity": "error"
+    },
+    {
+      "code": "BGP_SESSION_DOWN",
+      "detector": "routing",
+      "frames": [
+        36,
+        42,
+        51
+      ],
+      "message": "BGP session 10.255.0.4 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.11)",
+      "protocol": "bgp",
+      "severity": "error"
+    },
+    {
+      "code": "BGP_MSS_NOT_CLAMPED",
+      "detector": "routing",
+      "expected_mss": 1360,
+      "frames": [
+        9,
+        10
+      ],
+      "message": "BGP TCP connection 1 on 10.255.0.2 <-> 10.255.0.11: 10.255.0.11 offered MSS 1460, 10.255.0.2 offered MSS 1460 (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+      "protocol": "bgp",
+      "severity": "warning"
+    },
+    {
+      "code": "BGP_MSS_NOT_CLAMPED",
+      "detector": "routing",
+      "expected_mss": 1360,
+      "frames": [
+        16,
+        17
+      ],
+      "message": "BGP TCP connection 1 on 10.255.0.3 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.3 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+      "protocol": "bgp",
+      "severity": "warning"
+    },
+    {
+      "code": "BGP_MSS_NOT_CLAMPED",
+      "detector": "routing",
+      "expected_mss": 1360,
+      "frames": [
+        23,
+        24
+      ],
+      "message": "BGP TCP connection 1 on 10.255.0.4 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.4 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+      "protocol": "bgp",
+      "severity": "warning"
+    },
+    {
+      "code": "ICMP_LOSS",
+      "detector": "reachability",
+      "frames": [
+        72
+      ],
+      "message": "ping 10.1.11.1 -> 10.1.1.1: 30 of 50 lost (60.0%), 1 outage window(s)",
+      "severity": "warning"
+    }
+  ],
+  "issues_omitted": 0,
+  "overall_status": "problem",
+  "ping_outages": [
+    {
+      "dst": "10.1.1.1",
+      "duration_s": 30.02,
+      "end_t": 70.0,
+      "first_frame": 72,
+      "last_frame": 108,
+      "lost_requests": 30,
+      "next_reply_frame": 114,
+      "recovered_t": 71.02,
+      "src": "10.1.11.1",
+      "start_t": 41.0
+    }
+  ],
+  "protocols_present": [
+    "bgp",
+    "icmp",
+    "tcp"
+  ],
+  "reachability": {
+    "arp_duplicate_ips": [],
+    "arp_unanswered": [],
+    "arp_unanswered_omitted": 0,
+    "detector": "reachability",
+    "echo": [
+      {
+        "answered": 20,
+        "dst": "10.1.1.1",
+        "duplicate_requests_seen": 0,
+        "first_t": 31.0,
+        "frames": [
+          47,
+          49,
+          52,
+          54,
+          56,
+          58,
+          60,
+          62,
+          64,
+          67
+        ],
+        "ipv6": false,
+        "loss_percent": 60.0,
+        "lost": 30,
+        "outages": [
+          {
+            "duration_s": 30.02,
+            "end_t": 70.0,
+            "first_frame": 72,
+            "last_frame": 108,
+            "lost_requests": 30,
+            "next_reply_frame": 114,
+            "recovered_t": 71.02,
+            "start_t": 41.0
+          }
+        ],
+        "pending_at_capture_end": 0,
+        "rtt_ms": {
+          "avg": 20.0,
+          "max": 20.0,
+          "min": 20.0
+        },
+        "sent": 50,
+        "src": "10.1.11.1",
+        "tunneled": false,
+        "verdict": "loss"
+      }
+    ],
+    "echo_omitted": 0,
+    "icmp_errors": [],
+    "icmp_errors_omitted": 0,
+    "issues": [
+      {
+        "code": "ICMP_LOSS",
+        "frames": [
+          72
+        ],
+        "message": "ping 10.1.11.1 -> 10.1.1.1: 30 of 50 lost (60.0%), 1 outage window(s)",
+        "severity": "warning"
+      }
+    ],
+    "status": "warning",
+    "summary": {
+      "arp_targets_answered": 0,
+      "arp_targets_unanswered": 0,
+      "echo_lost": 30,
+      "echo_pairs": 1,
+      "echo_replies_matched": 20,
+      "echo_requests": 50,
+      "gratuitous_arp": 0,
+      "icmp_errors": 0,
+      "unmatched_replies": 0
+    },
+    "verdict": "ping loss: 10.1.11.1->10.1.1.1 30/50 lost"
+  },
+  "reachability_verdict": "ping loss: 10.1.11.1->10.1.1.1 30/50 lost",
+  "routing": {
+    "bgp": {
+      "established_sessions": 1,
+      "expected_mss": 1360,
+      "issues": [
+        {
+          "bgp_code": 4,
+          "bgp_subcode": 0,
+          "code": "BGP_NOTIFICATION",
+          "frames": [
+            107
+          ],
+          "message": "10.255.0.11 sent NOTIFICATION to 10.255.0.1: Hold Timer Expired (no KEEPALIVE or UPDATE arrived within the hold time: peer down, path to it lost, or TCP 179 filtered)",
+          "name": "Hold Timer Expired",
+          "severity": "error"
+        },
+        {
+          "code": "BGP_SESSION_DOWN",
+          "frames": [
+            8,
+            30,
+            31
+          ],
+          "message": "BGP session 10.255.0.1 <-> 10.255.0.11 was established and is down at the end of the capture (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+          "severity": "error"
+        },
+        {
+          "code": "BGP_SESSION_DOWN",
+          "frames": [
+            34,
+            35,
+            37
+          ],
+          "message": "BGP session 10.255.0.3 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.3)",
+          "severity": "error"
+        },
+        {
+          "code": "BGP_SESSION_DOWN",
+          "frames": [
+            36,
+            42,
+            51
+          ],
+          "message": "BGP session 10.255.0.4 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.11)",
+          "severity": "error"
+        },
+        {
+          "code": "BGP_MSS_NOT_CLAMPED",
+          "expected_mss": 1360,
+          "frames": [
+            9,
+            10
+          ],
+          "message": "BGP TCP connection 1 on 10.255.0.2 <-> 10.255.0.11: 10.255.0.11 offered MSS 1460, 10.255.0.2 offered MSS 1460 (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+          "severity": "warning"
+        },
+        {
+          "code": "BGP_MSS_NOT_CLAMPED",
+          "expected_mss": 1360,
+          "frames": [
+            16,
+            17
+          ],
+          "message": "BGP TCP connection 1 on 10.255.0.3 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.3 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+          "severity": "warning"
+        },
+        {
+          "code": "BGP_MSS_NOT_CLAMPED",
+          "expected_mss": 1360,
+          "frames": [
+            23,
+            24
+          ],
+          "message": "BGP TCP connection 1 on 10.255.0.4 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.4 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+          "severity": "warning"
+        }
+      ],
+      "messages": 49,
+      "present": true,
+      "sessions": [
+        {
+          "downs": [
+            {
+              "cause": "hold_timer_expired",
+              "explanation": "a NOTIFICATION 'Hold Timer Expired' was sent: the other side was silent for the whole hold time",
+              "frame": 107,
+              "hold_time": 30,
+              "quietest_last_message_frame": 68,
+              "quietest_last_message_t": 40.002,
+              "quietest_speaker": "10.255.0.1",
+              "reason": "NOTIFICATION from 10.255.0.11: Hold Timer Expired",
+              "silence_before_down_s": {
+                "10.255.0.1": 29.998,
+                "10.255.0.11": 0.0
+              },
+              "t": 70.0
+            }
+          ],
+          "expected_keepalive_interval_s": 10.0,
+          "first_t": 0.0,
+          "frames": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "ibgp": true,
+          "last_t": 70.001,
+          "negotiated_hold_time": 30,
+          "notifications": [
+            {
+              "code": 4,
+              "frame": 107,
+              "from": "10.255.0.11",
+              "hint": "no KEEPALIVE or UPDATE arrived within the hold time: peer down, path to it lost, or TCP 179 filtered",
+              "name": "Hold Timer Expired",
+              "subcode": 0,
+              "t": 70.0,
+              "to": "10.255.0.1",
+              "while_established": true
+            }
+          ],
+          "over_gre": false,
+          "peers": [
+            "10.255.0.1",
+            "10.255.0.11"
+          ],
+          "speakers": {
+            "10.255.0.1": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": 0.1,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 10.0,
+              "keepalive_interval_min_s": 9.98,
+              "keepalive_interval_s": 10.0,
+              "last_update_t": 0.1,
+              "messages": {
+                "KEEPALIVE": 5,
+                "OPEN": 1,
+                "UPDATE": 1
+              },
+              "prefixes_announced": 2,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.0.0.1",
+              "updates": [
+                {
+                  "announced": 2,
+                  "frame": 8,
+                  "t": 0.1,
+                  "withdrawn": 0
+                }
+              ]
+            },
+            "10.255.0.11": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 10.0,
+              "keepalive_interval_min_s": 9.98,
+              "keepalive_interval_s": 10.0,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 7,
+                "NOTIFICATION": 1,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.1.11.1",
+              "updates": []
+            }
+          },
+          "state": "down",
+          "tcp_connections": 1,
+          "tcp_mss": [
+            {
+              "check": {
+                "10.255.0.1": "ok",
+                "10.255.0.11": "ok"
+              },
+              "connection": 1,
+              "frames": {
+                "10.255.0.1": 2,
+                "10.255.0.11": 1
+              },
+              "mss": {
+                "10.255.0.1": 1360,
+                "10.255.0.11": 1360
+              },
+              "syn_from": "10.255.0.11"
+            }
+          ],
+          "times_down": 1,
+          "times_established": 1
+        },
+        {
+          "downs": [],
+          "expected_keepalive_interval_s": 10.0,
+          "first_t": 0.5,
+          "frames": [
+            9,
+            10,
+            11,
+            12,
+            13
+          ],
+          "ibgp": true,
+          "last_t": 80.502,
+          "negotiated_hold_time": 30,
+          "notifications": [],
+          "over_gre": false,
+          "peers": [
+            "10.255.0.2",
+            "10.255.0.11"
+          ],
+          "speakers": {
+            "10.255.0.11": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 10.1,
+              "keepalive_interval_min_s": 9.9,
+              "keepalive_interval_s": 10.0,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 9,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.1.11.1",
+              "updates": []
+            },
+            "10.255.0.2": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": 70.5,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 10.1,
+              "keepalive_interval_min_s": 9.9,
+              "keepalive_interval_s": 10.0,
+              "last_update_t": 70.5,
+              "messages": {
+                "KEEPALIVE": 9,
+                "OPEN": 1,
+                "UPDATE": 1
+              },
+              "prefixes_announced": 2,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.0.0.2",
+              "updates": [
+                {
+                  "announced": 2,
+                  "frame": 112,
+                  "t": 70.5,
+                  "withdrawn": 0
+                }
+              ]
+            }
+          },
+          "state": "established",
+          "tcp_connections": 1,
+          "tcp_mss": [
+            {
+              "check": {
+                "10.255.0.11": "above_expected",
+                "10.255.0.2": "above_expected"
+              },
+              "connection": 1,
+              "frames": {
+                "10.255.0.11": 9,
+                "10.255.0.2": 10
+              },
+              "mss": {
+                "10.255.0.11": 1460,
+                "10.255.0.2": 1460
+              },
+              "syn_from": "10.255.0.11"
+            }
+          ],
+          "times_down": 0,
+          "times_established": 1
+        },
+        {
+          "downs": [
+            {
+              "cause": "tcp_rst",
+              "explanation": "TCP RST with no NOTIFICATION before it",
+              "frame": 37,
+              "hold_time": 30,
+              "quietest_last_message_frame": 34,
+              "quietest_last_message_t": 11.0,
+              "quietest_speaker": "10.255.0.11",
+              "reason": "TCP RST from 10.255.0.3",
+              "silence_before_down_s": {
+                "10.255.0.11": 4.0,
+                "10.255.0.3": 3.998
+              },
+              "t": 15.0
+            }
+          ],
+          "expected_keepalive_interval_s": 10.0,
+          "first_t": 1.0,
+          "frames": [
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "ibgp": true,
+          "last_t": 15.0,
+          "negotiated_hold_time": 30,
+          "notifications": [],
+          "over_gre": false,
+          "peers": [
+            "10.255.0.3",
+            "10.255.0.11"
+          ],
+          "speakers": {
+            "10.255.0.11": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 9.98,
+              "keepalive_interval_min_s": 9.98,
+              "keepalive_interval_s": 9.98,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 2,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.1.11.1",
+              "updates": []
+            },
+            "10.255.0.3": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 9.98,
+              "keepalive_interval_min_s": 9.98,
+              "keepalive_interval_s": 9.98,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 2,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.0.0.3",
+              "updates": []
+            }
+          },
+          "state": "down",
+          "tcp_connections": 1,
+          "tcp_mss": [
+            {
+              "check": {
+                "10.255.0.11": "no_mss_option",
+                "10.255.0.3": "no_mss_option"
+              },
+              "connection": 1,
+              "frames": {
+                "10.255.0.11": 16,
+                "10.255.0.3": 17
+              },
+              "mss": {
+                "10.255.0.11": null,
+                "10.255.0.3": null
+              },
+              "syn_from": "10.255.0.11"
+            }
+          ],
+          "times_down": 1,
+          "times_established": 1
+        },
+        {
+          "downs": [
+            {
+              "cause": "hold_timer_expired_inferred",
+              "explanation": "10.255.0.4 was silent 31.478 s (hold time 30 s) before the TCP close and no NOTIFICATION was captured: the hold timer most likely expired",
+              "frame": 51,
+              "hold_time": 30,
+              "quietest_last_message_frame": 29,
+              "quietest_last_message_t": 1.522,
+              "quietest_speaker": "10.255.0.4",
+              "reason": "TCP RST from 10.255.0.11",
+              "silence_before_down_s": {
+                "10.255.0.11": 11.5,
+                "10.255.0.4": 31.478
+              },
+              "t": 33.0
+            }
+          ],
+          "expected_keepalive_interval_s": 10.0,
+          "first_t": 1.5,
+          "frames": [
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "ibgp": true,
+          "last_t": 33.0,
+          "negotiated_hold_time": 30,
+          "notifications": [],
+          "over_gre": false,
+          "peers": [
+            "10.255.0.4",
+            "10.255.0.11"
+          ],
+          "speakers": {
+            "10.255.0.11": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": 10.0,
+              "keepalive_interval_min_s": 9.98,
+              "keepalive_interval_s": 9.99,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 3,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.1.11.1",
+              "updates": []
+            },
+            "10.255.0.4": {
+              "as": 65100,
+              "capabilities": [
+                "multiprotocol",
+                "route-refresh",
+                "4-byte-as"
+              ],
+              "end_of_rib_t": null,
+              "first_update_t": null,
+              "hold_time_offered": 30,
+              "keepalive_interval_max_s": null,
+              "keepalive_interval_min_s": null,
+              "keepalive_interval_s": null,
+              "last_update_t": null,
+              "messages": {
+                "KEEPALIVE": 1,
+                "OPEN": 1
+              },
+              "prefixes_announced": 0,
+              "prefixes_withdrawn": 0,
+              "router_id": "10.0.0.4",
+              "updates": []
+            }
+          },
+          "state": "down",
+          "tcp_connections": 1,
+          "tcp_mss": [
+            {
+              "check": {
+                "10.255.0.11": "no_mss_option",
+                "10.255.0.4": "no_mss_option"
+              },
+              "connection": 1,
+              "frames": {
+                "10.255.0.11": 23,
+                "10.255.0.4": 24
+              },
+              "mss": {
+                "10.255.0.11": null,
+                "10.255.0.4": null
+              },
+              "syn_from": "10.255.0.11"
+            }
+          ],
+          "times_down": 1,
+          "times_established": 1
+        }
+      ],
+      "sessions_omitted": 0,
+      "status": "problem",
+      "verdict": "BGP: 1 of 4 session(s) established at capture end, 3 session reset(s); problems: BGP_NOTIFICATION, BGP_SESSION_DOWN."
+    },
+    "detector": "routing",
+    "eigrp": {
+      "present": false
+    },
+    "failover_timeline": [
+      {
+        "detail": "10.255.0.1 <-> 10.255.0.11: session established (hold time 30 s)",
+        "event": "established",
+        "frame": 7,
+        "protocol": "bgp",
+        "t": 0.022,
+        "time": "2026-01-01T00:00:00.022Z"
+      },
+      {
+        "detail": "10.255.0.1 <-> 10.255.0.11: 10.255.0.1 announced 2 prefix(es)",
+        "event": "update",
+        "frame": 8,
+        "protocol": "bgp",
+        "t": 0.1,
+        "time": "2026-01-01T00:00:00.100Z"
+      },
+      {
+        "detail": "10.255.0.2 <-> 10.255.0.11: session established (hold time 30 s)",
+        "event": "established",
+        "frame": 15,
+        "protocol": "bgp",
+        "t": 0.522,
+        "time": "2026-01-01T00:00:00.522Z"
+      },
+      {
+        "detail": "10.255.0.3 <-> 10.255.0.11: session established (hold time 30 s)",
+        "event": "established",
+        "frame": 22,
+        "protocol": "bgp",
+        "t": 1.022,
+        "time": "2026-01-01T00:00:01.022Z"
+      },
+      {
+        "detail": "10.255.0.4 <-> 10.255.0.11: session established (hold time 30 s)",
+        "event": "established",
+        "frame": 29,
+        "protocol": "bgp",
+        "t": 1.522,
+        "time": "2026-01-01T00:00:01.522Z"
+      },
+      {
+        "detail": "10.255.0.3 <-> 10.255.0.11: session down (TCP RST from 10.255.0.3)",
+        "event": "down",
+        "frame": 37,
+        "protocol": "bgp",
+        "t": 15.0,
+        "time": "2026-01-01T00:00:15.000Z"
+      },
+      {
+        "detail": "10.255.0.4 <-> 10.255.0.11: session down (TCP RST from 10.255.0.11)",
+        "event": "down",
+        "frame": 51,
+        "protocol": "bgp",
+        "t": 33.0,
+        "time": "2026-01-01T00:00:33.000Z"
+      },
+      {
+        "detail": "10.255.0.1 <-> 10.255.0.11: NOTIFICATION 10.255.0.11->10.255.0.1: Hold Timer Expired",
+        "event": "notification",
+        "frame": 107,
+        "protocol": "bgp",
+        "t": 70.0,
+        "time": "2026-01-01T00:01:10.000Z"
+      },
+      {
+        "detail": "10.255.0.1 <-> 10.255.0.11: session down (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+        "event": "down",
+        "frame": 107,
+        "protocol": "bgp",
+        "t": 70.0,
+        "time": "2026-01-01T00:01:10.000Z"
+      },
+      {
+        "detail": "10.255.0.2 <-> 10.255.0.11: 10.255.0.2 announced 2 prefix(es)",
+        "event": "update",
+        "frame": 112,
+        "protocol": "bgp",
+        "t": 70.5,
+        "time": "2026-01-01T00:01:10.500Z"
+      }
+    ],
+    "issues": [
+      {
+        "bgp_code": 4,
+        "bgp_subcode": 0,
+        "code": "BGP_NOTIFICATION",
+        "frames": [
+          107
+        ],
+        "message": "10.255.0.11 sent NOTIFICATION to 10.255.0.1: Hold Timer Expired (no KEEPALIVE or UPDATE arrived within the hold time: peer down, path to it lost, or TCP 179 filtered)",
+        "name": "Hold Timer Expired",
+        "protocol": "bgp",
+        "severity": "error"
+      },
+      {
+        "code": "BGP_SESSION_DOWN",
+        "frames": [
+          8,
+          30,
+          31
+        ],
+        "message": "BGP session 10.255.0.1 <-> 10.255.0.11 was established and is down at the end of the capture (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+        "protocol": "bgp",
+        "severity": "error"
+      },
+      {
+        "code": "BGP_SESSION_DOWN",
+        "frames": [
+          34,
+          35,
+          37
+        ],
+        "message": "BGP session 10.255.0.3 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.3)",
+        "protocol": "bgp",
+        "severity": "error"
+      },
+      {
+        "code": "BGP_SESSION_DOWN",
+        "frames": [
+          36,
+          42,
+          51
+        ],
+        "message": "BGP session 10.255.0.4 <-> 10.255.0.11 was established and is down at the end of the capture (TCP RST from 10.255.0.11)",
+        "protocol": "bgp",
+        "severity": "error"
+      },
+      {
+        "code": "BGP_MSS_NOT_CLAMPED",
+        "expected_mss": 1360,
+        "frames": [
+          9,
+          10
+        ],
+        "message": "BGP TCP connection 1 on 10.255.0.2 <-> 10.255.0.11: 10.255.0.11 offered MSS 1460, 10.255.0.2 offered MSS 1460 (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+        "protocol": "bgp",
+        "severity": "warning"
+      },
+      {
+        "code": "BGP_MSS_NOT_CLAMPED",
+        "expected_mss": 1360,
+        "frames": [
+          16,
+          17
+        ],
+        "message": "BGP TCP connection 1 on 10.255.0.3 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.3 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+        "protocol": "bgp",
+        "severity": "warning"
+      },
+      {
+        "code": "BGP_MSS_NOT_CLAMPED",
+        "expected_mss": 1360,
+        "frames": [
+          23,
+          24
+        ],
+        "message": "BGP TCP connection 1 on 10.255.0.4 <-> 10.255.0.11: 10.255.0.11 sent no MSS option, 10.255.0.4 sent no MSS option (expected 1360 or less). The value is what crossed this capture point: 'ip tcp adjust-mss' rewrites SYNs as they cross the interface it is on",
+        "protocol": "bgp",
+        "severity": "warning"
+      }
+    ],
+    "ospf": {
+      "present": false
+    },
+    "status": "problem",
+    "verdict": "BGP: 1 of 4 session(s) established at capture end, 3 session reset(s); problems: BGP_NOTIFICATION, BGP_SESSION_DOWN."
+  },
+  "schema": "sonic.network_report/1",
+  "sip": {
+    "note": "no SIP in this capture",
+    "present": false
+  },
+  "status": "success",
+  "timeline": [
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: OPEN from 10.255.0.11: AS 65100, hold 30 s, router ID 10.1.11.1",
+      "detector": "routing",
+      "event": "open",
+      "frame": 4,
+      "protocol": "bgp",
+      "t": 0.01,
+      "time": "2026-01-01T00:00:00.010Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: OPEN from 10.255.0.1: AS 65100, hold 30 s, router ID 10.0.0.1",
+      "detector": "routing",
+      "event": "open",
+      "frame": 5,
+      "protocol": "bgp",
+      "t": 0.012,
+      "time": "2026-01-01T00:00:00.012Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: session established (hold time 30 s)",
+      "detector": "routing",
+      "event": "established",
+      "frame": 7,
+      "protocol": "bgp",
+      "t": 0.022,
+      "time": "2026-01-01T00:00:00.022Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: 10.255.0.1 announced 2 prefix(es)",
+      "detector": "routing",
+      "event": "update",
+      "frame": 8,
+      "protocol": "bgp",
+      "t": 0.1,
+      "time": "2026-01-01T00:00:00.100Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: OPEN from 10.255.0.11: AS 65100, hold 30 s, router ID 10.1.11.1",
+      "detector": "routing",
+      "event": "open",
+      "frame": 12,
+      "protocol": "bgp",
+      "t": 0.51,
+      "time": "2026-01-01T00:00:00.510Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: OPEN from 10.255.0.2: AS 65100, hold 30 s, router ID 10.0.0.2",
+      "detector": "routing",
+      "event": "open",
+      "frame": 13,
+      "protocol": "bgp",
+      "t": 0.512,
+      "time": "2026-01-01T00:00:00.512Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: session established (hold time 30 s)",
+      "detector": "routing",
+      "event": "established",
+      "frame": 15,
+      "protocol": "bgp",
+      "t": 0.522,
+      "time": "2026-01-01T00:00:00.522Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: OPEN from 10.255.0.11: AS 65100, hold 30 s, router ID 10.1.11.1",
+      "detector": "routing",
+      "event": "open",
+      "frame": 19,
+      "protocol": "bgp",
+      "t": 1.01,
+      "time": "2026-01-01T00:00:01.010Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: OPEN from 10.255.0.3: AS 65100, hold 30 s, router ID 10.0.0.3",
+      "detector": "routing",
+      "event": "open",
+      "frame": 20,
+      "protocol": "bgp",
+      "t": 1.012,
+      "time": "2026-01-01T00:00:01.012Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: session established (hold time 30 s)",
+      "detector": "routing",
+      "event": "established",
+      "frame": 22,
+      "protocol": "bgp",
+      "t": 1.022,
+      "time": "2026-01-01T00:00:01.022Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: OPEN from 10.255.0.11: AS 65100, hold 30 s, router ID 10.1.11.1",
+      "detector": "routing",
+      "event": "open",
+      "frame": 26,
+      "protocol": "bgp",
+      "t": 1.51,
+      "time": "2026-01-01T00:00:01.510Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: OPEN from 10.255.0.4: AS 65100, hold 30 s, router ID 10.0.0.4",
+      "detector": "routing",
+      "event": "open",
+      "frame": 27,
+      "protocol": "bgp",
+      "t": 1.512,
+      "time": "2026-01-01T00:00:01.512Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: session established (hold time 30 s)",
+      "detector": "routing",
+      "event": "established",
+      "frame": 29,
+      "protocol": "bgp",
+      "t": 1.522,
+      "time": "2026-01-01T00:00:01.522Z"
+    },
+    {
+      "detail": "10.255.0.3 <-> 10.255.0.11: session down (TCP RST from 10.255.0.3)",
+      "detector": "routing",
+      "event": "down",
+      "frame": 37,
+      "protocol": "bgp",
+      "t": 15.0,
+      "time": "2026-01-01T00:00:15.000Z"
+    },
+    {
+      "detail": "10.255.0.4 <-> 10.255.0.11: session down (TCP RST from 10.255.0.11)",
+      "detector": "routing",
+      "event": "down",
+      "frame": 51,
+      "protocol": "bgp",
+      "t": 33.0,
+      "time": "2026-01-01T00:00:33.000Z"
+    },
+    {
+      "detail": "ping 10.1.11.1 -> 10.1.1.1: 30 consecutive request(s) unanswered, recovered after 30.02 s",
+      "detector": "reachability",
+      "event": "outage",
+      "frame": 72,
+      "protocol": "icmp",
+      "t": 41.0,
+      "time": "2026-01-01T00:00:41.000Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: NOTIFICATION 10.255.0.11->10.255.0.1: Hold Timer Expired",
+      "detector": "routing",
+      "event": "notification",
+      "frame": 107,
+      "protocol": "bgp",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "10.255.0.1 <-> 10.255.0.11: session down (NOTIFICATION from 10.255.0.11: Hold Timer Expired)",
+      "detector": "routing",
+      "event": "down",
+      "frame": 107,
+      "protocol": "bgp",
+      "t": 70.0,
+      "time": "2026-01-01T00:01:10.000Z"
+    },
+    {
+      "detail": "10.255.0.2 <-> 10.255.0.11: 10.255.0.2 announced 2 prefix(es)",
+      "detector": "routing",
+      "event": "update",
+      "frame": 112,
+      "protocol": "bgp",
+      "t": 70.5,
+      "time": "2026-01-01T00:01:10.500Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "verdict": "BGP: 1 of 4 session(s) established at capture end, 3 session reset(s); problems: BGP_NOTIFICATION, BGP_SESSION_DOWN.",
+  "verdicts": {
+    "reachability": "ping loss: 10.1.11.1->10.1.1.1 30/50 lost",
+    "routing": "BGP: 1 of 4 session(s) established at capture end, 3 session reset(s); problems: BGP_NOTIFICATION, BGP_SESSION_DOWN."
+  }
+}

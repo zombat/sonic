@@ -1,0 +1,515 @@
+{
+  "capture": {
+    "backend": "tshark",
+    "bytes": 5576,
+    "display_filter": null,
+    "duration_s": 8.504,
+    "end": "2026-01-01T00:00:08.504Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 36,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "detectors_not_present": [
+    "gre_nhrp",
+    "dmvpn_phase3"
+  ],
+  "detectors_requested": [
+    "ipsec",
+    "gre_nhrp",
+    "dmvpn_phase3"
+  ],
+  "detectors_run": [
+    "ipsec"
+  ],
+  "dmvpn_phase3": {
+    "cannot_show": [
+      "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "Which application flow triggered a redirect is known only from the original packet header the hub copies into the Traffic Indication."
+    ],
+    "detector": "dmvpn_phase3",
+    "encrypted_shortcuts": {
+      "not_visible": "NHRP redirect, resolution request and resolution reply travel inside ESP on a protected tunnel, so on the transport link only the IKE negotiation and ESP between the spokes are visible; capture on the tunnel interface to see steps 2 to 4",
+      "note": "hub addresses unknown (no NHRP visible): pass hubs to classify the 1 IKE SA(s) negotiated during the capture as spoke-to-spoke shortcuts",
+      "shortcuts": []
+    },
+    "error_indications": [],
+    "flows": [],
+    "flows_omitted": 0,
+    "hub_relayed_without_redirect": [],
+    "hubs": [],
+    "hubs_source": {
+      "from_redirects": [],
+      "from_registrations": [],
+      "given": []
+    },
+    "issues": [],
+    "resolution_thrashing": {
+      "spokes": [],
+      "thrashing": false,
+      "thresholds": {
+        "peak_per_second": 5,
+        "unanswered_repeats_per_target": 5
+      }
+    },
+    "status": "not_present",
+    "verdict": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts."
+  },
+  "encryption_verdict": "encrypted",
+  "file": "testdata/fixtures/ipsec_ikev2_esp.pcap",
+  "gre_nhrp": {
+    "detector": "gre_nhrp",
+    "dmvpn_phase_hint": "unknown",
+    "error_indications": [],
+    "hubs": [],
+    "issues": [],
+    "purges": {},
+    "redirects": [],
+    "registrations": [],
+    "registrations_omitted": 0,
+    "resolutions": [],
+    "resolutions_omitted": 0,
+    "spoke_to_spoke_tunnels": [],
+    "spokes": [],
+    "status": "not_present",
+    "summary": {
+      "gre_packets": 0,
+      "gre_tunnels": 0,
+      "hubs": 0,
+      "nhrp_messages": {},
+      "spoke_to_spoke_tunnels": 0,
+      "spokes": 0,
+      "spokes_registered": 0
+    },
+    "tunnels": [],
+    "tunnels_omitted": 0,
+    "verdict": "No GRE traffic in this capture."
+  },
+  "ike_diagnoses": [
+    {
+      "diagnosis": {
+        "code": "ok",
+        "text": "established with AES-CBC-256/HMAC-SHA2-256/MODP-2048 (group 14)"
+      },
+      "initiator": "198.51.100.2",
+      "initiator_spi": "1111111111111111",
+      "outcome": "established",
+      "responder": "192.0.2.1"
+    }
+  ],
+  "ipsec": {
+    "cleartext": [],
+    "detector": "ipsec",
+    "encryption_verdict": "encrypted",
+    "esp_flows": [
+      {
+        "bytes": 1220,
+        "dst": "192.0.2.1",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 1.0,
+        "frames": [
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "last_seq": 10,
+        "last_t": 5.5,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 10,
+        "spi": "0xc0ffee01",
+        "src": "198.51.100.2",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 1220,
+        "dst": "198.51.100.2",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 1.004,
+        "frames": [
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "last_seq": 10,
+        "last_t": 5.504,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 10,
+        "spi": "0xc0ffee02",
+        "src": "192.0.2.1",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 610,
+        "dst": "192.0.2.1",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 6.5,
+        "frames": [
+          27,
+          29,
+          31,
+          33,
+          35
+        ],
+        "last_seq": 5,
+        "last_t": 8.5,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 5,
+        "spi": "0xc0ffee11",
+        "src": "198.51.100.2",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      },
+      {
+        "bytes": 610,
+        "dst": "198.51.100.2",
+        "duplicate_sequence_numbers": 0,
+        "first_seq": 1,
+        "first_t": 6.504,
+        "frames": [
+          28,
+          30,
+          32,
+          34,
+          36
+        ],
+        "last_seq": 5,
+        "last_t": 8.504,
+        "missing_sequence_numbers": 0,
+        "out_of_order": 0,
+        "packets": 5,
+        "spi": "0xc0ffee12",
+        "src": "192.0.2.1",
+        "stale_frames": [],
+        "stale_packets": 0,
+        "udp_encapsulated": false
+      }
+    ],
+    "esp_flows_omitted": 0,
+    "ike_sas": [
+      {
+        "detail": "IKE_SA_INIT and IKE_AUTH completed and ESP followed",
+        "diagnosis": {
+          "code": "ok",
+          "text": "established with AES-CBC-256/HMAC-SHA2-256/MODP-2048 (group 14)"
+        },
+        "exchanges": [
+          {
+            "encrypted": false,
+            "exchange": "IKE_SA_INIT",
+            "message_id": 0,
+            "request_frames": [
+              1
+            ],
+            "requests": 1,
+            "response_frames": [
+              2
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 0.0,
+            "unanswered": false
+          },
+          {
+            "encrypted": true,
+            "exchange": "IKE_AUTH",
+            "message_id": 1,
+            "request_frames": [
+              3
+            ],
+            "requests": 1,
+            "response_frames": [
+              4
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 0.03,
+            "unanswered": false
+          },
+          {
+            "encrypted": true,
+            "exchange": "CREATE_CHILD_SA",
+            "message_id": 2,
+            "request_frames": [
+              25
+            ],
+            "requests": 1,
+            "response_frames": [
+              26
+            ],
+            "responses": 1,
+            "retransmissions": 0,
+            "t": 6.0,
+            "unanswered": false
+          }
+        ],
+        "first_t": 0.0,
+        "frames": [
+          1,
+          2,
+          3,
+          4,
+          25,
+          26
+        ],
+        "ike_version": 2,
+        "initiator": "198.51.100.2",
+        "initiator_spi": "1111111111111111",
+        "last_t": 6.012,
+        "nat_t": false,
+        "negotiation": {
+          "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+          "chosen_frame": 2,
+          "invalid_ke_payload": [],
+          "ke_group_chosen": 14,
+          "ke_groups_offered": [
+            14
+          ],
+          "liveness": {
+            "answered": 0,
+            "by_sender": {},
+            "checks": 0,
+            "frames": [],
+            "interval_s_by_sender": {},
+            "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+            "pending_at_capture_end": 0,
+            "unanswered": 0,
+            "unanswered_checks": []
+          },
+          "nat_detection": {
+            "first_udp_4500_frame": null,
+            "first_udp_4500_t": null,
+            "ike_auth_udp_ports": [
+              500
+            ],
+            "moved_to_udp_4500": false,
+            "nat_detected": false,
+            "payloads_seen": true,
+            "translated": [],
+            "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+          },
+          "offered_frame": 1,
+          "proposal_chosen": {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          },
+          "proposals_offered": [
+            {
+              "dh_group": [
+                "MODP-2048 (group 14)"
+              ],
+              "encryption": [
+                "AES-CBC-256"
+              ],
+              "esn": [],
+              "integrity": [
+                "HMAC-SHA2-256-128"
+              ],
+              "number": 1,
+              "prf": [
+                "HMAC-SHA2-256"
+              ],
+              "protocol": "IKE",
+              "weak": []
+            }
+          ]
+        },
+        "notifies": [
+          {
+            "error": false,
+            "frame": 1,
+            "from": "198.51.100.2",
+            "name": "NAT_DETECTION_SOURCE_IP",
+            "type": 16388
+          },
+          {
+            "error": false,
+            "frame": 1,
+            "from": "198.51.100.2",
+            "name": "NAT_DETECTION_DESTINATION_IP",
+            "type": 16389
+          },
+          {
+            "error": false,
+            "frame": 2,
+            "from": "192.0.2.1",
+            "name": "NAT_DETECTION_SOURCE_IP",
+            "type": 16388
+          },
+          {
+            "error": false,
+            "frame": 2,
+            "from": "192.0.2.1",
+            "name": "NAT_DETECTION_DESTINATION_IP",
+            "type": 16389
+          }
+        ],
+        "outcome": "established",
+        "rekeys": 1,
+        "responder": "192.0.2.1",
+        "responder_spi": "2222222222222222",
+        "retransmissions": 0,
+        "udp_ports": [
+          500
+        ]
+      }
+    ],
+    "ike_sas_omitted": 0,
+    "issues": [],
+    "nat_traversal": {
+      "esp_in_udp_flows": 0,
+      "ike_packets_on_4500": 0,
+      "in_use": false,
+      "keepalive_frames": [],
+      "nat_detection_payloads_seen": true,
+      "nat_keepalives": 0,
+      "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+    },
+    "negotiation_verdict": "1 IKE SA(s): 1 established",
+    "peer_pairs": [
+      {
+        "cleartext": [],
+        "cleartext_packets": 0,
+        "endpoints": [
+          "192.0.2.1",
+          "198.51.100.2"
+        ],
+        "protected_packets": {
+          "esp": 30,
+          "ike": 6
+        },
+        "verdict": "encrypted"
+      }
+    ],
+    "peer_pairs_omitted": 0,
+    "status": "ok",
+    "summary": {
+      "esp_flows": 4,
+      "esp_packets": 30,
+      "ike_packets": 6,
+      "ike_sas": 1,
+      "ike_sas_established": 1,
+      "nat_keepalives": 0
+    },
+    "verdict": "all inter-site traffic encrypted: 1 peer pair(s), 30 ESP packets, no cleartext between the same endpoints"
+  },
+  "issues": [],
+  "issues_omitted": 0,
+  "negotiation_verdict": "1 IKE SA(s): 1 established",
+  "overall_status": "ok",
+  "overlay_verdict": "No GRE or NHRP visible: with tunnel protection, GRE and NHRP travel inside ESP. Capture on the tunnel interface to see the DMVPN overlay.",
+  "phase3_verdict": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts.",
+  "protocols_present": [
+    "esp",
+    "ike",
+    "udp"
+  ],
+  "schema": "sonic.network_report/1",
+  "sip": {
+    "note": "no SIP in this capture",
+    "present": false
+  },
+  "status": "success",
+  "timeline": [
+    {
+      "detail": "IKE SA 198.51.100.2 -> 192.0.2.1 established (IKE_AUTH answered, ESP followed)",
+      "detector": "ipsec",
+      "event": "established",
+      "frame": 4,
+      "protocol": "ike",
+      "t": 0.03,
+      "time": "2026-01-01T00:00:00.030Z"
+    },
+    {
+      "detail": "first ESP 198.51.100.2->192.0.2.1 (SPI 0xc0ffee01)",
+      "detector": "ipsec",
+      "event": "esp_start",
+      "frame": 5,
+      "protocol": "esp",
+      "t": 1.0,
+      "time": "2026-01-01T00:00:01.000Z"
+    },
+    {
+      "detail": "first ESP 192.0.2.1->198.51.100.2 (SPI 0xc0ffee02)",
+      "detector": "ipsec",
+      "event": "esp_start",
+      "frame": 6,
+      "protocol": "esp",
+      "t": 1.004,
+      "time": "2026-01-01T00:00:01.004Z"
+    },
+    {
+      "detail": "1 rekey exchange(s) on IKE SA 1111111111111111 (198.51.100.2 -> 192.0.2.1)",
+      "detector": "ipsec",
+      "event": "rekey",
+      "frame": null,
+      "protocol": "ike",
+      "t": 6.012,
+      "time": "2026-01-01T00:00:06.012Z"
+    },
+    {
+      "detail": "198.51.100.2->192.0.2.1 ESP SPI 0xc0ffee01 replaced by 0xc0ffee11 (rekey)",
+      "detector": "ipsec",
+      "event": "spi_change",
+      "frame": 27,
+      "protocol": "esp",
+      "t": 6.5,
+      "time": "2026-01-01T00:00:06.500Z"
+    },
+    {
+      "detail": "192.0.2.1->198.51.100.2 ESP SPI 0xc0ffee02 replaced by 0xc0ffee12 (rekey)",
+      "detector": "ipsec",
+      "event": "spi_change",
+      "frame": 28,
+      "protocol": "esp",
+      "t": 6.504,
+      "time": "2026-01-01T00:00:06.504Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "verdict": "all inter-site traffic encrypted: 1 peer pair(s), 30 ESP packets, no cleartext between the same endpoints",
+  "verdicts": {
+    "dmvpn_phase3": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts.",
+    "gre_nhrp": "No GRE traffic in this capture.",
+    "ipsec": "all inter-site traffic encrypted: 1 peer pair(s), 30 ESP packets, no cleartext between the same endpoints"
+  }
+}

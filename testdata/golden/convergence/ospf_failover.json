@@ -1,0 +1,36 @@
+{
+  "cannot_show": [
+    "On a transport-link capture of a protected tunnel, BGP, NHRP and the user traffic travel inside ESP: routing reaction and traffic resumption are then inferred from ESP packet rates, not read from BGP.",
+    "A liveness check (DPD) is recognised by size because its payload is encrypted.",
+    "An event time from the runbook host and the capture's timestamps come from different clocks; a skew between them shifts every delta measured from the event.",
+    "Only this capture point is seen: a failure elsewhere shows only through its effect on these links."
+  ],
+  "detector": "convergence",
+  "driver": {
+    "mechanism": "undetermined",
+    "reason": "no failure seen"
+  },
+  "event_t": null,
+  "event_time": null,
+  "events": [],
+  "failed_peer": null,
+  "failed_peer_source": null,
+  "issues": [],
+  "measurements": {
+    "detection": null,
+    "event_to_detection_s": null,
+    "event_to_first_failure_sign_s": null,
+    "event_to_first_update_s": null,
+    "event_to_traffic_resumed_s": null,
+    "first_failure_sign": null,
+    "first_update_on_surviving_path": null,
+    "origin": null,
+    "origin_t": null,
+    "traffic_resumed": null
+  },
+  "status": "ok",
+  "timeline": [],
+  "timeline_omitted": 0,
+  "traffic_shift": null,
+  "verdict": "No failure seen: no ESP direction went quiet, no DPD went unanswered, no BGP session dropped and no ping outage"
+}

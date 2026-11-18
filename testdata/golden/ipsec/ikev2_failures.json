@@ -1,0 +1,776 @@
+{
+  "cleartext": [],
+  "detector": "ipsec",
+  "encryption_verdict": "no_esp",
+  "esp_flows": [],
+  "esp_flows_omitted": 0,
+  "events": [
+    {
+      "detail": "IKE_AUTH 198.51.100.10 -> 192.0.2.1 unanswered",
+      "event": "no_response",
+      "frame": 3,
+      "protocol": "ike",
+      "t": 0.02,
+      "time": "2026-01-01T00:00:00.020Z"
+    },
+    {
+      "detail": "IKE_AUTH 198.51.100.12 -> 192.0.2.1 unanswered",
+      "event": "no_response",
+      "frame": 12,
+      "protocol": "ike",
+      "t": 8.02,
+      "time": "2026-01-01T00:00:08.020Z"
+    },
+    {
+      "detail": "IKE_SA_INIT 198.51.100.13 -> 192.0.2.1 refused: INVALID_KE_PAYLOAD",
+      "event": "negotiation_failed",
+      "frame": 16,
+      "protocol": "ike",
+      "t": 14.0,
+      "time": "2026-01-01T00:00:14.000Z"
+    }
+  ],
+  "ike_sas": [
+    {
+      "detail": "IKE_AUTH sent, never answered",
+      "diagnosis": {
+        "code": "nat_t_missing",
+        "text": "NAT-T missing: the NAT_DETECTION hashes show a translation, IKE_AUTH stayed on UDP 500 and got no reply"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            1
+          ],
+          "requests": 1,
+          "response_frames": [
+            2
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 0.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            3,
+            4,
+            5
+          ],
+          "requests": 3,
+          "response_frames": [],
+          "responses": 0,
+          "retransmissions": 2,
+          "t": 0.02,
+          "unanswered": true
+        }
+      ],
+      "first_t": 0.0,
+      "frames": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.10",
+      "initiator_spi": "c1c1c1c1c1c1c1c1",
+      "last_t": 3.02,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 2,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": 14,
+        "ke_groups_offered": [
+          14
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {},
+          "checks": 0,
+          "frames": [],
+          "interval_s_by_sender": {},
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": true,
+          "payloads_seen": true,
+          "translated": [
+            {
+              "field": "source",
+              "frame": 1,
+              "message": "IKE_SA_INIT request",
+              "observed": "198.51.100.10:500",
+              "sender": "198.51.100.10"
+            }
+          ],
+          "verdict": "NAT detected: the source 198.51.100.10:500 of the IKE_SA_INIT request from 198.51.100.10 does not match the NAT_DETECTION hash its sender computed, so an address or port was translated before the capture point; IKE never moved to UDP 4500"
+        },
+        "offered_frame": 1,
+        "proposal_chosen": {
+          "dh_group": [
+            "MODP-2048 (group 14)"
+          ],
+          "encryption": [
+            "AES-CBC-256"
+          ],
+          "esn": [],
+          "integrity": [
+            "HMAC-SHA2-256-128"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA2-256"
+          ],
+          "protocol": "IKE",
+          "weak": []
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.10",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 1,
+          "from": "198.51.100.10",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 2,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "auth_no_response",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "d1d1d1d1d1d1d1d1",
+      "retransmissions": 2,
+      "udp_ports": [
+        500
+      ]
+    },
+    {
+      "detail": "IKE_AUTH answered with a 80-byte response and no ESP followed",
+      "diagnosis": {
+        "code": "auth_failed",
+        "text": "authentication failed (heuristic): the IKE_AUTH response is the size of one encrypted error notification and no ESP followed. A PSK mismatch shows exactly this way (AUTHENTICATION_FAILED inside SK) or as IKE_AUTH retransmissions with no reply; the hash or key is never visible"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            6
+          ],
+          "requests": 1,
+          "response_frames": [
+            7
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 5.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            8
+          ],
+          "requests": 1,
+          "response_frames": [
+            9
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 5.02,
+          "unanswered": false
+        }
+      ],
+      "first_t": 5.0,
+      "frames": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.11",
+      "initiator_spi": "c2c2c2c2c2c2c2c2",
+      "last_t": 5.03,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 7,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": 14,
+        "ke_groups_offered": [
+          14
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {},
+          "checks": 0,
+          "frames": [],
+          "interval_s_by_sender": {},
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 6,
+        "proposal_chosen": {
+          "dh_group": [
+            "MODP-2048 (group 14)"
+          ],
+          "encryption": [
+            "AES-CBC-256"
+          ],
+          "esn": [],
+          "integrity": [
+            "HMAC-SHA2-256-128"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA2-256"
+          ],
+          "protocol": "IKE",
+          "weak": []
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 6,
+          "from": "198.51.100.11",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 6,
+          "from": "198.51.100.11",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 7,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 7,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "auth_likely_failed",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "d2d2d2d2d2d2d2d2",
+      "retransmissions": 0,
+      "udp_ports": [
+        500
+      ]
+    },
+    {
+      "detail": "IKE_AUTH sent, never answered",
+      "diagnosis": {
+        "code": "auth_no_reply",
+        "text": "IKE_AUTH never answered: a pre-shared key mismatch can show this way (some peers drop the message silently instead of sending AUTHENTICATION_FAILED); also a large IKE_AUTH fragmented and dropped. The AUTH payload is encrypted, so the key itself is never visible"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            10
+          ],
+          "requests": 1,
+          "response_frames": [
+            11
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 8.0,
+          "unanswered": false
+        },
+        {
+          "encrypted": true,
+          "exchange": "IKE_AUTH",
+          "message_id": 1,
+          "request_frames": [
+            12,
+            13,
+            14
+          ],
+          "requests": 3,
+          "response_frames": [],
+          "responses": 0,
+          "retransmissions": 2,
+          "t": 8.02,
+          "unanswered": true
+        }
+      ],
+      "first_t": 8.0,
+      "frames": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.12",
+      "initiator_spi": "c3c3c3c3c3c3c3c3",
+      "last_t": 11.02,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": 11,
+        "invalid_ke_payload": [],
+        "ke_group_chosen": 14,
+        "ke_groups_offered": [
+          14
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {},
+          "checks": 0,
+          "frames": [],
+          "interval_s_by_sender": {},
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [
+            500
+          ],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 10,
+        "proposal_chosen": {
+          "dh_group": [
+            "MODP-2048 (group 14)"
+          ],
+          "encryption": [
+            "AES-CBC-256"
+          ],
+          "esn": [],
+          "integrity": [
+            "HMAC-SHA2-256-128"
+          ],
+          "number": 1,
+          "prf": [
+            "HMAC-SHA2-256"
+          ],
+          "protocol": "IKE",
+          "weak": []
+        },
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 10,
+          "from": "198.51.100.12",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 10,
+          "from": "198.51.100.12",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": false,
+          "frame": 11,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 11,
+          "from": "192.0.2.1",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        }
+      ],
+      "outcome": "auth_no_response",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": "d3d3d3d3d3d3d3d3",
+      "retransmissions": 2,
+      "udp_ports": [
+        500
+      ]
+    },
+    {
+      "detail": "IKE_SA_INIT refused: INVALID_KE_PAYLOAD",
+      "diagnosis": {
+        "code": "dh_group_mismatch",
+        "text": "DH group mismatch: 198.51.100.13 sent a KE for group 14, 192.0.2.1 asked for group 19, and no retry with that group succeeded on this IKE SA"
+      },
+      "exchanges": [
+        {
+          "encrypted": false,
+          "exchange": "IKE_SA_INIT",
+          "message_id": 0,
+          "request_frames": [
+            15
+          ],
+          "requests": 1,
+          "response_frames": [
+            16
+          ],
+          "responses": 1,
+          "retransmissions": 0,
+          "t": 14.0,
+          "unanswered": false
+        }
+      ],
+      "first_t": 14.0,
+      "frames": [
+        15,
+        16
+      ],
+      "ike_version": 2,
+      "initiator": "198.51.100.13",
+      "initiator_spi": "c4c4c4c4c4c4c4c4",
+      "last_t": 14.01,
+      "nat_t": false,
+      "negotiation": {
+        "child_sa": "not visible: the child SA proposal, traffic selectors, identities and AUTH payload travel inside the encrypted IKE_AUTH",
+        "chosen_frame": null,
+        "invalid_ke_payload": [
+          {
+            "frame": 16,
+            "group_offered": 14,
+            "group_requested": 19,
+            "t": 14.01
+          }
+        ],
+        "ke_group_chosen": null,
+        "ke_groups_offered": [
+          14
+        ],
+        "liveness": {
+          "answered": 0,
+          "by_sender": {},
+          "checks": 0,
+          "frames": [],
+          "interval_s_by_sender": {},
+          "note": "liveness checks are the SA's smallest INFORMATIONAL requests (empty inside SK, which is what IKEv2 DPD sends); inferred from size because the payload is encrypted",
+          "pending_at_capture_end": 0,
+          "unanswered": 0,
+          "unanswered_checks": []
+        },
+        "nat_detection": {
+          "first_udp_4500_frame": null,
+          "first_udp_4500_t": null,
+          "ike_auth_udp_ports": [],
+          "moved_to_udp_4500": false,
+          "nat_detected": false,
+          "payloads_seen": true,
+          "translated": [],
+          "verdict": "no NAT between the peers and this capture point: every NAT_DETECTION hash matches the addresses and ports on the wire"
+        },
+        "offered_frame": 15,
+        "proposal_chosen": null,
+        "proposals_offered": [
+          {
+            "dh_group": [
+              "MODP-2048 (group 14)"
+            ],
+            "encryption": [
+              "AES-CBC-256"
+            ],
+            "esn": [],
+            "integrity": [
+              "HMAC-SHA2-256-128"
+            ],
+            "number": 1,
+            "prf": [
+              "HMAC-SHA2-256"
+            ],
+            "protocol": "IKE",
+            "weak": []
+          }
+        ]
+      },
+      "notifies": [
+        {
+          "error": false,
+          "frame": 15,
+          "from": "198.51.100.13",
+          "name": "NAT_DETECTION_SOURCE_IP",
+          "type": 16388
+        },
+        {
+          "error": false,
+          "frame": 15,
+          "from": "198.51.100.13",
+          "name": "NAT_DETECTION_DESTINATION_IP",
+          "type": 16389
+        },
+        {
+          "error": true,
+          "frame": 16,
+          "from": "192.0.2.1",
+          "name": "INVALID_KE_PAYLOAD",
+          "type": 17
+        }
+      ],
+      "outcome": "failed",
+      "rekeys": 0,
+      "responder": "192.0.2.1",
+      "responder_spi": null,
+      "retransmissions": 0,
+      "udp_ports": [
+        500
+      ]
+    }
+  ],
+  "ike_sas_omitted": 0,
+  "issues": [
+    {
+      "code": "IKE_AUTH_NO_RESPONSE",
+      "frames": [
+        3,
+        4,
+        5
+      ],
+      "message": "192.0.2.1 never answered IKE_AUTH from 198.51.100.10 (3 request(s)): often a large IKE_AUTH (certificates) fragmented and dropped, or the responder silently rejecting it",
+      "severity": "error"
+    },
+    {
+      "code": "IKE_NAT_T_MISSING",
+      "frames": [
+        1
+      ],
+      "message": "IKE SA 198.51.100.10 -> 192.0.2.1: NAT detected, but IKE_AUTH stayed on UDP 500 and was never answered (NAT traversal disabled on one peer, or the NAT drops UDP 500 after the first exchange)",
+      "severity": "error"
+    },
+    {
+      "code": "IKE_AUTH_NO_RESPONSE",
+      "frames": [
+        12,
+        13,
+        14
+      ],
+      "message": "192.0.2.1 never answered IKE_AUTH from 198.51.100.12 (3 request(s)): often a large IKE_AUTH (certificates) fragmented and dropped, or the responder silently rejecting it",
+      "severity": "error"
+    },
+    {
+      "code": "IKE_INVALID_KE_PAYLOAD",
+      "frames": [
+        16
+      ],
+      "message": "192.0.2.1 refused IKE_SA_INIT from 198.51.100.13: INVALID_KE_PAYLOAD (the initiator offered a DH group the responder does not accept; it normally retries with the group the responder names); 1 attempt(s)",
+      "notify": "INVALID_KE_PAYLOAD",
+      "severity": "error"
+    },
+    {
+      "code": "IKE_AUTH_LIKELY_FAILED",
+      "frames": [
+        9
+      ],
+      "message": "IKE_AUTH response from 192.0.2.1 is only 80 bytes and no ESP followed: the size of an encrypted error notification (often AUTHENTICATION_FAILED or TS_UNACCEPTABLE). Heuristic: the payload is encrypted and cannot be read",
+      "response_length": 80,
+      "severity": "warning"
+    }
+  ],
+  "nat_traversal": {
+    "esp_in_udp_flows": 0,
+    "ike_packets_on_4500": 0,
+    "in_use": false,
+    "keepalive_frames": [],
+    "nat_detection_payloads_seen": true,
+    "nat_keepalives": 0,
+    "verdict": "NAT detection payloads exchanged; no NAT found (IKE stayed on UDP 500, ESP not encapsulated)"
+  },
+  "negotiation_verdict": "4 IKE SA(s): 2 auth no response, 1 auth likely failed, 1 failed",
+  "peer_pairs": [
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.10"
+      ],
+      "protected_packets": {
+        "ike": 5
+      },
+      "verdict": "ike_only"
+    },
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.11"
+      ],
+      "protected_packets": {
+        "ike": 4
+      },
+      "verdict": "ike_only"
+    },
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.12"
+      ],
+      "protected_packets": {
+        "ike": 5
+      },
+      "verdict": "ike_only"
+    },
+    {
+      "cleartext": [],
+      "cleartext_packets": 0,
+      "endpoints": [
+        "192.0.2.1",
+        "198.51.100.13"
+      ],
+      "protected_packets": {
+        "ike": 2
+      },
+      "verdict": "ike_only"
+    }
+  ],
+  "peer_pairs_omitted": 0,
+  "status": "problem",
+  "summary": {
+    "esp_flows": 0,
+    "esp_packets": 0,
+    "ike_packets": 16,
+    "ike_sas": 4,
+    "ike_sas_established": 0,
+    "nat_keepalives": 0
+  },
+  "verdict": "no ESP between IKE peers 192.0.2.1<->198.51.100.10, 192.0.2.1<->198.51.100.11, 192.0.2.1<->198.51.100.12, 192.0.2.1<->198.51.100.13: the tunnel carried no protected traffic (or failed to come up); IKE: 4 IKE SA(s): 2 auth no response, 1 auth likely failed, 1 failed"
+}

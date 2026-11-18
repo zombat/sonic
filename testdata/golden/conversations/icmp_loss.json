@@ -1,0 +1,108 @@
+{
+  "detector": "conversations",
+  "events": [],
+  "issues": [],
+  "protocols": [
+    {
+      "bytes": 1515,
+      "packets": 21,
+      "protocol": "icmp",
+      "service": null
+    },
+    {
+      "bytes": 210,
+      "packets": 5,
+      "protocol": "arp",
+      "service": null
+    },
+    {
+      "bytes": 108,
+      "packets": 2,
+      "protocol": "udp/33434",
+      "service": null
+    }
+  ],
+  "protocols_omitted": 0,
+  "status": "ok",
+  "top_conversations": [
+    {
+      "a": "10.1.1.1",
+      "a_to_b": {
+        "bytes": 848,
+        "packets": 12
+      },
+      "b": "10.2.2.2",
+      "b_to_a": {
+        "bytes": 588,
+        "packets": 8
+      },
+      "bytes": 1436,
+      "packets": 20,
+      "protocols": {
+        "icmp": 18,
+        "udp/33434": 2
+      }
+    },
+    {
+      "a": "10.1.1.1",
+      "a_to_b": {
+        "bytes": 0,
+        "packets": 0
+      },
+      "b": "10.1.1.254",
+      "b_to_a": {
+        "bytes": 140,
+        "packets": 2
+      },
+      "bytes": 140,
+      "packets": 2,
+      "protocols": {
+        "icmp": 2
+      }
+    },
+    {
+      "a": "10.1.1.1",
+      "a_to_b": {
+        "bytes": 47,
+        "packets": 1
+      },
+      "b": "10.3.3.3",
+      "b_to_a": {
+        "bytes": 0,
+        "packets": 0
+      },
+      "bytes": 47,
+      "packets": 1,
+      "protocols": {
+        "icmp": 1
+      }
+    }
+  ],
+  "top_conversations_omitted": 0,
+  "top_talkers": [
+    {
+      "address": "10.1.1.1",
+      "bytes_sent": 895,
+      "packets_sent": 13
+    },
+    {
+      "address": "10.2.2.2",
+      "bytes_sent": 588,
+      "packets_sent": 8
+    },
+    {
+      "address": "10.1.1.254",
+      "bytes_sent": 140,
+      "packets_sent": 2
+    }
+  ],
+  "top_talkers_omitted": 0,
+  "totals": {
+    "address_pairs": 3,
+    "bytes": 1833,
+    "duration_s": 17.0,
+    "hosts_sending": 3,
+    "packets": 28
+  },
+  "verdict": "28 packets, 1833 bytes over 17.0 s; 3 address pair(s); most bytes: icmp"
+}

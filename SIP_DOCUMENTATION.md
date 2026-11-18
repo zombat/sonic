@@ -76,7 +76,7 @@ sequenceDiagram
     Callee-->>Caller: 200 OK (with SDP answer)
     deactivate Callee
     
-    Note over Caller,Callee: RTP Media Streams<br/>(Audio packets both directions)
+    Note over Caller,Callee: RTP Media Streams (Audio packets both directions)
     
     Caller->>Callee: ACK
     
@@ -114,18 +114,18 @@ S.O.N.I.C. correlates RTP media with SIP signaling:
 ```mermaid
 flowchart TD
     A["SIP INVITE Message"] --> B["Extract SDP Payload"]
-    B --> C["Parse Connection Info<br/>(c= IP address)"]
-    B --> D["Parse Media Description<br/>(m= port, codec)"]
-    C --> E["Build IP/Port Pair<br/>e.g., 192.0.2.1:5004"]
+    B --> C["Parse Connection Info (c= IP address)"]
+    B --> D["Parse Media Description (m= port, codec)"]
+    C --> E["Build IP/Port Pair (e.g., 192.0.2.1:5004)"]
     D --> E
-    E --> F["Search RTP Flows<br/>for Matching IP/Port"]
-    F --> G{"RTP Stream<br/>Found?"}
+    E --> F["Search RTP Flows for Matching IP/Port"]
+    F --> G{"RTP Stream Found?"}
     G -->|Yes| H["Analyze RTP Metrics"]
     G -->|No| I["Mark as One-Way/No-Audio"]
-    H --> J["Extract Payload Types<br/>(codec verification)"]
-    H --> K["Analyze Sequence Numbers<br/>(packet loss)"]
-    H --> L["Check Timestamps<br/>(jitter/latency)"]
-    H --> M["Identify SSRC<br/>(stream ID)"]
+    H --> J["Extract Payload Types (codec verification)"]
+    H --> K["Analyze Sequence Numbers (packet loss)"]
+    H --> L["Check Timestamps (jitter/latency)"]
+    H --> M["Identify SSRC (stream ID)"]
     J --> N["RTP Quality Assessment"]
     K --> N
     L --> N
@@ -183,32 +183,32 @@ AuthSecurityPosture {
 
 ```mermaid
 flowchart TD
-    A["PCAP File<br/>(pcap/pcapng)"] --> B{"Extract with<br/>tshark?"}  
-    B -->|Available| C["tshark JSON<br/>Extraction"]
-    B -->|Not Available| D["Scapy Fallback<br/>Extraction"]
-    C --> E["Parse SIP Messages<br/>(INVITE, REGISTER, BYE)"]
+    A["PCAP File (pcap/pcapng)"] --> B{"Extraction Path"}
+    B -->|L7 / SIP| C["tshark -T ek Stream Extraction"]
+    B -->|L2-L4 Only| D["Pure-Go Fast Path (go-fast)"]
+    C --> E["Parse SIP Messages (INVITE, REGISTER, BYE)"]
     D --> E
-    E --> F["Extract RTP Streams<br/>(IP, port, payload type)"]
-    F --> G["Correlate SIP SDP<br/>with RTP Flows"]
-    G --> H["Validate Codec<br/>Negotiation"]
-    H --> I["Quality Metrics<br/>Calculation"]
-    I --> J["Packet Loss<br/>Analysis"]
-    I --> K["Jitter<br/>Measurement"]
-    I --> L["MOS<br/>Scoring"]
-    I --> M["Auth Security<br/>Grading"]
-    J --> N{"AI Analysis<br/>Requested?"}
+    E --> F["Extract RTP Streams (IP, port, payload type)"]
+    F --> G["Correlate SIP SDP with RTP Flows"]
+    G --> H["Validate Codec Negotiation & Clipping"]
+    H --> I["Quality Metrics Calculation"]
+    I --> J["Packet Loss Analysis"]
+    I --> K["Jitter Measurement"]
+    I --> L["MOS Scoring & RFC 4733 DTMF"]
+    I --> M["Auth Security Grading"]
+    J --> N{"AI Analysis Requested?"}
     K --> N
     L --> N
     M --> N
-    N -->|No| O["Quality-Only Report<br/>(No LLM)"]
+    N -->|No| O["Quality-Only Report (No LLM)"]
     N -->|Yes| P["AI Analysis Layer"]
-    P --> Q["Fast Model<br/>(qwen2.5:0.5b)"]
-    P --> R["Detailed Model<br/>(mistral:7b)"]
-    Q --> S["Combine Results<br/>(Best insights)"]
+    P --> Q["Fast Model (qwen2.5:0.5b)"]
+    P --> R["Detailed Model (mistral:7b)"]
+    Q --> S["Combine Results (Best insights)"]
     R --> S
-    O --> T["Final Report<br/>(Markdown + Mermaid)"]
+    O --> T["Final Report (Markdown / HTML5 / JSON)"]
     S --> T
-    T --> U["Output: Diagnostics,<br/>Recommendations, Metrics"]
+    T --> U["Output: Diagnostics, Recommendations, Metrics"]
 ```
 
 ## 🔍 SIP Issues Detected

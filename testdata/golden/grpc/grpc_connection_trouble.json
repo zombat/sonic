@@ -1,0 +1,817 @@
+{
+  "capture": {
+    "decode_as": [
+      "tcp.port==50051,http2",
+      "tcp.port==57400,http2"
+    ],
+    "decode_as_reasons": {
+      "tcp/50051": "preface",
+      "tcp/57400": "preface"
+    },
+    "display_filter": null,
+    "end": "2026-01-01T00:00:11.040Z",
+    "http2_packets": 25,
+    "keylog_file_given": false,
+    "max_packets": null,
+    "proto_paths": [],
+    "reread_without_out_of_order": [],
+    "start": "2026-01-01T00:00:00.000Z",
+    "tls_secrets": {
+      "key_log_file": false,
+      "pcapng_decryption_secrets_blocks": 0,
+      "sessions_in_key_log": 0,
+      "sessions_in_pcapng": 0,
+      "source": null
+    },
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "warnings": []
+  },
+  "connections": [
+    {
+      "client": "10.30.0.10:52000",
+      "credential_keys": [],
+      "detected_by": "preface",
+      "duration_s": 2.971,
+      "first_frame": 4,
+      "flow": "10.30.0.10:52000 -> 10.30.0.1:50051",
+      "flow_control": {
+        "followed": true,
+        "stalls": []
+      },
+      "frames_by_type": {
+        "DATA": 2,
+        "GOAWAY": 1,
+        "HEADERS": 3,
+        "MAGIC": 1,
+        "PING": 6,
+        "SETTINGS": 4
+      },
+      "goaways": [
+        {
+          "debug_data": "too_many_pings",
+          "error": "ENHANCE_YOUR_CALM",
+          "error_code": 11,
+          "frame": 15,
+          "from": "server",
+          "last_stream_id": 1
+        }
+      ],
+      "max_concurrent_streams_used": 1,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {
+        "client": {
+          "acked": 3,
+          "first_frame": 9,
+          "interval_s_median": 1.0,
+          "interval_s_min": 1.0,
+          "rtt_ms_median": 0.5,
+          "sent": 3
+        }
+      },
+      "protocol": "grpc",
+      "rpc_status": {
+        "OK": 1
+      },
+      "rpcs": 1,
+      "rst_streams": [],
+      "server": "10.30.0.1:50051",
+      "server_known_by": "syn",
+      "service": "tcp/50051",
+      "service_name": "grpc (common default; Cisco NX-OS gNMI)",
+      "services": [
+        "grpc.health.v1.Health"
+      ],
+      "settings": {
+        "client": {},
+        "server": {
+          "max_concurrent_streams": 100
+        }
+      },
+      "t": 0.03,
+      "tcp_resets": [],
+      "transport": "cleartext"
+    },
+    {
+      "client": "10.30.0.10:52001",
+      "credential_keys": [],
+      "detected_by": "preface",
+      "duration_s": 0.071,
+      "first_frame": 19,
+      "flow": "10.30.0.10:52001 -> 10.30.0.1:50051",
+      "flow_control": {
+        "followed": true,
+        "stalls": []
+      },
+      "frames_by_type": {
+        "DATA": 3,
+        "GOAWAY": 1,
+        "HEADERS": 4,
+        "MAGIC": 1,
+        "SETTINGS": 3
+      },
+      "goaways": [
+        {
+          "debug_data": "server shutting down",
+          "error": "NO_ERROR",
+          "error_code": 0,
+          "frame": 24,
+          "from": "server",
+          "last_stream_id": 1
+        }
+      ],
+      "max_concurrent_streams_used": 1,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {},
+      "protocol": "grpc",
+      "rpc_status": {
+        "OK": 1,
+        "incomplete": 1
+      },
+      "rpcs": 2,
+      "rst_streams": [],
+      "server": "10.30.0.1:50051",
+      "server_known_by": "syn",
+      "service": "tcp/50051",
+      "service_name": "grpc (common default; Cisco NX-OS gNMI)",
+      "services": [
+        "gnmi.gNMI"
+      ],
+      "settings": {
+        "client": {},
+        "server": {}
+      },
+      "t": 5.03,
+      "tcp_resets": [],
+      "transport": "cleartext"
+    },
+    {
+      "client": "10.30.0.10:52002",
+      "credential_keys": [],
+      "detected_by": "preface",
+      "duration_s": 0.02,
+      "first_frame": 28,
+      "flow": "10.30.0.10:52002 -> 10.30.0.1:50051",
+      "flow_control": {
+        "followed": true,
+        "stalls": []
+      },
+      "frames_by_type": {
+        "DATA": 2,
+        "HEADERS": 2,
+        "MAGIC": 1,
+        "SETTINGS": 3
+      },
+      "goaways": [],
+      "max_concurrent_streams_used": 1,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {},
+      "protocol": "grpc",
+      "rpc_status": {
+        "incomplete": 1
+      },
+      "rpcs": 1,
+      "rst_streams": [],
+      "server": "10.30.0.1:50051",
+      "server_known_by": "syn",
+      "service": "tcp/50051",
+      "service_name": "grpc (common default; Cisco NX-OS gNMI)",
+      "services": [
+        "gnmi.gNMI"
+      ],
+      "settings": {
+        "client": {},
+        "server": {}
+      },
+      "t": 7.03,
+      "tcp_resets": [
+        {
+          "frame": 32,
+          "from": "10.30.0.1:50051"
+        }
+      ],
+      "transport": "cleartext"
+    },
+    {
+      "client": "10.30.0.10:52003",
+      "credential_keys": [],
+      "detected_by": "preface",
+      "duration_s": 0.0,
+      "first_frame": 36,
+      "flow": "10.30.0.10:52003 -> 10.30.0.1:57400",
+      "flow_control": {
+        "followed": true,
+        "stalls": []
+      },
+      "frames_by_type": {
+        "MAGIC": 1,
+        "SETTINGS": 1
+      },
+      "goaways": [],
+      "max_concurrent_streams_used": 0,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {},
+      "protocol": "http2",
+      "rpc_status": {},
+      "rpcs": 0,
+      "rst_streams": [],
+      "server": "10.30.0.1:57400",
+      "server_known_by": "syn",
+      "service": "tcp/57400",
+      "service_name": "gnmi (Nokia SR Linux, Cisco IOS XR)",
+      "services": [],
+      "settings": {
+        "client": {},
+        "server": {}
+      },
+      "t": 9.03,
+      "tcp_resets": [],
+      "transport": "cleartext"
+    },
+    {
+      "client": "10.30.0.10:52004",
+      "credential_keys": [],
+      "detected_by": "grpc port",
+      "duration_s": 0.1,
+      "first_frame": 40,
+      "flow": "10.30.0.10:52004 -> 10.30.0.1:50051",
+      "flow_control": {
+        "followed": false,
+        "stalls": []
+      },
+      "frames_by_type": {
+        "DATA": 1,
+        "HEADERS": 2
+      },
+      "goaways": [],
+      "max_concurrent_streams_used": 1,
+      "metadata_keys": [],
+      "oversize_frames": [],
+      "oversize_header_lists": [],
+      "pings": {},
+      "protocol": "http2",
+      "rpc_status": {
+        "OK": 1
+      },
+      "rpcs": 1,
+      "rst_streams": [],
+      "server": "10.30.0.1:50051",
+      "server_known_by": "port",
+      "service": "tcp/50051",
+      "service_name": "grpc (common default; Cisco NX-OS gNMI)",
+      "services": [
+        "gnmi.gNMI"
+      ],
+      "settings": {
+        "client": {},
+        "server": {}
+      },
+      "t": 10.1,
+      "tcp_resets": [],
+      "transport": "cleartext"
+    }
+  ],
+  "connections_omitted": 0,
+  "credentials": [],
+  "file": "testdata/fixtures/grpc_connection_trouble.pcap",
+  "issues": [
+    {
+      "code": "HTTP2_TOO_MANY_PINGS",
+      "frames": [
+        15
+      ],
+      "message": "10.30.0.10:52000 -> 10.30.0.1:50051 (tcp/50051): GOAWAY ENHANCE_YOUR_CALM 'too_many_pings' from the server: the client's keepalive is more frequent than the server allows (grpc-go servers refuse pings more often than every 5 minutes by default); raise the client's keepalive time or the server's keepalive enforcement policy",
+      "severity": "error"
+    },
+    {
+      "code": "TCP_RESET_DURING_RPC",
+      "frames": [
+        32
+      ],
+      "message": "10.30.0.10:52002 -> 10.30.0.1:50051 (tcp/50051): TCP reset from 10.30.0.1:50051 with 1 RPC(s) still open (/gnmi.gNMI/Subscribe): the client sees UNAVAILABLE",
+      "severity": "error"
+    },
+    {
+      "code": "HTTP2_PREFACE_UNANSWERED",
+      "frames": [
+        36
+      ],
+      "message": "10.30.0.10:52003 -> 10.30.0.1:57400 (tcp/57400): the client sent the HTTP/2 preface in cleartext and the server never answered with HTTP/2: the port may expect TLS (the client used an insecure channel), or it is not a gRPC server",
+      "severity": "error"
+    },
+    {
+      "code": "GRPC_CLEARTEXT",
+      "frames": [
+        4
+      ],
+      "message": "10.30.0.10:52000 -> 10.30.0.1:50051 (tcp/50051): grpc over cleartext HTTP/2 (h2c): every request, response and metadata value crosses the network readable",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_NO_STATUS",
+      "frames": [
+        23
+      ],
+      "message": "10.30.0.10:52001 -> 10.30.0.1:50051 (tcp/50051): /gnmi.gNMI/Get: no response from the server before the capture ended",
+      "method": "/gnmi.gNMI/Get",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_CLEARTEXT",
+      "frames": [
+        19
+      ],
+      "message": "10.30.0.10:52001 -> 10.30.0.1:50051 (tcp/50051): grpc over cleartext HTTP/2 (h2c): every request, response and metadata value crosses the network readable",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_GOAWAY",
+      "error": "NO_ERROR",
+      "frames": [
+        24
+      ],
+      "message": "10.30.0.10:52001 -> 10.30.0.1:50051 (tcp/50051): GOAWAY NO_ERROR from the server, last stream 1, debug data 'server shutting down': the server is closing the connection gracefully (shutdown, restart or max connection age); streams above the last stream id were not processed and may be retried; streams [3] were not processed",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_CLEARTEXT",
+      "frames": [
+        28
+      ],
+      "message": "10.30.0.10:52002 -> 10.30.0.1:50051 (tcp/50051): grpc over cleartext HTTP/2 (h2c): every request, response and metadata value crosses the network readable",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_CLEARTEXT",
+      "frames": [
+        40
+      ],
+      "message": "10.30.0.10:52004 -> 10.30.0.1:50051 (tcp/50051): http2 over cleartext HTTP/2 (h2c): every request, response and metadata value crosses the network readable",
+      "severity": "warning"
+    },
+    {
+      "code": "HTTP2_HPACK_DECODE_FAILED",
+      "frames": [
+        40,
+        41
+      ],
+      "message": "10.30.0.10:52004 -> 10.30.0.1:50051 (tcp/50051): 2 header block(s) could not be decoded (HPACK state missing: the capture started after the connection opened)",
+      "severity": "warning"
+    },
+    {
+      "code": "GRPC_NO_STATUS",
+      "frames": [
+        30
+      ],
+      "message": "10.30.0.10:52002 -> 10.30.0.1:50051 (tcp/50051): /gnmi.gNMI/Subscribe: a long-lived stream (STREAM) still open when the capture ended, 1 response message(s) so far (normal)",
+      "method": "/gnmi.gNMI/Subscribe",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "Wireshark needs the start of each HTTP/2 connection: HPACK headers are compressed against a table both sides build from the first request on, so a capture that begins mid-connection may show headers as undecodable and RPCs without a method.",
+    "Without a key log (or TLS secrets embedded in a pcapng), TLS-wrapped gRPC shows only the handshake: no method, status or metadata. In TLS 1.3 the certificate is encrypted too.",
+    "A session's secret is matched by its ClientHello random: a session whose ClientHello is not in the capture cannot be decrypted, whatever the key log holds.",
+    "Plaintext HTTP/2 is found by its preface on any port and assumed on the well-known gRPC ports; HTTP/2 that upgraded from HTTP/1.1 (Upgrade: h2c) on another port is not decoded.",
+    "Flow control is followed only when the connection's start was captured (the initial windows are in it).",
+    "A gRPC message over 4 MiB is flagged against the common default receive limit; the receiver's real limit is configuration and is not on the wire.",
+    "Message contents are decoded only for gNMI and gNOI system.Time (paths, encodings, modes, counts); values are never decoded. Other services show sizes and counts, or Wireshark's protobuf view with .proto files."
+  ],
+  "overall_status": "problem",
+  "rpcs": [
+    {
+      "authority": "10.30.0.1:50051",
+      "content_type": "application/grpc",
+      "decoded": {
+        "response": {
+          "serving_status": "SERVING"
+        }
+      },
+      "diagnosis": "/grpc.health.v1.Health/Check: OK: the service reports SERVING",
+      "family": "gRPC health",
+      "flow": "10.30.0.10:52000 -> 10.30.0.1:50051",
+      "frames": {
+        "first_response": 8,
+        "request": 7,
+        "trailers": 8
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": 0,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "OK",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [],
+      "method": "/grpc.health.v1.Health/Check",
+      "outcome": "ok",
+      "request": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 0,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 2,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 2,
+        "messages": 1
+      },
+      "rpc": "Check",
+      "service": "grpc.health.v1.Health",
+      "state_changing": false,
+      "stream_id": 1,
+      "t": 0.05,
+      "timing": {
+        "to_end_ms": 10.0,
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 8,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.30.0.1:50051",
+      "content_type": "application/grpc",
+      "decoded": {
+        "response": {
+          "gnmi_version": "0.10.0",
+          "model_names": [
+            "openconfig-interfaces 1.0.0",
+            "openconfig-system 1.0.0"
+          ],
+          "models": 2,
+          "supported_encodings": [
+            "JSON_IETF",
+            "PROTO",
+            "ASCII"
+          ]
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Capabilities: OK: gNMI 0.10.0, encodings JSON_IETF, PROTO, ASCII, 2 model(s)",
+      "family": "gNMI",
+      "flow": "10.30.0.10:52001 -> 10.30.0.1:50051",
+      "frames": {
+        "first_response": 22,
+        "request": 21,
+        "trailers": 22
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": 0,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "OK",
+      "grpc_timeout_s": 15.0,
+      "http_status": 200,
+      "metadata_keys": [],
+      "method": "/gnmi.gNMI/Capabilities",
+      "outcome": "ok",
+      "request": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 0,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 95,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 95,
+        "messages": 1
+      },
+      "rpc": "Capabilities",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 1,
+      "t": 5.04,
+      "timing": {
+        "to_end_ms": 10.0,
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 22,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.30.0.1:50051",
+      "content_type": "application/grpc",
+      "decoded": {
+        "request": {
+          "encoding": "JSON_IETF",
+          "encoding_field_present": true,
+          "paths": [
+            "/system"
+          ],
+          "type": "ALL"
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Get: no response from the server before the capture ended",
+      "family": "gNMI",
+      "flow": "10.30.0.10:52001 -> 10.30.0.1:50051",
+      "frames": {
+        "request": 23
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 15.0,
+      "http_status": null,
+      "metadata_keys": [],
+      "method": "/gnmi.gNMI/Get",
+      "outcome": "incomplete",
+      "request": {
+        "bytes": 14,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 14,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Get",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 3,
+      "t": 5.1,
+      "timing": {},
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 23,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": "10.30.0.1:50051",
+      "content_type": "application/grpc",
+      "decoded": {
+        "request": {
+          "encoding": "JSON",
+          "encoding_field_present": false,
+          "mode": "STREAM",
+          "subscription_count": 1,
+          "subscriptions": [
+            {
+              "mode": "TARGET_DEFINED",
+              "path": "/system"
+            }
+          ],
+          "updates_only": false
+        },
+        "response": {
+          "deletes": 0,
+          "messages": 1,
+          "notifications": 0,
+          "sync_response": true,
+          "updates": 0
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Subscribe: a long-lived stream (STREAM) still open when the capture ended, 1 response message(s) so far (normal)",
+      "family": "gNMI",
+      "flow": "10.30.0.10:52002 -> 10.30.0.1:50051",
+      "frames": {
+        "first_response": 31,
+        "request": 30
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": null,
+      "grpc_status_from_http": false,
+      "grpc_status_name": null,
+      "grpc_timeout_s": 600.0,
+      "http_status": 200,
+      "metadata_keys": [],
+      "method": "/gnmi.gNMI/Subscribe",
+      "outcome": "incomplete",
+      "request": {
+        "bytes": 18,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 18,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 2,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 2,
+        "messages": 1
+      },
+      "rpc": "Subscribe",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 1,
+      "t": 7.04,
+      "timing": {
+        "to_first_response_ms": 10.0
+      },
+      "trailers_only": false,
+      "user_agent": "synthetic-client/1.0 grpc-go/1.70.0",
+      "wireshark_protobuf": [
+        {
+          "direction": "request",
+          "fields": [],
+          "frame": 30,
+          "message_type": null
+        },
+        {
+          "direction": "response",
+          "fields": [],
+          "frame": 31,
+          "message_type": null
+        }
+      ]
+    },
+    {
+      "authority": null,
+      "content_type": null,
+      "decoded": {
+        "request": {
+          "encoding": "JSON_IETF",
+          "encoding_field_present": true,
+          "paths": [
+            "/system"
+          ],
+          "type": "ALL"
+        }
+      },
+      "diagnosis": "/gnmi.gNMI/Get: OK: succeeded; some headers could not be decoded (HPACK state missing: the capture started after the connection opened), so metadata and status may be incomplete",
+      "family": "gNMI",
+      "flow": "10.30.0.10:52004 -> 10.30.0.1:50051",
+      "frames": {
+        "first_response": 41,
+        "request": 40,
+        "trailers": 41
+      },
+      "grpc_encoding": null,
+      "grpc_message": null,
+      "grpc_status": 0,
+      "grpc_status_from_http": false,
+      "grpc_status_name": "OK",
+      "grpc_timeout_s": null,
+      "headers_decoded": false,
+      "http_status": null,
+      "metadata_keys": [],
+      "method": "/gnmi.gNMI/Get",
+      "outcome": "ok",
+      "request": {
+        "bytes": 14,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": 14,
+        "messages": 1
+      },
+      "reset": null,
+      "reset_after_end": false,
+      "response": {
+        "bytes": 0,
+        "compressed": 0,
+        "framing_lost": false,
+        "largest": null,
+        "messages": 0
+      },
+      "rpc": "Get",
+      "service": "gnmi.gNMI",
+      "state_changing": false,
+      "stream_id": 21,
+      "t": 10.1,
+      "timing": {
+        "to_end_ms": 100.0,
+        "to_first_response_ms": 100.0
+      },
+      "trailers_only": true,
+      "user_agent": null
+    }
+  ],
+  "rpcs_omitted": 0,
+  "schema": "sonic.grpc_report/1",
+  "status": "success",
+  "summary": {
+    "cleartext_credentials": 0,
+    "connections": 5,
+    "rpc_status": {
+      "OK": 3,
+      "incomplete": 2
+    },
+    "rpcs": 5
+  },
+  "timeline": [
+    {
+      "detail": "/grpc.health.v1.Health/Check OK",
+      "event": "rpc",
+      "frame": 7,
+      "protocol": "grpc",
+      "t": 0.05,
+      "time": "2026-01-01T00:00:00.050Z"
+    },
+    {
+      "detail": "10.30.0.10:52000 -> 10.30.0.1:50051 (tcp/50051): GOAWAY ENHANCE_YOUR_CALM 'too_many_pings' from the server: the client's keepalive is more frequent than the server allows (grpc-go servers refuse pings more often than every 5 minutes by default); raise the client's keepalive time or the server's keepalive enforcement policy",
+      "event": "goaway",
+      "frame": 15,
+      "protocol": "http2",
+      "t": 3.001,
+      "time": "2026-01-01T00:00:03.001Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Capabilities OK",
+      "event": "rpc",
+      "frame": 21,
+      "protocol": "grpc",
+      "t": 5.04,
+      "time": "2026-01-01T00:00:05.040Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Get incomplete",
+      "event": "rpc",
+      "frame": 23,
+      "protocol": "grpc",
+      "t": 5.1,
+      "time": "2026-01-01T00:00:05.100Z"
+    },
+    {
+      "detail": "10.30.0.10:52001 -> 10.30.0.1:50051 (tcp/50051): GOAWAY NO_ERROR from the server, last stream 1, debug data 'server shutting down': the server is closing the connection gracefully (shutdown, restart or max connection age); streams above the last stream id were not processed and may be retried; streams [3] were not processed",
+      "event": "goaway",
+      "frame": 24,
+      "protocol": "http2",
+      "t": 5.101,
+      "time": "2026-01-01T00:00:05.100Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Subscribe incomplete",
+      "event": "rpc",
+      "frame": 30,
+      "protocol": "grpc",
+      "t": 7.04,
+      "time": "2026-01-01T00:00:07.040Z"
+    },
+    {
+      "detail": "10.30.0.10:52002 -> 10.30.0.1:50051 (tcp/50051): TCP reset from 10.30.0.1:50051 with 1 RPC(s) still open (/gnmi.gNMI/Subscribe): the client sees UNAVAILABLE",
+      "event": "reset",
+      "frame": 32,
+      "protocol": "tcp",
+      "t": 8.0,
+      "time": "2026-01-01T00:00:08.000Z"
+    },
+    {
+      "detail": "/gnmi.gNMI/Get OK",
+      "event": "rpc",
+      "frame": 40,
+      "protocol": "grpc",
+      "t": 10.1,
+      "time": "2026-01-01T00:00:10.100Z"
+    }
+  ],
+  "timeline_omitted": 0,
+  "tls_decryption": {
+    "decrypted": 0,
+    "secrets_source": null,
+    "sessions": [],
+    "sessions_omitted": 0,
+    "total": 0,
+    "verdict": "No TLS session in this capture."
+  },
+  "verdict": "4 cleartext gRPC connection(s) (tcp/50051). 5 RPC(s): 3 OK, 2 incomplete."
+}

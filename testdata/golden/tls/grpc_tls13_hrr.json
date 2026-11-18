@@ -1,0 +1,88 @@
+{
+  "baseline": null,
+  "detector": "tls",
+  "events": [
+    {
+      "detail": "TLS 10.40.0.11:53100 -> 192.0.2.93:9339 SNI None: TLS1.3 TLS_AES_128_GCM_SHA256",
+      "event": "handshake",
+      "frame": 7,
+      "protocol": "tls",
+      "t": 0.09,
+      "time": "2026-01-01T00:00:00.090Z"
+    }
+  ],
+  "issues": [],
+  "limits": [
+    "Only the cleartext handshake is read. In TLS 1.3 everything after the ServerHello is encrypted: the certificate, the server's extensions and any later alert cannot be seen. In TLS 1.2 and older the certificate is visible and is read here.",
+    "Certificate trust (chain to a trusted root, revocation) is not judged; only what the certificate says.",
+    "In TLS 1.3 the server's ALPN choice travels in the encrypted EncryptedExtensions message, so server_chose.alpn is null and an ALPN baseline is checked only for TLS 1.2 and older.",
+    "With Encrypted Client Hello the visible SNI is the outer, public name, not the real server name.",
+    "A handshake split across segments is reassembled from the first bytes of each direction; one that starts before the capture, or whose segments were lost before the capture point, cannot be read.",
+    "QUIC, DTLS and STARTTLS are not decoded."
+  ],
+  "sessions": [
+    {
+      "alerts": [],
+      "baseline_pass": null,
+      "certificate": {
+        "reason": "TLS 1.3 encrypts the certificate; not visible",
+        "visible": false
+      },
+      "client": "10.40.0.11:53100",
+      "client_offered": {
+        "alpn": [
+          "h2"
+        ],
+        "cipher_suites": [
+          "TLS_AES_128_GCM_SHA256",
+          "TLS_AES_256_GCM_SHA384"
+        ],
+        "ech_offered": false,
+        "extensions": 4,
+        "groups": [
+          "secp256r1"
+        ],
+        "key_share_groups": [
+          "secp256r1"
+        ],
+        "legacy_version": "TLS1.2",
+        "sni": null,
+        "versions": [
+          "TLS1.3"
+        ]
+      },
+      "findings": [],
+      "first_t": 0.03,
+      "frames": {
+        "client_hello": 6,
+        "hello_retry_request": 5,
+        "server_hello": 7
+      },
+      "hello_retry_request": true,
+      "hints": [
+        {
+          "code": "TLS_NO_SNI",
+          "severity": "info",
+          "text": "the client sent no SNI name, so it most likely dialled the address 192.0.2.93; TLS 1.3 encrypts the certificate, so whether it carries that address as an IP SAN cannot be seen here"
+        }
+      ],
+      "server": "192.0.2.93:9339",
+      "server_chose": {
+        "alpn": null,
+        "cipher_suite": "TLS_AES_128_GCM_SHA256",
+        "hello_retry_request": false,
+        "key_share_group": "secp256r1",
+        "version": "TLS1.3"
+      },
+      "sni": null
+    }
+  ],
+  "sessions_omitted": 0,
+  "status": "ok",
+  "summary": {
+    "baseline_failures": 0,
+    "handshakes": 1,
+    "streams_dropped_at_cap": 0
+  },
+  "verdict": "1 TLS handshake(s): 1 TLS1.3."
+}

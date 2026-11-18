@@ -1,0 +1,41 @@
+{
+  "analysis": {
+    "bye_only_calls": 0,
+    "call_patterns": [
+      "\ud83d\udcde Callers tend to hang up more often than recipients",
+      "\ud83d\udcca Good capture coverage - multiple call events captured"
+    ],
+    "capture_analysis": {
+      "calls_ended_in_capture": 1,
+      "calls_spanning_capture_window": 0,
+      "calls_started_in_capture": 1
+    },
+    "complete_calls": 1,
+    "disconnect_codes": {
+      "BYE": 1
+    },
+    "error_terminations": 0,
+    "incomplete_calls": 0,
+    "initiator_hangups": 1,
+    "invite_only_calls": 0,
+    "normal_terminations": 1,
+    "recipient_hangups": 0,
+    "total_calls": 1
+  },
+  "sessions": {
+    "fixture-call-1@10.5.5.10": {
+      "bye_timestamp": "Unknown",
+      "call_direction": "outbound",
+      "call_id": "fixture-call-1@10.5.5.10",
+      "capture_context": "Complete call session captured",
+      "complete_session": true,
+      "disconnect_code": "BYE",
+      "disconnect_reason": "Normal call termination",
+      "hangup_pattern": "Initiator hung up",
+      "initiator_ip": "10.5.5.10",
+      "invite_timestamp": "Unknown",
+      "session_type": "complete",
+      "terminator_ip": "10.5.5.10"
+    }
+  }
+}

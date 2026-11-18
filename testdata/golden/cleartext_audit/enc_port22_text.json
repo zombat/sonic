@@ -1,0 +1,155 @@
+{
+  "allowed_by_rule": {},
+  "allowlist": [
+    "encrypted"
+  ],
+  "by_protocol": [
+    {
+      "bytes": 606,
+      "category": "cleartext",
+      "first_frame": 1,
+      "packets": 8,
+      "pairs": 2,
+      "protocol": "tcp/22"
+    }
+  ],
+  "cannot_show": [
+    "Only frames that crossed this capture point and that the capture kept are audited: a capture filter, a snap length or a full buffer can hide frames, and traffic on other links is not seen.",
+    "ESP payload is opaque: ESP with NULL encryption or a weak cipher passes, because the cipher is negotiated inside IKE (visible only in IKE_SA_INIT for the IKE SA, never for the child SA).",
+    "A non-first IP fragment carries no port: it follows its datagram's first fragment (same addresses and IP identification); when that first fragment is not in the capture it is reported as plain udp (fail-closed).",
+    "SSH and TLS are judged by their handshake: the TLS suite in the ServerHello, the SSH cipher from both KEXINITs. Without the handshake (a session that began before the capture) a NULL cipher looks like a real one, so such a session passes only as encrypted, unverified (a warning). A TLS session is recognised that way only when a segment begins at a record boundary, an SSH session only on tcp/22 or tcp/830 and only when its payload looks like ciphertext; anything else is reported as cleartext (fail-closed).",
+    "Encryption is judged by the cipher's name: key sizes, certificate trust and the strength of the key exchange are not (analyze_network_pcap's tls detector reads certificates and checks a baseline)."
+  ],
+  "capture": {
+    "backend": "tshark",
+    "bytes": 606,
+    "display_filter": null,
+    "duration_s": 0.09,
+    "end": "2026-01-01T00:00:00.090Z",
+    "max_packets": null,
+    "missing_tshark_fields": [],
+    "packets": 8,
+    "start": "2026-01-01T00:00:00.000Z",
+    "warnings": []
+  },
+  "clean": false,
+  "cleartext_frames": 8,
+  "encryption": {
+    "cleartext": 0,
+    "encrypted": 0,
+    "not_started": 0,
+    "sessions": 0,
+    "unverified": 0,
+    "weak": 0
+  },
+  "file": "testdata/fixtures/enc_port22_text.pcap",
+  "first_violation_frame": 1,
+  "frames_allowed": 0,
+  "frames_audited": 8,
+  "frames_outside_allowlist": 8,
+  "issues": [
+    {
+      "category": "cleartext",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "message": "4 tcp/22 frame(s) 10.80.0.10 -> 10.80.0.8 outside the allowlist (application or management traffic outside the tunnel)",
+      "protocol": "tcp/22",
+      "severity": "error"
+    },
+    {
+      "category": "cleartext",
+      "code": "CLEARTEXT_OUTSIDE_ALLOWLIST",
+      "frames": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "message": "4 tcp/22 frame(s) 10.80.0.8 -> 10.80.0.10 outside the allowlist (application or management traffic outside the tunnel)",
+      "protocol": "tcp/22",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "protection": {
+    "authenticated_only": 0,
+    "cleartext": 8,
+    "encrypted": 0,
+    "key_exchange": 0,
+    "layer2": 0
+  },
+  "protocols_present": [
+    "tcp"
+  ],
+  "result": "fail",
+  "status": "success",
+  "tcp_sessions": [
+    {
+      "category": "cleartext",
+      "client": "10.80.0.10:53200",
+      "first_frame": 1,
+      "packets": 8,
+      "protection": {
+        "cleartext": 8
+      },
+      "protocol": "tcp/22",
+      "server": "10.80.0.8:22",
+      "server_known_by": "syn",
+      "service": "tcp/22"
+    }
+  ],
+  "tcp_sessions_omitted": 0,
+  "verdict": "FAIL: 8 of 8 frames outside the allowlist (8 tcp/22); first at frame 1; 8 of them cleartext",
+  "violations": [
+    {
+      "bytes": 255,
+      "category": "cleartext",
+      "dst": "10.80.0.8",
+      "first_frame": 1,
+      "first_t": 0.0,
+      "frames": [
+        1,
+        3,
+        5,
+        7
+      ],
+      "hint": "application or management traffic outside the tunnel",
+      "last_frame": 7,
+      "last_t": 0.08,
+      "packets": 4,
+      "protection": {
+        "cleartext": 4
+      },
+      "protocol": "tcp/22",
+      "src": "10.80.0.10"
+    },
+    {
+      "bytes": 351,
+      "category": "cleartext",
+      "dst": "10.80.0.10",
+      "first_frame": 2,
+      "first_t": 0.01,
+      "frames": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "hint": "application or management traffic outside the tunnel",
+      "last_frame": 8,
+      "last_t": 0.09,
+      "packets": 4,
+      "protection": {
+        "cleartext": 4
+      },
+      "protocol": "tcp/22",
+      "src": "10.80.0.8"
+    }
+  ],
+  "violations_omitted": 0
+}

@@ -1,0 +1,174 @@
+{
+  "capture": {
+    "decode_as": [
+      "tcp.port==443,tls",
+      "tcp.port==50001,http2"
+    ],
+    "decode_as_reasons": {
+      "tcp/443": "tls_http",
+      "tcp/50001": "h2c"
+    },
+    "display_filter": null,
+    "end": "2026-01-01T00:00:03.050Z",
+    "http2_packets": 4,
+    "http_messages": 2,
+    "keylog_file_given": false,
+    "max_packets": null,
+    "start": "2026-01-01T00:00:00.000Z",
+    "tls_secrets": {
+      "key_log_file": false,
+      "pcapng_decryption_secrets_blocks": 0,
+      "sessions_in_key_log": 0,
+      "sessions_in_pcapng": 0,
+      "source": null
+    },
+    "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
+    "warnings": []
+  },
+  "connections": [
+    {
+      "alpn_offered": [],
+      "decrypted": null,
+      "flow": "10.70.0.10:41000 -> 10.70.0.1:50001",
+      "http_versions": [
+        "2"
+      ],
+      "requests": 1,
+      "restconf": false,
+      "service": "tcp/50001",
+      "service_name": null,
+      "sni": null,
+      "transport": "cleartext"
+    },
+    {
+      "alpn_offered": [
+        "h2",
+        "http/1.1"
+      ],
+      "decrypted": false,
+      "flow": "10.70.0.10:56001 -> 10.70.0.1:443",
+      "http_versions": [],
+      "requests": 0,
+      "restconf": null,
+      "service": "tcp/443",
+      "service_name": "https",
+      "sni": null,
+      "transport": "tls (no key log)"
+    }
+  ],
+  "credentials": [
+    {
+      "cleartext": true,
+      "flow": "10.70.0.10:41000 -> 10.70.0.1:50001",
+      "frames": [
+        37
+      ],
+      "header": "Authorization",
+      "kind": "authorization",
+      "requests": 1,
+      "scheme": null,
+      "service": "tcp/50001",
+      "value": "masked"
+    }
+  ],
+  "file": "testdata/fixtures/grpc_mgmt_mix.pcap",
+  "issues": [
+    {
+      "code": "CLEARTEXT_CREDENTIAL",
+      "frames": [
+        37,
+        37
+      ],
+      "header": "Authorization",
+      "message": "10.70.0.10:41000 -> 10.70.0.1:50001 (tcp/50001): Authorization sent in cleartext on POST /gnmi.gNMI/Capabilities (value masked): anyone on the path can read it; use TLS",
+      "severity": "error"
+    },
+    {
+      "code": "HTTP_TLS_NOT_DECRYPTED",
+      "frames": [
+        22
+      ],
+      "message": "10.70.0.10:56001 -> 10.70.0.1:443 (tcp/443): TLS with no key log, so the requests are encrypted; have the client write a key log (SSLKEYLOGFILE) and pass it to read them",
+      "severity": "info"
+    }
+  ],
+  "limits": [
+    "TLS-wrapped RESTCONF/REST without a key log (or TLS secrets embedded in a pcapng) shows only the handshake: no method, path, status or body. In TLS 1.3 the certificate is encrypted too.",
+    "A session's secret is matched by its ClientHello random: a session whose ClientHello is not in the capture cannot be decrypted, whatever the key log holds.",
+    "A capture that begins mid-connection may leave an HTTP/2 request without its method or path (HPACK state missing) or an HTTP/1.1 body unreassembled.",
+    "Only RESTCONF error documents are parsed from a body; a successful GET's configuration is never decoded (its Content-Type and size are reported).",
+    "Credential values are never shown: an Authorization scheme is kept, the credential is masked, and Cookie, token and CSRF headers are flagged by name only.",
+    "RESTCONF event-stream notifications (text/event-stream) are reported as a long-lived GET; their contents are not decoded."
+  ],
+  "overall_status": "problem",
+  "requests": [
+    {
+      "credentials": [
+        {
+          "header": "Authorization",
+          "kind": "authorization",
+          "scheme": null,
+          "value": "masked"
+        }
+      ],
+      "flow": "10.70.0.10:41000 -> 10.70.0.1:50001",
+      "frames": {
+        "request": 37,
+        "response": 37
+      },
+      "host": "10.70.0.1:50001",
+      "http_version": "2",
+      "location": null,
+      "method": "POST",
+      "outcome": "ok",
+      "path": "/gnmi.gNMI/Capabilities",
+      "phrase": null,
+      "request_body_bytes": 0,
+      "request_content_type": "application/grpc",
+      "response_body_bytes": 105,
+      "response_content_type": "application/grpc",
+      "restconf": false,
+      "restconf_errors": [],
+      "service": "tcp/50001",
+      "status": 200,
+      "stream_id": 1,
+      "t": 1767225603.04,
+      "timing_ms": 0.0,
+      "transport": "cleartext"
+    }
+  ],
+  "requests_omitted": 0,
+  "schema": "sonic.http_report/1",
+  "status": "success",
+  "summary": {
+    "cleartext_credentials": 1,
+    "connections": 2,
+    "requests": 1,
+    "restconf_errors": 0,
+    "restconf_requests": 0,
+    "status_counts": {
+      "200": 1
+    }
+  },
+  "tls_decryption": {
+    "decrypted": 0,
+    "secrets_source": null,
+    "sessions": [
+      {
+        "application_data": [],
+        "client_hello_frame": 22,
+        "decrypted": false,
+        "flow": "10.70.0.10:56001 -> 10.70.0.1:443",
+        "labels": [],
+        "reason": "no key log given, and the capture carries no TLS secrets",
+        "secret_in": [],
+        "service": "tcp/443",
+        "tcp_stream": 1
+      }
+    ],
+    "sessions_omitted": 0,
+    "total": 1,
+    "verdict": "0 of 1 TLS session(s) decrypted: no key log given, and the capture carries no secrets."
+  },
+  "verdict": "2 HTTP connection(s). 1 over TLS, 0 decrypted (no key log: give one to read the requests). 1 request(s). credentials in cleartext: Authorization (values masked)."
+}

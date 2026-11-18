@@ -9,9 +9,9 @@ table. For every v3 message it says whether it authenticated and decrypted, and 
 Deterministic (no LLM); no passphrase or community value is ever written out.
 
 ```bash
-python3 sonic.py --file snmp.pcap --snmp                               # versions, levels, communities
-python3 sonic.py --file snmp.pcap --snmp --snmp-users users.txt        # also decrypt SNMPv3
-python3 sonic.py --file snmp.pcap --snmp --snmp-users users.txt --json
+sonic --file snmp.pcap --snmp                               # versions, levels, communities
+sonic --file snmp.pcap --snmp --snmp-users users.txt        # also decrypt SNMPv3
+sonic --file snmp.pcap --snmp --snmp-users users.txt --json
 ```
 
 Over MCP the tool is `analyze_snmp_pcap` (`users_file` is a path on the server). The report goes
@@ -57,7 +57,7 @@ also scrubbed by value from the report, the CLI output and the saved files.
 
 ## 🔓 What TShark 3.6.2 can and cannot decrypt (measured)
 
-Measured against net-snmp 5.9.4 on real traffic (`tests/fixtures/generate_snmp_fixtures.py --v3`):
+Measured against net-snmp 5.9.4 on real traffic (`scripts/fixtures/generate_snmp_fixtures.py --v3`):
 
 | Auth | Priv | Decrypted by tshark 3.6.2 |
 |---|---|---|
@@ -112,11 +112,11 @@ engine_id, role, outcome, reason, report), `credentials[]` (cleartext communitie
 ## 🧪 Tests and fixtures
 
 ```bash
-python3 tests/fixtures/generate_snmp_fixtures.py --v3   # capture the v3 matrix (Docker, a few minutes)
-python3 -m unittest -q test_snmp
+python3 scripts/fixtures/generate_snmp_fixtures.py --v3   # capture the v3 matrix (Docker, a few minutes)
+go test -race ./internal/analyze/snmpinspect/...
 ```
 
-v1 and v2c are proven on a committed synthetic scapy fixture (`tests/fixtures/snmp_v1v2c.pcap`).
+v1 and v2c are proven on a committed synthetic scapy fixture (`testdata/fixtures/snmp_v1v2c.pcap`).
 SNMPv3 cannot be built by hand (USM localizes each key from the passphrase and the agent's engine
 id), so `generate_snmp_fixtures.py --v3` captures it from a real net-snmp: one container from a
 pinned image (`alpine@sha256:d9e853e8...`, alpine 3.20, net-snmp 5.9.4), unprivileged (tcpdump

@@ -1,0 +1,98 @@
+{
+  "detector": "conversations",
+  "events": [],
+  "issues": [],
+  "protocols": [
+    {
+      "bytes": 22462,
+      "packets": 60,
+      "protocol": "tcp/443",
+      "service": "https"
+    },
+    {
+      "bytes": 174,
+      "packets": 3,
+      "protocol": "tcp/8080",
+      "service": null
+    },
+    {
+      "bytes": 112,
+      "packets": 2,
+      "protocol": "tcp/25",
+      "service": "smtp"
+    },
+    {
+      "bytes": 70,
+      "packets": 1,
+      "protocol": "icmp",
+      "service": null
+    }
+  ],
+  "protocols_omitted": 0,
+  "status": "ok",
+  "top_conversations": [
+    {
+      "a": "10.6.6.60",
+      "a_to_b": {
+        "bytes": 2620,
+        "packets": 36
+      },
+      "b": "203.0.113.70",
+      "b_to_a": {
+        "bytes": 20128,
+        "packets": 29
+      },
+      "bytes": 22748,
+      "packets": 65,
+      "protocols": {
+        "tcp/25": 2,
+        "tcp/443": 60,
+        "tcp/8080": 3
+      }
+    },
+    {
+      "a": "10.6.6.1",
+      "a_to_b": {
+        "bytes": 70,
+        "packets": 1
+      },
+      "b": "10.6.6.60",
+      "b_to_a": {
+        "bytes": 0,
+        "packets": 0
+      },
+      "bytes": 70,
+      "packets": 1,
+      "protocols": {
+        "icmp": 1
+      }
+    }
+  ],
+  "top_conversations_omitted": 0,
+  "top_talkers": [
+    {
+      "address": "203.0.113.70",
+      "bytes_sent": 20128,
+      "packets_sent": 29
+    },
+    {
+      "address": "10.6.6.60",
+      "bytes_sent": 2620,
+      "packets_sent": 36
+    },
+    {
+      "address": "10.6.6.1",
+      "bytes_sent": 70,
+      "packets_sent": 1
+    }
+  ],
+  "top_talkers_omitted": 0,
+  "totals": {
+    "address_pairs": 2,
+    "bytes": 22818,
+    "duration_s": 15.06,
+    "hosts_sending": 3,
+    "packets": 66
+  },
+  "verdict": "66 packets, 22818 bytes over 15.06 s; 2 address pair(s); most bytes: tcp/443"
+}

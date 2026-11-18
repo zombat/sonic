@@ -1,0 +1,141 @@
+{
+  "captures": [
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:01.531Z",
+      "label": "lan",
+      "packets": 8,
+      "path": "testdata/fixtures/dp_corr_lan.pcap",
+      "start": "2026-01-01T00:00:00.000Z",
+      "unmatched_packets": 0,
+      "warnings": []
+    },
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:01.501Z",
+      "label": "wan1",
+      "packets": 4,
+      "path": "testdata/fixtures/dp_corr_wan1.pcap",
+      "start": "2026-01-01T00:00:00.001Z",
+      "unmatched_packets": 0,
+      "warnings": []
+    },
+    {
+      "backend": "tshark",
+      "clock_offset_s": 0.0,
+      "end": "2026-01-01T00:00:01.530Z",
+      "label": "wan2",
+      "packets": 4,
+      "path": "testdata/fixtures/dp_corr_wan2.pcap",
+      "start": "2026-01-01T00:00:00.030Z",
+      "unmatched_packets": 0,
+      "warnings": []
+    }
+  ],
+  "connections": [
+    {
+      "detail": "tcp 10.0.0.20:50000 -> 192.0.2.50:22: requests seen at lan, wan1, replies at lan, wan2: out through wan1, back through wan2",
+      "endpoints_by_capture": {
+        "lan": "tcp 10.0.0.20:50000 -> 192.0.2.50:22",
+        "wan1": "tcp 10.0.0.20:50000 -> 192.0.2.50:22"
+      },
+      "first_t": 0.0,
+      "flow": "tcp 10.0.0.20:50000 -> 192.0.2.50:22",
+      "frames": {
+        "lan": [
+          1
+        ],
+        "wan1": [
+          1
+        ]
+      },
+      "incomplete": [],
+      "link_local_or_multicast": false,
+      "reply": {
+        "seen_at": {
+          "lan": 4,
+          "wan2": 4
+        }
+      },
+      "request": {
+        "seen_at": {
+          "lan": 4,
+          "wan1": 4
+        }
+      },
+      "verdict": "asymmetric"
+    }
+  ],
+  "connections_omitted": 0,
+  "dscp_changes": [],
+  "issues": [
+    {
+      "code": "CORRELATE_ASYMMETRIC",
+      "frames": {
+        "lan": [
+          1
+        ],
+        "wan1": [
+          1
+        ]
+      },
+      "message": "tcp 10.0.0.20:50000 -> 192.0.2.50:22: requests seen at lan, wan1, replies at lan, wan2: out through wan1, back through wan2",
+      "severity": "warning"
+    }
+  ],
+  "limits": [
+    "Only packets that reached at least one capture point are known; a packet dropped before the first capture point is invisible.",
+    "Matching relies on fields NAT normally keeps (TCP sequence numbers, ESP SPI/sequence, payload hashes, IP identification). A device that randomizes TCP sequence numbers or rewrites payloads (an ALG) breaks matching for those flows.",
+    "Times between capture points include the difference between the capturing clocks; captures written by one host (for example the CML controller) share a clock.",
+    "A packet is held for matching for window_s seconds and at most max_packets_held packets are held; a packet that reaches the next capture point later than that, or after an early eviction, counts as unmatched.",
+    "seen_only_at is an observation, not a verdict on intent: a flow that never needed to cross the other capture points looks the same as one that was dropped."
+  ],
+  "matching": {
+    "evicted_early": 0,
+    "flows_dropped_at_cap": 0,
+    "max_packets_held": 200000,
+    "packets_matched": 8,
+    "window_s": 2.0
+  },
+  "nat": [],
+  "nat_omitted": 0,
+  "schema": "sonic.correlation_report/1",
+  "status": "success",
+  "summary": {
+    "by_verdict": {
+      "asymmetric": 1
+    },
+    "connections": 1,
+    "dscp_changes": 0,
+    "nat_translations": 0
+  },
+  "transit": [
+    {
+      "delta_ms": {
+        "max": 1.0,
+        "median": 1.0,
+        "min": 1.0
+      },
+      "from": "lan",
+      "note": "wan1 sees packets 1.0 ms after lan (median, both directions; includes any clock offset)",
+      "packets_matched": 4,
+      "to": "wan1",
+      "ttl_decrement": 1
+    },
+    {
+      "delta_ms": {
+        "max": -1.0,
+        "median": -1.0,
+        "min": -1.0
+      },
+      "from": "lan",
+      "note": "wan2 sees packets 1.0 ms before lan (median, both directions; includes any clock offset)",
+      "packets_matched": 4,
+      "to": "wan2",
+      "ttl_decrement": 1
+    }
+  ],
+  "verdict": "8 packet(s) matched across 3 captures; 1 asymmetric."
+}

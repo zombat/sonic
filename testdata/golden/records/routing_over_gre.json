@@ -1,0 +1,1090 @@
+{
+  "backend": "tshark",
+  "missing_fields": [],
+  "records": [
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.1"
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 1,
+      "t": 1767225600.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.2"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 2,
+      "t": 1767225600.3
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 40
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "10.0.0.2",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 1,
+          "hold": null,
+          "k": null,
+          "opcode": 1,
+          "seq": 1,
+          "tlvs": []
+        },
+        "proto": 88,
+        "src": "10.0.0.1"
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 3,
+      "t": 1767225600.5
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 40
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 68
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "10.0.0.1",
+        "eigrp": {
+          "ack": 1,
+          "as": 100,
+          "flags": 1,
+          "hold": null,
+          "k": null,
+          "opcode": 1,
+          "seq": 1,
+          "tlvs": []
+        },
+        "proto": 88,
+        "src": "10.0.0.2"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 4,
+      "t": 1767225600.6
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 40
+        },
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 0,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 8000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 68
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "10.0.0.1",
+        "proto": 6,
+        "src": "10.0.0.2",
+        "tcp": {
+          "dport": 179,
+          "flags": 2,
+          "len": 0,
+          "sport": 41001
+        }
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 5,
+      "t": 1767225601.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 40
+        },
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 8001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 7000,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 68
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "10.0.0.2",
+        "proto": 6,
+        "src": "10.0.0.1",
+        "tcp": {
+          "dport": 41001,
+          "flags": 18,
+          "len": 0,
+          "sport": 179
+        }
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 6,
+      "t": 1767225601.001
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 40
+        },
+        "mf": 0,
+        "off": 0,
+        "tcp": {
+          "ack": 7001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 8001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 68
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "10.0.0.1",
+        "proto": 6,
+        "src": "10.0.0.2",
+        "tcp": {
+          "dport": 179,
+          "flags": 16,
+          "len": 0,
+          "sport": 41001
+        }
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 82,
+      "n": 7,
+      "t": 1767225601.002
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 83
+        },
+        "mf": 0,
+        "off": 0,
+        "ph": "965898838a315f65",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde800b40a0000020e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 7001,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 8001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 111
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "bgp": [
+          {
+            "as4": 65000,
+            "bgp_id": "10.0.0.2",
+            "caps": [
+              1,
+              65
+            ],
+            "hold": 180,
+            "len": 43,
+            "major": null,
+            "minor": null,
+            "myas": 65000,
+            "type": 1
+          }
+        ],
+        "bgp_nlri": 0,
+        "bgp_withdrawn": 0,
+        "dst": "10.0.0.1",
+        "proto": 6,
+        "src": "10.0.0.2",
+        "tcp": {
+          "dport": 179,
+          "flags": 24,
+          "len": 43,
+          "sport": 41001
+        }
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 125,
+      "n": 8,
+      "t": 1767225601.01
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 83
+        },
+        "mf": 0,
+        "off": 0,
+        "ph": "e60c8ddd5ec0b7fd",
+        "pl": "ffffffffffffffffffffffffffffffff002b0104fde800b40a0000010e020c01040001000141040000fde8",
+        "tcp": {
+          "ack": 8044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 7001,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 111
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "bgp": [
+          {
+            "as4": 65000,
+            "bgp_id": "10.0.0.1",
+            "caps": [
+              1,
+              65
+            ],
+            "hold": 180,
+            "len": 43,
+            "major": null,
+            "minor": null,
+            "myas": 65000,
+            "type": 1
+          }
+        ],
+        "bgp_nlri": 0,
+        "bgp_withdrawn": 0,
+        "dst": "10.0.0.2",
+        "proto": 6,
+        "src": "10.0.0.1",
+        "tcp": {
+          "dport": 41001,
+          "flags": 24,
+          "len": 43,
+          "sport": 179
+        }
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 125,
+      "n": 9,
+      "t": 1767225601.012
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 59
+        },
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 7044,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 8044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 87
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "bgp": [
+          {
+            "as4": null,
+            "bgp_id": null,
+            "caps": null,
+            "hold": null,
+            "len": 19,
+            "major": null,
+            "minor": null,
+            "myas": null,
+            "type": 4
+          }
+        ],
+        "bgp_nlri": 0,
+        "bgp_withdrawn": 0,
+        "dst": "10.0.0.1",
+        "proto": 6,
+        "src": "10.0.0.2",
+        "tcp": {
+          "dport": 179,
+          "flags": 24,
+          "len": 19,
+          "sport": 41001
+        }
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 101,
+      "n": 10,
+      "t": 1767225601.02
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 59
+        },
+        "mf": 0,
+        "off": 0,
+        "ph": "eec6d8bcca50d11d",
+        "pl": "ffffffffffffffffffffffffffffffff001304",
+        "tcp": {
+          "ack": 8063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 7044,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 87
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "bgp": [
+          {
+            "as4": null,
+            "bgp_id": null,
+            "caps": null,
+            "hold": null,
+            "len": 19,
+            "major": null,
+            "minor": null,
+            "myas": null,
+            "type": 4
+          }
+        ],
+        "bgp_nlri": 0,
+        "bgp_withdrawn": 0,
+        "dst": "10.0.0.2",
+        "proto": 6,
+        "src": "10.0.0.1",
+        "tcp": {
+          "dport": 41001,
+          "flags": 24,
+          "len": 19,
+          "sport": 179
+        }
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 101,
+      "n": 11,
+      "t": 1767225601.022
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 88
+        },
+        "mf": 0,
+        "off": 0,
+        "ph": "74f739a5694ce960",
+        "pl": "ffffffffffffffffffffffffffffffff00300200000015400101004002004003040a00000140050400000064180a0101",
+        "tcp": {
+          "ack": 8063,
+          "hl": 20,
+          "mss": null,
+          "sack": false,
+          "seq": 7063,
+          "ts": false,
+          "win": 16384,
+          "ws": null
+        },
+        "tl": 116
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "bgp": [
+          {
+            "as4": null,
+            "bgp_id": null,
+            "caps": null,
+            "hold": null,
+            "len": 48,
+            "major": null,
+            "minor": null,
+            "myas": null,
+            "type": 2
+          }
+        ],
+        "bgp_nlri": 1,
+        "bgp_withdrawn": 0,
+        "dst": "10.0.0.2",
+        "proto": 6,
+        "src": "10.0.0.1",
+        "tcp": {
+          "dport": 41001,
+          "flags": 24,
+          "len": 48,
+          "sport": 179
+        }
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 130,
+      "n": 12,
+      "t": 1767225601.1
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.1"
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 13,
+      "t": 1767225605.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.2"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 14,
+      "t": 1767225605.3
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.1"
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 15,
+      "t": 1767225610.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.2"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 16,
+      "t": 1767225610.3
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.1"
+      },
+      "ip": {
+        "dst": "198.51.100.2",
+        "proto": 47,
+        "src": "192.0.2.1",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 17,
+      "t": 1767225615.0
+    },
+    {
+      "dp": {
+        "df": 0,
+        "dscp": 0,
+        "ecn": 0,
+        "hl": 20,
+        "id": 1,
+        "inner": {
+          "df": 0,
+          "dscp": 0,
+          "ecn": 0,
+          "id": 1,
+          "tl": 60
+        },
+        "mf": 0,
+        "off": 0,
+        "tl": 88
+      },
+      "gre": {
+        "key": 100,
+        "ptype": 2048
+      },
+      "inner": {
+        "dst": "224.0.0.10",
+        "eigrp": {
+          "ack": 0,
+          "as": 100,
+          "flags": 0,
+          "hold": 15,
+          "k": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "opcode": 5,
+          "seq": 0,
+          "tlvs": [
+            1,
+            4
+          ]
+        },
+        "proto": 88,
+        "src": "10.0.0.2"
+      },
+      "ip": {
+        "dst": "192.0.2.1",
+        "proto": 47,
+        "src": "198.51.100.2",
+        "ttl": 255,
+        "v": 4
+      },
+      "len": 102,
+      "n": 18,
+      "t": 1767225615.3
+    }
+  ],
+  "warnings": []
+}
