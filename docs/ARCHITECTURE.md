@@ -9,28 +9,28 @@ This page shows how the Go implementation of S.O.N.I.C. (`cmd/sonic`, `cmd/sonic
 ```mermaid
 flowchart TB
     subgraph Entry["Go Entry Points"]
-        CLI["cmd/sonic<br/>CLI Binary (--version, gate, diff, tui)"]
-        MCP["cmd/sonic-mcp<br/>MCP JSON-RPC over stdio (--version)"]
+        CLI["cmd/sonic: CLI Binary (--version, gate, diff, tui)"]
+        MCP["cmd/sonic-mcp: MCP JSON-RPC over stdio (--version)"]
     end
 
     subgraph Guide["Guidance and Registry"]
-        MCPSRV["internal/mcpserver<br/>21 tools, 5 prompts, 7 resources"]
-        GUIDE["internal/guide<br/>instructions, AST detector meta, --create-skill"]
+        MCPSRV["internal/mcpserver: 21 tools, 5 prompts, 7 resources"]
+        GUIDE["internal/guide: instructions, AST detector meta, --create-skill"]
     end
 
     subgraph AI["Direct-HTTP LLM Layer"]
-        ORCH["internal/ai<br/>ArtifactFactory + ResponseAdapters"]
-        LLM["internal/llm<br/>Provider / Completer over net/http<br/>ollama, anthropic, openai, azure"]
+        ORCH["internal/ai: ArtifactFactory + ResponseAdapters"]
+        LLM["internal/llm: Provider / Completer (ollama, anthropic, openai, azure)"]
     end
 
     subgraph Core["Extractors, CI Gate & 22 Analyzers"]
-        EXT["internal/extract<br/>SIP, network, dataplane, pcap_fastpath, http2,<br/>http_messages, tls_secrets, snmp, aaa, esp, auth_info"]
-        ANA["internal/analyze/*<br/>netorch, diff, 20 protocol/VPN/SIP packages"]
-        SEC["internal/wsconfig + internal/redact + internal/gate<br/>/dev/shm tmpfs keys, audit redaction, CI gate"]
+        EXT["internal/extract: SIP, network, dataplane, pcap_fastpath, http2, tls, snmp, aaa, esp"]
+        ANA["internal/analyze/*: netorch, diff, 20 protocol/VPN/SIP packages"]
+        SEC["internal/wsconfig + redact + gate: /dev/shm tmpfs keys, audit redaction, CI gate"]
     end
 
     subgraph Report["Reporting, TUI and Process Safety"]
-        REP["internal/report + internal/tui<br/>Markdown, HTML5, JSON, TUI, stdio fd guard"]
+        REP["internal/report + internal/tui: Markdown, HTML5, JSON, TUI, stdio fd guard"]
         TSH[("tshark")]
     end
 

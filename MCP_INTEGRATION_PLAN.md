@@ -776,22 +776,22 @@ The server will start and wait for MCP client connections.
 
 ```mermaid
 graph TB
-    CLI["sonic.py<br/>(CLI Interface)"]
-    MCP["mcp_server.py<br/>(MCP/Claude Desktop)"]
+    CLI["cmd/sonic (CLI Interface)"]
+    MCP["cmd/sonic-mcp (MCP stdio Server)"]
     
-    CLI --> ORCH["orchestrator.py<br/>(Workflow Layer)"]
+    CLI --> ORCH["internal/ai (Workflow Layer)"]
     MCP --> ORCH
     
-    ORCH --> AI["ai/analysis.py<br/>(LLM Analysis)<br/>📡 Streaming"]
-    ORCH --> QC["call_quality_scoring.py<br/>(Quality Metrics)"]
-    ORCH --> MOS["rtp_mos_analysis.py<br/>(MOS Analysis)"]
+    ORCH --> AI["LLM Analysis (Streaming SSE/NDJSON)"]
+    ORCH --> QC["Quality Metrics"]
+    ORCH --> MOS["MOS Analysis"]
     
-    AI --> LLM["llm_config.py<br/>(Provider Abstraction)"]
+    AI --> LLM["internal/llm (Direct HTTP)"]
     
-    LLM --> OLLAMA["Ollama<br/>(Local)"]
-    LLM --> CLAUDE["Anthropic<br/>(Claude)"]
-    LLM --> GPT["OpenAI<br/>(GPT)"]
-    LLM --> AZURE["Azure<br/>(OpenAI)"]
+    LLM --> OLLAMA["Ollama (Local)"]
+    LLM --> CLAUDE["Anthropic (Claude)"]
+    LLM --> GPT["OpenAI (GPT)"]
+    LLM --> AZURE["Azure (OpenAI)"]
     
     style CLI fill:#4A90E2
     style MCP fill:#4A90E2

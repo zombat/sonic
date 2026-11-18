@@ -4,11 +4,12 @@
 [![Go 1.27+](https://img.shields.io/badge/go-1.27+-00ADD8.svg)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a dependency-free Go packet capture inspection engine and 21-tool MCP server (`sonic` and `sonic-mcp`). Originally built for AI-assisted VoIP/SIP/RTP call quality and MOS troubleshooting, it provides deterministic (`No LLM`) inspection of IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes (including a pure-Go `go-fast` L2-L4 path), gRPC/gNMI/gNOI, zero-cleartext audits, CI policy gates (`sonic gate`), baseline diffing (`sonic diff`), multi-capture correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), alongside offline HTML reports, an ANSI TUI, and optional local or cloud LLM VoIP diagnostics. (Anyone needing the retired Python runtime or pure-Python `scapy` fallback can use the pinned `v3.3.0` release tag.)
+**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a deterministic Go packet-capture intelligence platform and 21-tool MCP server (`sonic` and `sonic-mcp`) with zero external Go dependencies and optional LLM interpretation. Originally built for VoIP/SIP/RTP call quality and MOS analysis, it now inspects IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes (including a pure-Go `go-fast` L2-L4 path), gRPC/gNMI/gNOI, zero-cleartext audits, CI/CD policy gates (`sonic gate`), baseline diffing (`sonic diff`), multi-capture and cross-layer media-underlay correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), plus offline HTML5 reports, an interactive ANSI TUI, and optional local or cloud LLM VoIP diagnostics. (Anyone needing the retired Python runtime or pure-Python `scapy` fallback can use the pinned `v3.3.0` release tag.)
 
 ### Quick Navigation
-- [Prerequisites & Go Build](#-prerequisites)
+- [Prerequisites, Go Build & `v3.3.0` -> `v4.0.0` Upgrade](#-prerequisites)
 - [Quick Start (CLI Examples)](#-quick-start)
+- [Sample Diagnostic Report (`TEST_CAPTURE.md`)](TEST_CAPTURE.md)
 - [Network and VPN Detectors](#-network-and-vpn-detectors)
 - [gRPC Troubleshooting](#-grpc-troubleshooting-gnmi-gnoi-any-grpc-service)
 - [Decryption with Your Own Keys](#-decryption-with-your-own-keys)
@@ -18,57 +19,41 @@
 - [Go vs Python Performance](#-go-vs-python-performance) ([benchmark.md](benchmark.md))
 - [Testing & Development Setup](#-testing)
 
-## 📖 Background: From Manual to AI-Powered
+## 📖 Background: From VoIP Script to Deterministic Capture Intelligence
 
-**S.O.N.I.C. started as a personal tool to automate what I was already doing by hand.**
+**S.O.N.I.C. started as a personal tool to automate what I was already doing by hand, and grew into a full control-plane, underlay, and media diagnostic engine.**
 
-As a VoIP engineer, I spent years manually analyzing packet captures: importing pcaps into Wireshark, drilling through SIP dialogs, correlating RTP streams, checking codec payloads, inspecting authentication headers, and writing detailed findings. It was repetitive, thorough, but time-consuming.
-
-What began in 2019 as a simple shell script to automate my manual troubleshooting grew into a sophisticated, multi-stage evolution of my personal workflow. By 2023, I had migrated that logic into Python, codifying every heuristic and analysis step I’d perfected over the years. While this version was excellent at systematic detection, it hit a ceiling: it could identify what was wrong, but it lacked the human-like nuance to explain why.
-
-To bridge that gap, I launched a 2025 weekend project integrating Claude (LLM) to analyze the structured data. Instead of me manually interpreting the results, the AI began processing SIP flows, RTP metrics, and codec negotiations to generate natural-language diagnostics. That successful weekend proof-of-concept quickly scaled through Phase 2 and Phase 3, transforming a personal script into a full-scale production tool.
+As a VoIP engineer, I spent years manually analyzing packet captures in Wireshark: drilling through SIP dialogs, correlating RTP streams, checking codec payloads, inspecting authentication headers, and tracking down why a WAN failover clipped media. What began in 2019 as shell scripts and evolved in 2023 into Python encoded deterministic protocol heuristics. In 2025 I added LLM synthesis to turn structured metrics into natural-language VoIP diagnostics, and in 2026 ported and expanded the entire engine into static, zero-dependency Go binaries covering routing, VPN overlays, data-plane health, gRPC/gNMI, CI policy gates, baseline diffing, and cross-layer correlation.
 
 **Today, S.O.N.I.C. provides:**
-- Native dependency-free Go CLI (`sonic`) and MCP stdio server (`sonic-mcp`) binaries built with `CGO_ENABLED=0` for Linux, macOS, and Windows (direct HTTP LLM clients, `tshark` only at runtime)
-- Deterministic network, VPN, routing, data-plane, gRPC/gNMI, RESTCONF, SNMPv3, AAA, ESP decryption, and SIP/RTP quality scoring alongside optional LLM diagnosis
-- Secret-redacting credential handling (`SONIC_ENV_FILE`, `--env-file`, `/dev/shm` tmpfs Wireshark dirs)
+- **Deterministic packet-capture intelligence first**: 22 analyzer packages covering IPsec/IKE, GRE/DMVPN, BGP/OSPF/EIGRP, convergence timing, PMTUD/TCP/TLS/QoS, zero-cleartext audits, gRPC/gNMI, RESTCONF/SNMPv3/AAA/ESP decryption, baseline diffing (`sonic diff`), and CI gates (`sonic gate`) with SARIF/JUnit output, requiring zero LLMs or cloud calls
+- **Native Go binaries & 21-tool MCP runtime**: static `sonic` CLI and `sonic-mcp` stdio server (`CGO_ENABLED=0`) for Linux, macOS, and Windows (`tshark` only at runtime, plus pure-Go `go-fast` L2-L4 decoding), alongside `--create-skill` agent integration
+- **Secret hygiene by construction**: `SONIC_ENV_FILE`, `--env-file`, ephemeral `/dev/shm` tmpfs `WIRESHARK_CONFIG_DIR`, verifiable `--redact-audit` counts, redacting secret structs, and ANSI-sanitized TUI / XSS-safe HTML5 outputs
 
-This isn't a generic SIP parser. It's the systematic approach I developed through years of hands-on VoIP troubleshooting, now executable at scale.
+See [TEST_CAPTURE.md](TEST_CAPTURE.md) for a multi-scenario sanitized report showing cross-layer media clipping linked to WAN/IKEv2/BGP failover, DMVPN/PMTUD diagnosis, NAT traversal, and `sonic gate` enforcement.
 
 ## 🚀 Key Features
 
-### 🤖 AI-Powered Analysis
-- **Dual AI Models**: Fast structured analysis + detailed natural language insights
-- **Codec-Aware Diagnostics**: Comprehensive knowledge of G.711, G.729, Opus, and iLBC codecs
-- **Intelligent Issue Detection**: Automatic identification of call quality problems
-
-### 🎵 Comprehensive Media Analysis
-- **SIP-RTP Correlation**: Correlates SIP INVITE SDP payloads with actual RTP streams
-- **Media Quality Metrics**: Packet loss, jitter, sequence gap analysis
-- **Codec Quality Assessment**: Bandwidth usage, quality profiles, and compatibility checks
-
-### 📊 Advanced Diagnostics
-- **Multi-Format Support**: `pcap` and `pcapng` capture inspection powered by `tshark`
-- **Real-Time Quality Assessment**: Industry-standard thresholds for call quality
-- **Visual Indicators**: Rich console output and Markdown reports
-
-### 🔧 Robust Architecture
-- **Streaming Dissection**: `tshark` (Wireshark CLI) for memory-bounded TSV, PDML, and JSON extraction
-- **Zero External Go Dependencies**: Direct `net/http` SSE/NDJSON LLM clients (`internal/llm`) and typed schemas (`internal/model`, `internal/ai`) with zero SDK bloat
-- **Error Recovery**: Multi-strategy LLM JSON recovery (`ArtifactFactory`) and protocol-level diagnostics
-
-### 🛰️ Network and VPN Detectors (No LLM)
+### 🛰️ Network, VPN & Control-Plane Diagnostics (No LLM)
 - **Zero-cleartext audit**: every frame of a transport link against an allowlist, pass or fail, so one leaked GRE, BGP, OSPF or ICMP packet fails a runbook gate
 - **IPsec / VPN**: IKEv1 and IKEv2 outcomes, IKEv2 proposals offered and chosen, DH group retries, NAT detection checked against the wire, DPD liveness, a diagnosis per SA, NOTIFY errors, rekeys, stale ESP SPIs, NAT-T, and an encrypted or cleartext verdict per peer pair
 - **GRE / DMVPN**: GRE keys and tunnels, NHRP registrations, resolutions, redirects and error indications, hub and spoke roles, and the DMVPN Phase 3 sequence proven step by step (or the encrypted shortcut evidence when NHRP is inside ESP)
-- **Routing health**: BGP (OPEN capabilities, keepalive cadence, UPDATE timing, MSS clamping, why a session went down), OSPF (mismatches, stuck EXSTART/EXCHANGE) and EIGRP adjacency checks, and a failover timeline
-- **Convergence**: from an event time or the first failure sign, the delay to detection, the first UPDATE on the surviving path and traffic resuming, and whether DPD or the BGP hold timer drove it
-- **Reachability**: ICMP echo loss, RTT and outage windows, ICMP errors, ARP without replies, top talkers
-- **Data plane**: path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP and RTP quality
-- **Several captures at once**: follow packets through NAT and across links (translations, drops, asymmetric paths), and one merged event timeline with failover timing against thresholds
-- **gRPC, gNMI and gNOI troubleshooting**: every RPC with its grpc-status and message, HTTP/2 resets, GOAWAY and flow-control stalls, TLS certificate and alert problems, gNMI encodings and Subscribe modes, and credentials sent in cleartext metadata (by key, never the value), with Wireshark's own dissectors
-- **Decryption with your own keys**: RESTCONF and REST over TLS (HTTP/1.1 and HTTP/2) with a TLS key log, SNMPv3 with a USM users file (and every SNMP version named), TACACS+ and RADIUS with the shared key, IPsec ESP from SA keys with the existing detectors run over the inner traffic. Every key file is read by path and never echoed
-- See the Network and VPN Detectors, gRPC Troubleshooting and Decryption sections below
+- **Routing health & convergence**: BGP (OPEN capabilities, keepalive cadence, UPDATE timing, MSS clamping, why a session went down), OSPF (mismatches, stuck EXSTART/EXCHANGE), EIGRP adjacency checks, and failover timing driven by DPD or BGP hold timers
+- **Data plane & reachability**: pure-Go `go-fast` or `tshark` inspection of path MTU and fragmentation, ESP overhead, TCP health per connection, TLS handshakes against a baseline, DSCP/RTP QoS, ICMP loss/RTT outages, ARP gaps, and top talkers
+- **gRPC, gNMI & gNOI + Multi-Capture Correlation**: every RPC `grpc-status`, HTTP/2 resets/GOAWAY, TLS certs, gNMI encodings, packet correlation across NAT/links, and merged failover timelines
+
+### 🔐 Decryption with Your Own Keys & CI/CD Gates
+- **Key-backed decryption (zero CLI exposure)**: RESTCONF/HTTP TLS key logs, SNMPv3 USM users files, TACACS+/RADIUS shared secrets, and IPsec ESP SA tables kept in `/dev/shm` tmpfs dirs and never echoed in reports or MCP responses
+- **CI/CD policy gates & baseline diffs**: `sonic gate` enforces `zero-cleartext`, `no-weak-crypto`, `mos-min`, `max-clipping-ms`, and `no-critical-issues` with SARIF v2.1.0, JUnit XML, exit codes `0`/`3`, and `sonic diff` before/after comparison
+
+### 🎵 Cross-Layer VoIP, SIP & Optional AI Interpretation
+- **Cross-layer media correlation**: `--correlate-media` links SIP/RTP call degradation, post-`200 OK` clipping, and RFC 4733 DTMF issues directly to co-occurring IPsec, DMVPN, routing, PMTUD, or TCP underlay faults
+- **SIP-RTP Quality & MOS**: Early/Delayed offer detection, dynamic SDP RTP decoding, packet loss, jitter, G.711/G.729/Opus/iLBC assessment, and SIP Digest auth grading
+- **Optional LLM synthesis**: direct `net/http` streaming SSE/NDJSON clients (`internal/llm` + `ArtifactFactory` in `internal/ai`) over Ollama, Anthropic, OpenAI, or Azure with schema recovery and zero SDK bloat
+
+### 🔧 Engineered for Determinism
+- **Typed end-to-end**: pointer/presence fields, `iota` enums, and golden-snapshot parity verification (`testdata/golden/`) instead of untyped dicts or heuristics
+- **Multi-format reporting**: Markdown, console tables, offline zero-URL HTML5 reports (`--html`), interactive ANSI TUI (`sonic tui`), JSON with `--redact-audit`, and rootless Alpine containers (`make container`)
 
 ## 📋 Prerequisites
 
@@ -122,6 +107,11 @@ make install
 # Cross-compile release archives (.tar.gz / .zip) + SHA256SUMS for all 6 platforms
 make release
 ```
+
+### Upgrading from `v3.3.0` to `v4.0.0`
+
+* **`v3.3.0`** was the final dual-runtime baseline with full 1:1 Go and Python parity.
+* **`v4.0.0`** switches S.O.N.I.C. exclusively to the compiled Go binaries (`sonic` and `sonic-mcp`), removing Python runtime dependencies (`dspy`, `fastmcp`, `scapy`, `pydantic`). Replace `python3 sonic.py ...` with `sonic ...` and `python3 mcp_server.py` with `sonic-mcp`; if an air-gapped environment lacks `tshark`, check out tag `v3.3.0`.
 
 ### AI Backend (Ollama - Recommended)
 ```bash
@@ -585,8 +575,8 @@ flowchart LR
         O3["gRPC, RESTCONF, SNMP, AAA, ESP"]
     end
     ORCH --> EX["internal/extract & /dev/shm wsconfig"]
-    O1 -. optional .-> AI["Direct HTTP (internal/llm)<br/>ollama, anthropic, openai, azure"]
-    ORCH --> RP["internal/report & internal/redact<br/>Markdown, JSON, console"]
+    O1 -. optional .-> AI["Direct HTTP (internal/llm): ollama, anthropic, openai, azure"]
+    ORCH --> RP["internal/report & internal/redact: Markdown, HTML5, JSON, TUI"]
     EX --> TS[("tshark")]
 ```
 

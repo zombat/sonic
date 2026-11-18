@@ -6,12 +6,12 @@ S.O.N.I.C. now includes comprehensive SIP authentication analysis, automatically
 
 ## Automatic Activation
 
-Authentication analysis is **automatic** and runs with every analysis:
+Authentication analysis is **automatic** and runs with every SIP analysis:
 
 ```bash
-python3 sonic.py --file capture.pcap        # Auto-includes auth analysis
-python3 sonic.py --file capture.pcap -q    # Quality-only mode (no LLM)
-python3 sonic.py --file capture.pcap -m    # MCP server mode (includes auth)
+sonic --file capture.pcap                    # Auto-includes auth analysis
+sonic --file capture.pcap --quality-only     # Quality + auth mode (no LLM)
+sonic-mcp                                    # MCP stdio server (includes auth tools)
 ```
 
 No additional flags or configuration needed.
@@ -194,67 +194,16 @@ Authentication findings are **automatically integrated** with:
 - 🔒 No cleartext credential logging
 - 🔒 RFC-compliant parameter handling
 
-## For Developers
+## For Developers (`v4.0.0` Go Architecture)
 
-### Access Auth Data Programmatically
+### Package Mapping (`internal/`)
 
-```python
-from analyzers.orchestrator import run_analysis_mode
-result = run_analysis_mode("capture.pcap", "combined")
-auth_data = result.get("auth_data", {})
-
-# Access components
-challenges = auth_data.get("auth_challenges", [])
-responses = auth_data.get("auth_responses", [])
-register_attempts = auth_data.get("register_attempts", [])
-anomalies = auth_data.get("auth_anomalies", [])
-```
-
-### Parse Headers Directly
-
-```python
-from extractors.auth_info import (
-    parse_authentication_header,
-    parse_authorization_header
-)
-
-# Parse a WWW-Authenticate header
-header = 'Digest realm="example.com", nonce="abc123", algorithm=SHA-256, qop="auth"'
-params = parse_authentication_header(header)
-print(params['realm'])  # "example.com"
-print(params['algorithm'])  # "SHA-256"
-
-# Parse an Authorization header
-auth = 'Digest username="user1", realm="example.com", response="xyz789", nc=00000001'
-creds = parse_authorization_header(auth)
-print(creds['username'])  # "user1"
-print(creds['nc'])  # "00000001"
-```
-
-### Import AuthenticationMetrics
-
-```python
-from models.schemas import AuthenticationMetrics
-
-metrics = AuthenticationMetrics(
-    total_challenges=5,
-    unique_realms=["pbx.example.com"],
-    weak_algorithms=["MD5"],
-    authentication_anomalies=[
-        "Weak authentication algorithm (MD5) detected"
-    ]
-)
-
-# Serialize to JSON
-json_data = metrics.model_dump_json()
-```
-
-## Legacy Phase 1 Files (`v3.3.0`, Superseded by Go `internal/` in `v4.0.0`)
-
-- `extractors/tshark.py` - Auth header extraction (now in `internal/tshark/`)
-- `extractors/auth_info.py` - Digest auth parsing (now in `internal/extract/`)
-- `models/schemas.py` - AuthenticationMetrics schema (now in `internal/model/`)
-- `analyzers/orchestrator.py` - Pipeline integration (now in `internal/analyze/sip/` and `internal/ai/`)
+- `internal/tshark/` - Streaming `-T fields` and `-T ek` (`NDJSON`) extraction over `tshark`
+- `internal/extract/sip.go`, `internal/extract/sip_sdp.go` - Masked SIP Digest header & SDP `rtpmap`/crypto extraction (`SIPCredentialMask`)
+- `internal/redact/` - Known-secret and shape scrubbing with verifiable `AuditCounts` (`--redact-audit`)
+- `internal/model/` - Strongly typed packet, auth challenge/response, and report structs
+- `internal/analyze/sip/` - Auth grading, quality scoring, post-`200 OK` clipping, RFC 4733 DTMF, and MOS analysis
+- `internal/ai/` - Pipeline integration and structured artifact recovery
 
 ## Implementation Documentation
 

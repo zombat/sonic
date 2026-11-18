@@ -10,7 +10,7 @@ The key to these integrations is the Model Context Protocol (MCP) server built i
 
 **MCP Server (`sonic-mcp`)**: S.O.N.I.C. exposes a dependency-free MCP server over stdio JSON-RPC (`build/sonic-mcp` via `make build`, or `go install github.com/zombat/sonic/cmd/sonic-mcp@latest`).
 
-**Agentic Orchestration**: Because it acts as an MCP tool, platforms like NetClaw (or its open-source equivalent, OpenClaw) can register S.O.N.I.C. as a tool. When your network automation agents need to analyze a pcap file or troubleshoot a SIP trunk, they can natively call any of S.O.N.I.C.'s 18 MCP tools (`analyze_pcap`, `quick_quality_check`, `analyze_network_pcap`, `analyze_grpc_pcap`, `analyze_esp_pcap`, and more).
+**Agentic Orchestration**: Because it acts as an MCP tool, platforms like NetClaw (or its open-source equivalent, OpenClaw) can register S.O.N.I.C. as a deterministic packet-capture intelligence backend. When your network or voice automation agents need to inspect a capture, run a CI cleartext/policy gate, diff baseline captures, or troubleshoot a WAN/VoIP incident, they can natively call any of S.O.N.I.C.'s 21 MCP tools (`analyze_network_pcap`, `diagnose_media_underlay`, `evaluate_capture_gate`, `diff_pcaps`, `analyze_grpc_pcap`, `analyze_esp_pcap`, `analyze_pcap`, and more).
 
 **Multiple LLM Providers**: S.O.N.I.C. doesn't lock you into one ecosystem. You can use local Ollama (for air-gapped or secure environments where you don't want SIP auth headers leaving your network), Anthropic, OpenAI, or Azure via direct HTTP clients (`internal/llm`).
 
@@ -68,17 +68,20 @@ NetClaw uses role-based agents. Create or update a Voice Engineering Agent and g
 
 ```yaml
 agent:
-  name: VoIP_Triage_Bot
-  role: Senior Voice Network Engineer
+  name: Packet_Capture_Triage_Bot
+  role: Senior Network and VoIP Incident Engineer
   system_prompt: |
-    You are a specialized VoIP network engineer. Your primary responsibility is to analyze
-    SIP and RTP traffic to diagnose call quality issues, dropped calls, and authentication
-    failures. When a user provides a pcap file, ALWAYS use the `analyze_pcap` tool to
-    process it before providing your final diagnostic summary.
+    You are a specialized network and VoIP troubleshooting engineer. When a user provides
+    one or more capture files, use S.O.N.I.C. deterministic tools (`diagnose_media_underlay`,
+    `analyze_network_pcap`, `evaluate_capture_gate`, `diff_pcaps`, `analyze_pcap`) before
+    writing a root-cause summary.
   tools_granted:
+    - sonic_voip_analyzer.diagnose_media_underlay
+    - sonic_voip_analyzer.analyze_network_pcap
+    - sonic_voip_analyzer.evaluate_capture_gate
+    - sonic_voip_analyzer.diff_pcaps
     - sonic_voip_analyzer.analyze_pcap
     - sonic_voip_analyzer.quick_quality_check
-    - sonic_voip_analyzer.analyze_batch_pcaps
 ```
 
 ### Step 4: Execute the Workflow
@@ -122,16 +125,16 @@ An MCP client gets the same guidance without a skill: the server sends instructi
 
 ---
 
-## Available MCP Tools (18)
+## Available MCP Tools (21)
 
 | Tool | LLM Required? | Description |
 |------|---------------|-------------|
 | `analyze_pcap` | Yes | Full analysis: SIP + quality + MOS + LLM diagnostics |
-| `quick_quality_check` | No | Quality/MOS metrics only (fastest, no LLM) |
+| `quick_quality_check` | No | Quality/MOS metrics, post-`200 OK` clipping, and RFC 4733 DTMF (fastest, no LLM) |
 | `list_llm_providers` | No | Returns available providers, models, and configured key status |
 | `analyze_batch_pcaps` | Yes | Processes all `*.pcap*` files in a directory |
 | `analyze_pcap_partial_streaming` | Yes | Quality first, then LLM diagnosis with stage timings |
-| `analyze_network_pcap` | No | Any capture: protocols present plus network detectors |
+| `analyze_network_pcap` | No | Any capture: protocols present, detectors, optional `fast_path` / `since` / `until` |
 | `analyze_vpn_pcap` | No | Encrypted or cleartext between VPN peers, IKE outcomes, DMVPN registrations |
 | `analyze_routing_pcap` | No | BGP/OSPF/EIGRP adjacency health, failover timeline, ping outages |
 | `audit_cleartext_pcap` | No | Pass/fail cleartext gate over a capture against an allowlist |
@@ -139,6 +142,9 @@ An MCP client gets the same guidance without a skill: the server sends instructi
 | `analyze_data_plane_pcap` | No | Path MTU, ESP overhead, TCP health, TLS handshakes, and QoS |
 | `correlate_pcaps` | No | Follows matching packets across two or more captures |
 | `merge_pcap_timelines` | No | Merges multi-point captures into one event timeline |
+| `diagnose_media_underlay` | No | Cross-layer correlation linking SIP/RTP clipping and MOS to WAN/VPN/routing faults |
+| `diff_pcaps` | No | Baseline-vs-target capture delta across TLS, MSS, QoS, SIP MOS, and issues |
+| `evaluate_capture_gate` | No | CI policy evaluator (`zero-cleartext`, `no-weak-crypto`, `mos-min`, `max-clipping-ms`, `no-critical-issues`) |
 | `analyze_grpc_pcap` | No | gRPC/gNMI/gNOI inspection, HTTP/2 trouble, TLS, masked metadata creds |
 | `analyze_restconf_pcap` | No | RESTCONF/REST over HTTP/1.1 & HTTP/2, `ietf-restconf:errors`, masked creds |
 | `analyze_snmp_pcap` | No | SNMP v1/v2c/v3 identification and USM authPriv decryption |

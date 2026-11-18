@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.0.0] - 2026-11-17
+## [4.0.0] - 2026-11-18
+
+`v4.0.0` marks S.O.N.I.C.'s cutover from its `v3.3.0` dual-runtime parity baseline to a pure-Go deterministic packet-capture intelligence platform (`sonic` and `sonic-mcp`) featuring sub-7 ms L2-L4 fast-path decoding, cross-layer media-to-underlay correlation, CI policy gates, baseline capture diffing, offline HTML5/TUI workflows, `os.Root` and terminal/secret hardening, and a 20-target fuzz suite verified against the Subject-Void Security Triad (`0` active Semgrep findings).
 
 ### Breaking Changes
 - **Pure Go Runtime Cutover:** Retired the legacy Python CLI/MCP runtime (`sonic.py`, `mcp_server.py`, `analyzers/`, `ai/`, `extractors/`, `handlers/`, `models/`, `utils/`, `llm_config.py`, `requirements*.txt`, and Python test suites). Users who require the archived Python runtime or Scapy offline fallback can check out release tag `v3.3.0`.
@@ -22,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version Injection & Release Packaging (`cmd/sonic`, `cmd/sonic-mcp`, `tools/pack_release.go`, `Makefile`):** Wired `-ldflags` `main.version` and `main.commit` into `--version` on both binaries and `serverInfo.version` during MCP `initialize`. Added pure-Go cross-platform archive packaging across 6 targets (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`) outputting `.tar.gz`/`.zip` bundles with `LICENSE`, `README.md`, and `SHA256SUMS`.
 - **Release Workflow & Go-Only CI (`.github/workflows/release.yml`, `ci.yml`, `codeql.yml`):** Added automated `v*` tag releases publishing artifacts via `softprops/action-gh-release`, streamlined `ci.yml` to run `gofmt`, 6-platform `go vet`, `make test`, `make fuzz`, and `make build release`, and switched CodeQL to `languages: go`.
 - **Native Go E2E Coverage (`cmd/sonic/cli_e2e_test.go`, `cmd/sonic/workflows_test.go`, `internal/mcpserver/stdio_e2e_test.go`):** Expanded child-binary CLI/workflow tests, stdout JSON-RPC purity checks across all `21` MCP tools, stubbed streaming MCP verification, prompts/resources inspection, and self-teaching tool schema validation in Go.
+
+### Security & Verification
+- **Secret-Field Redaction (`internal/llm/redact_types.go`, `internal/analyze/snmpinspect/types.go`):** Tagged `Config.APIKey`, `Endpoint.Key`, and `MessageRow.Credential` with `json:"-"` and added redacting `String()`, `GoString()`, `MarshalJSON()`, and `LogValue()` methods.
+- **Terminal Escape Sanitization (`internal/tui/sanitize.go`):** Added `SanitizeTerminalText` on all rendered TUI lines so untrusted capture strings cannot inject ANSI/OSC escape sequences or CRLF control bytes.
+- **`os.Root` Filesystem Confinement (`internal/guide/skill_writer.go`, `internal/wsconfig/`):** Confined `--create-skill` atomic file operations and ephemeral `/dev/shm` `WIRESHARK_CONFIG_DIR` writes/orphan cleanup with `os.OpenRoot`, refusing symlink escapes.
+- **20-Target Fuzz & Triad Closure (`Makefile`, `testdata/`):** Expanded `make fuzz` to all 20 targets (including pure-Go PCAP/PCAPNG, `-T ek` NDJSON, SIP/SDP, CI policy rules, HTML5 report digest, and terminal sanitization fuzzers), verified all 37 Go `-race` packages at `90.1% - 96.5%` coverage, and closed all Vuln-Corpus Semgrep sweep findings (`0` active violations).
 
 ## [3.3.0] - 2026-11-17
 
