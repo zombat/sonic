@@ -71,7 +71,7 @@
       "value": "masked"
     }
   ],
-  "file": "tests/fixtures/grpc_mgmt_mix.pcap",
+  "file": "testdata/fixtures/grpc_mgmt_mix.pcap",
   "issues": [
     {
       "code": "CLEARTEXT_CREDENTIAL",

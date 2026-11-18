@@ -1,17 +1,22 @@
 // Package parity provides JSON comparison helpers for verifying Go outputs
-// against the Python golden baseline in testdata/golden/.
+// against the golden baseline in testdata/golden/.
 package parity
 
 import (
+	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 )
 
 const floatTolerance = 1e-6
+
+var updateGolden = flag.Bool("update", false, "update golden JSON files instead of comparing")
 
 // CompareJSON unmarshals gotBytes and wantBytes into generic JSON values and
 // returns a descriptive error naming the first mismatched JSON path.
@@ -29,11 +34,25 @@ func CompareJSON(gotBytes, wantBytes []byte) error {
 
 // CompareGolden marshals got to JSON, reads the golden file at goldenPath, and
 // fails the test if their decoded JSON structures differ beyond floatTolerance.
+// When -update is passed to go test, goldenPath is overwritten cleanly instead.
 func CompareGolden(t *testing.T, got any, goldenPath string) {
 	t.Helper()
 	gotBytes, err := json.Marshal(got)
 	if err != nil {
 		t.Fatalf("marshal got value: %v", err)
+	}
+	CompareOrUpdateJSON(t, gotBytes, goldenPath)
+}
+
+// CompareOrUpdateJSON compares pre-serialized JSON bytes against goldenPath, or
+// rewrites goldenPath cleanly when the -update flag is enabled.
+func CompareOrUpdateJSON(t *testing.T, gotBytes []byte, goldenPath string) {
+	t.Helper()
+	if *updateGolden {
+		if err := writeGolden(goldenPath, gotBytes); err != nil {
+			t.Fatalf("update golden file %s: %v", goldenPath, err)
+		}
+		return
 	}
 	wantBytes, err := os.ReadFile(goldenPath)
 	if err != nil {
@@ -42,6 +61,24 @@ func CompareGolden(t *testing.T, got any, goldenPath string) {
 	if err := CompareJSON(gotBytes, wantBytes); err != nil {
 		t.Fatalf("golden parity mismatch for %s: %v", goldenPath, err)
 	}
+}
+
+func writeGolden(goldenPath string, raw []byte) error {
+	var decoded any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return fmt.Errorf("unmarshal generated json: %w", err)
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(decoded); err != nil {
+		return fmt.Errorf("encode sorted golden json: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(goldenPath, buf.Bytes(), 0o644)
 }
 
 // compareValues recursively compares two unmarshaled JSON values at path.

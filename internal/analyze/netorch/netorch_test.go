@@ -28,7 +28,7 @@ func TestGoldenNetorchParity(t *testing.T) {
 		return filepath.Join("testdata", "golden", "network_orchestrator", name)
 	}
 	fix := func(name string) string {
-		return filepath.Join("tests", "fixtures", name)
+		return filepath.Join("testdata", "fixtures", name)
 	}
 
 	t.Run("net_ipsec_ikev2_esp", func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestNetorchValidationAndEdges(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	sample := filepath.Join("tests", "fixtures", "icmp_loss.pcap")
+	sample := filepath.Join("testdata", "fixtures", "icmp_loss.pcap")
 
 	assertNetErr := func(r NetworkReport, substr string) {
 		t.Helper()
@@ -94,7 +94,7 @@ func TestNetorchValidationAndEdges(t *testing.T) {
 	}
 
 	assertNetErr(AnalyzeNetworkCapture(ctx, "", Options{}), "File not found")
-	assertNetErr(AnalyzeNetworkCapture(ctx, filepath.Join("tests", "fixtures", "missing.pcap"), Options{}), "File not found")
+	assertNetErr(AnalyzeNetworkCapture(ctx, filepath.Join("testdata", "fixtures", "missing.pcap"), Options{}), "File not found")
 	assertNetErr(AnalyzeNetworkCapture(ctx, t.TempDir(), Options{}), "File not readable")
 	unknownRep := AnalyzeNetworkCapture(ctx, sample, Options{Detectors: []string{"not_a_detector"}})
 	assertNetErr(unknownRep, "Unknown detector(s)")
@@ -112,7 +112,7 @@ func TestNetorchValidationAndEdges(t *testing.T) {
 	assertNetErr(AnalyzeNetworkCapture(ctx, sample, Options{DetectorOpts: DetectorOptions{Convergence: &convergence.Options{EventTime: "not-a-time"}}}), "event_time")
 
 	// Wrapper error marshaling paths.
-	missing := filepath.Join("tests", "fixtures", "missing.pcap")
+	missing := filepath.Join("testdata", "fixtures", "missing.pcap")
 	if b, err := json.Marshal(AnalyzeVPNCapture(ctx, missing, Options{})); err != nil || !strings.Contains(string(b), `"status":"error"`) {
 		t.Fatalf("VPN error marshal mismatch: %s err=%v", b, err)
 	}
@@ -130,7 +130,7 @@ func TestNetorchValidationAndEdges(t *testing.T) {
 	}
 
 	// SIP present flag + custom detector options (tls baseline, esp_overhead options, cleartext_audit pass/warning).
-	sipRep := AnalyzeNetworkCapture(ctx, filepath.Join("tests", "fixtures", "sip_minimal.pcap"), Options{
+	sipRep := AnalyzeNetworkCapture(ctx, filepath.Join("testdata", "fixtures", "sip_minimal.pcap"), Options{
 		Detectors: []string{"tls", "esp_overhead", "conversations", "cleartext_audit"},
 		MaxItems:  2,
 		DetectorOpts: DetectorOptions{

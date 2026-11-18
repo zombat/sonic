@@ -16,7 +16,7 @@ func TestExtractAAAFixtures(t *testing.T) {
 	rSec := "radius-shared-secret-not-real"
 	tKey := "tacacs-shared-key-not-real"
 
-	radRows, _, radSecrets, err := ExtractAAA(context.Background(), filepath.Join("tests", "fixtures", "aaa_radius.pcap"), &tKey, &rSec, "", nil)
+	radRows, _, radSecrets, err := ExtractAAA(context.Background(), filepath.Join("testdata", "fixtures", "aaa_radius.pcap"), &tKey, &rSec, "", nil)
 	if err != nil {
 		t.Fatalf("ExtractAAA(radius): %v", err)
 	}
@@ -24,7 +24,7 @@ func TestExtractAAAFixtures(t *testing.T) {
 		t.Fatalf("unexpected RADIUS extract: rows=%d secrets=%v", len(radRows), radSecrets)
 	}
 
-	_, tacRows, tacSecrets, err := ExtractAAA(context.Background(), filepath.Join("tests", "fixtures", "aaa_tacacs.pcap"), &tKey, &rSec, "tcp.port==49", nil)
+	_, tacRows, tacSecrets, err := ExtractAAA(context.Background(), filepath.Join("testdata", "fixtures", "aaa_tacacs.pcap"), &tKey, &rSec, "tcp.port==49", nil)
 	if err != nil {
 		t.Fatalf("ExtractAAA(tacacs): %v", err)
 	}

@@ -50,7 +50,7 @@ func TestGoldenGrpcParity(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := AnalyzeCapture(
 				context.Background(),
-				filepath.Join("tests", "fixtures", name+".pcap"),
+				filepath.Join("testdata", "fixtures", name+".pcap"),
 				Options{IgnoreDefaultProtoDir: true},
 			)
 			parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "grpc", name+".json"))
@@ -211,9 +211,9 @@ func TestProtosValidationAndScrubbing(t *testing.T) {
 		}
 	}
 
-	sample := filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap")
+	sample := filepath.Join("testdata", "fixtures", "grpc_mgmt_mix.pcap")
 	assertErr(AnalyzeCapture(ctx, "", Options{}), "File not found")
-	assertErr(AnalyzeCapture(ctx, filepath.Join("tests", "fixtures", "missing.pcap"), Options{}), "File not found")
+	assertErr(AnalyzeCapture(ctx, filepath.Join("testdata", "fixtures", "missing.pcap"), Options{}), "File not found")
 	assertErr(AnalyzeCapture(ctx, t.TempDir(), Options{}), "File not readable")
 	assertErr(AnalyzeCapture(ctx, sample, Options{KeylogFile: t.TempDir()}), "keylog_file is not a readable file")
 	assertErr(AnalyzeCapture(ctx, sample, Options{MaxPackets: intPtr(0)}), "max_packets must be a positive number")
@@ -258,7 +258,7 @@ func TestProtosValidationAndScrubbing(t *testing.T) {
 	if err := os.WriteFile(kl, []byte(klLine), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	tlsPcap := filepath.Join("tests", "fixtures", "grpc_tls13_hrr.pcap")
+	tlsPcap := filepath.Join("testdata", "fixtures", "grpc_tls13_hrr.pcap")
 	klRep := AnalyzeCapture(ctx, tlsPcap, Options{KeylogFile: kl, IgnoreDefaultProtoDir: true, MaxItems: 5})
 	if klRep.Status != "success" || klRep.TLSDecryption == nil || klRep.TLSDecryption.Decrypted >= klRep.TLSDecryption.Total {
 		t.Fatalf("expected un-decrypted TLS summary: %+v", klRep.TLSDecryption)

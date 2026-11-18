@@ -583,7 +583,8 @@ def build_tls13_keylog(out_dir: str, client_port: int = 55000, start: float = 0.
 
 
 def main():
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else HERE
+    default_out = os.path.join(os.path.dirname(os.path.dirname(HERE)), "testdata", "fixtures")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
     builders = {
         "grpc_h2_trouble.pcap": build_h2_trouble,

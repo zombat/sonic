@@ -1,5 +1,5 @@
 {
-  "file": "tests/fixtures/sip_auth_synthetic.pcap",
+  "file": "testdata/fixtures/sip_auth_synthetic.pcap",
   "mos_analysis": {
     "average_mos": 0.0,
     "best_mos": 0.0,

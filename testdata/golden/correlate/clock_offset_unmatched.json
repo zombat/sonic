@@ -6,7 +6,7 @@
       "end": "2026-01-01T00:00:10.020Z",
       "label": "inside",
       "packets": 18,
-      "path": "tests/fixtures/dp_corr_inside.pcap",
+      "path": "testdata/fixtures/dp_corr_inside.pcap",
       "start": "2026-01-01T00:00:00.000Z",
       "unmatched_packets": 18,
       "warnings": []
@@ -17,7 +17,7 @@
       "end": "2026-01-01T00:01:50.020Z",
       "label": "outside",
       "packets": 18,
-      "path": "tests/fixtures/dp_corr_outside.pcap",
+      "path": "testdata/fixtures/dp_corr_outside.pcap",
       "start": "2026-01-01T00:01:40.000Z",
       "unmatched_packets": 18,
       "warnings": []

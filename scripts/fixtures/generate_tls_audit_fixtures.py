@@ -217,7 +217,8 @@ BUILDERS = {
 
 
 def main():
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else HERE
+    default_out = os.path.join(os.path.dirname(os.path.dirname(HERE)), "testdata", "fixtures")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
     for name, builder in BUILDERS.items():
         path = os.path.join(out_dir, name)

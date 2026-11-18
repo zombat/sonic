@@ -9,7 +9,7 @@
     "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)"
   },
   "credentials": [],
-  "file": "tests/fixtures/aaa_tacacs.pcap",
+  "file": "testdata/fixtures/aaa_tacacs.pcap",
   "issues": [
     {
       "code": "AAA_CLEARTEXT_TACACS",

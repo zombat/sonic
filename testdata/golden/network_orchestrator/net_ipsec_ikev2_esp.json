@@ -815,7 +815,7 @@
     },
     "verdict": "4 ESP flow(s); sizes fit AES-CBC + HMAC-SHA512-256 on 4 flow(s) (estimate); no ESP fragmentation, largest outer packet 108 bytes."
   },
-  "file": "tests/fixtures/ipsec_ikev2_esp.pcap",
+  "file": "testdata/fixtures/ipsec_ikev2_esp.pcap",
   "gre_nhrp": {
     "detector": "gre_nhrp",
     "dmvpn_phase_hint": "unknown",

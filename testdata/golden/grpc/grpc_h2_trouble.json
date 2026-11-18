@@ -217,7 +217,7 @@
       "value": "masked"
     }
   ],
-  "file": "tests/fixtures/grpc_h2_trouble.pcap",
+  "file": "testdata/fixtures/grpc_h2_trouble.pcap",
   "issues": [
     {
       "code": "GRPC_UNIMPLEMENTED",

@@ -40,7 +40,7 @@ func TestGoldenConvergenceParity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			pcapPath := filepath.Join("tests", "fixtures", tc.pcap+".pcap")
+			pcapPath := filepath.Join("testdata", "fixtures", tc.pcap+".pcap")
 			out, err := extract.OpenNetworkRecords(context.Background(), tshark.StreamOptions{FilePath: pcapPath})
 			if err != nil {
 				t.Fatalf("OpenNetworkRecords: %v", err)

@@ -26,7 +26,7 @@ func TestHTTP2AndHTTPMessagesExtraction(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	rcPcap := filepath.Join("tests", "fixtures", "restconf_cleartext.pcap")
+	rcPcap := filepath.Join("testdata", "fixtures", "restconf_cleartext.pcap")
 	conns, err := Discover(ctx, rcPcap, "", nil, nil, nil)
 	if err != nil || len(conns) != 3 {
 		t.Fatalf("Discover(restconf_cleartext): len=%d err=%v", len(conns), err)
@@ -52,7 +52,7 @@ func TestHTTP2AndHTTPMessagesExtraction(t *testing.T) {
 		t.Fatalf("HTTP2Messages: len=%d pkts=%d secrets=%v err=%v", len(http2), pktCnt, h2Secrets, err)
 	}
 
-	dpTLS := filepath.Join("tests", "fixtures", "dp_tls.pcap")
+	dpTLS := filepath.Join("testdata", "fixtures", "dp_tls.pcap")
 	tlsConns, err := Discover(ctx, dpTLS, "", nil, nil, nil)
 	if err != nil || len(tlsConns) == 0 {
 		t.Fatalf("Discover(dp_tls): len=%d err=%v", len(tlsConns), err)
@@ -72,7 +72,7 @@ func TestHTTP2AndHTTPMessagesExtraction(t *testing.T) {
 	if len(pre) == 0 {
 		t.Fatal("expected prefaces in restconf_cleartext.pcap")
 	}
-	grpcPcap := filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap")
+	grpcPcap := filepath.Join("testdata", "fixtures", "grpc_mgmt_mix.pcap")
 	if grpcConns, gErr := Discover(ctx, grpcPcap, "", nil, nil, nil); gErr == nil {
 		if opts, r := PlanDecodeAs(grpcConns, []int{443}); len(opts) == 0 || r[443] == "" {
 			t.Fatalf("PlanDecodeAs grpc_mgmt_mix: opts=%v reasons=%v", opts, r)

@@ -70,7 +70,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/grpc_mgmt_mix.pcap",
+  "file": "testdata/fixtures/grpc_mgmt_mix.pcap",
   "first_violation_frame": 27,
   "frames_allowed": 26,
   "frames_audited": 38,

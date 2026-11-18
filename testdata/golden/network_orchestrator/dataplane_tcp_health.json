@@ -56,7 +56,7 @@
     "verdict": "No ESP in this capture."
   },
   "esp_overhead_verdict": "No ESP in this capture.",
-  "file": "tests/fixtures/dp_tcp_health.pcap",
+  "file": "testdata/fixtures/dp_tcp_health.pcap",
   "issues": [
     {
       "code": "TCP_NO_ANSWER",

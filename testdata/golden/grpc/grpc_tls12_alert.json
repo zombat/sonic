@@ -111,7 +111,7 @@
   ],
   "connections_omitted": 0,
   "credentials": [],
-  "file": "tests/fixtures/grpc_tls12_alert.pcap",
+  "file": "testdata/fixtures/grpc_tls12_alert.pcap",
   "issues": [
     {
       "code": "TLS_ALERT",

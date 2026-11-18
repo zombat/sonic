@@ -20,7 +20,7 @@ func TestGoldenPathMtuParity(t *testing.T) {
 
 	for _, stem := range []string{"dp_pmtu_frag_needed", "dp_pmtu_black_hole", "dp_fragments", "icmp_loss"} {
 		t.Run(stem, func(t *testing.T) {
-			pcapPath := filepath.Join("tests", "fixtures", stem+".pcap")
+			pcapPath := filepath.Join("testdata", "fixtures", stem+".pcap")
 			out, err := extract.OpenNetworkRecords(context.Background(), tshark.StreamOptions{FilePath: pcapPath})
 			if err != nil {
 				t.Fatalf("OpenNetworkRecords: %v", err)

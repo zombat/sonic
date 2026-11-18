@@ -32,7 +32,7 @@ func TestReportFormattersAndSaveRedaction(t *testing.T) {
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	fix := func(name string) string { return filepath.Join("tests", "fixtures", name) }
+	fix := func(name string) string { return filepath.Join("testdata", "fixtures", name) }
 
 	// 1. Network report formatting (IPsec, routing, GRE, reachability, conversations, SIP, error state).
 	for _, tc := range []struct {

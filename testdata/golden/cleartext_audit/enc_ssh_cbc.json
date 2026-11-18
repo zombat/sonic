@@ -35,7 +35,7 @@
     "unverified": 0,
     "weak": 1
   },
-  "file": "tests/fixtures/enc_ssh_cbc.pcap",
+  "file": "testdata/fixtures/enc_ssh_cbc.pcap",
   "first_violation_frame": null,
   "frames_allowed": 16,
   "frames_audited": 16,

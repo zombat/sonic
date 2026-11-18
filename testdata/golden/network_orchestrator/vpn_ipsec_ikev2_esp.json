@@ -57,7 +57,7 @@
     "verdict": "No GRE/NHRP visible; 1 IKE SA(s) were negotiated during the capture: pass hubs (the hub NBMA addresses) to test them as encrypted spoke-to-spoke shortcuts."
   },
   "encryption_verdict": "encrypted",
-  "file": "tests/fixtures/ipsec_ikev2_esp.pcap",
+  "file": "testdata/fixtures/ipsec_ikev2_esp.pcap",
   "gre_nhrp": {
     "detector": "gre_nhrp",
     "dmvpn_phase_hint": "unknown",

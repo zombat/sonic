@@ -410,7 +410,7 @@ func TestAllFourteenToolsGoldenParityOverStdio(t *testing.T) {
 		t.Fatal(err)
 	}
 	saArgs, _ := json.Marshal(map[string]string{
-		"file_path": "tests/fixtures/esp_tunnel.pcap",
+		"file_path": "testdata/fixtures/esp_tunnel.pcap",
 		"sa_file":   saPath,
 	})
 
@@ -419,19 +419,19 @@ func TestAllFourteenToolsGoldenParityOverStdio(t *testing.T) {
 		args   json.RawMessage
 		golden string
 	}{
-		{"quick_quality_check", json.RawMessage(`{"file_path":"tests/fixtures/sip_minimal.pcap"}`), "testdata/golden/sip/sip_minimal_quick_quality.json"},
-		{"analyze_network_pcap", json.RawMessage(`{"file_path":"tests/fixtures/ipsec_ikev2_esp.pcap"}`), "testdata/golden/network_orchestrator/net_ipsec_ikev2_esp.json"},
-		{"analyze_vpn_pcap", json.RawMessage(`{"file_path":"tests/fixtures/ipsec_ikev2_esp.pcap"}`), "testdata/golden/network_orchestrator/vpn_ipsec_ikev2_esp.json"},
-		{"analyze_routing_pcap", json.RawMessage(`{"file_path":"tests/fixtures/bgp_failover.pcap","expected_mss":1360}`), "testdata/golden/network_orchestrator/routing_bgp_failover.json"},
-		{"audit_cleartext_pcap", json.RawMessage(`{"file_path":"tests/fixtures/grpc_mgmt_mix.pcap","allow":["encrypted"]}`), "testdata/golden/network_orchestrator/audit_grpc_mgmt_mix.json"},
-		{"analyze_convergence_pcap", json.RawMessage(`{"file_path":"tests/fixtures/convergence_dpd.pcap"}`), "testdata/golden/network_orchestrator/conv_dpd.json"},
-		{"analyze_data_plane_pcap", json.RawMessage(`{"file_path":"tests/fixtures/dp_tcp_health.pcap"}`), "testdata/golden/network_orchestrator/dataplane_tcp_health.json"},
-		{"correlate_pcaps", json.RawMessage(`{"captures":[{"path":"tests/fixtures/dp_corr_inside.pcap","label":"inside"},{"path":"tests/fixtures/dp_corr_outside.pcap","label":"outside"}]}`), "testdata/golden/correlate/nat_inside_outside.json"},
-		{"merge_pcap_timelines", json.RawMessage(`{"captures":[{"path":"tests/fixtures/ospf_failover.pcap","label":"core"}],"measurements":[{"name":"ospf_down_to_up","from":{"event":"neighbor_down"},"to":{"event":"neighbor_up"},"max_s":15}]}`), "testdata/golden/timeline/ospf_icmp_measured.json"},
-		{"analyze_grpc_pcap", json.RawMessage(`{"file_path":"tests/fixtures/grpc_mgmt_mix.pcap"}`), "testdata/golden/grpc/grpc_mgmt_mix.json"},
-		{"analyze_restconf_pcap", json.RawMessage(`{"file_path":"tests/fixtures/restconf_cleartext.pcap"}`), "testdata/golden/http_inspect/restconf_cleartext.json"},
-		{"analyze_snmp_pcap", json.RawMessage(`{"file_path":"tests/fixtures/snmp_v1v2c.pcap"}`), "testdata/golden/snmp/snmp_v1v2c.json"},
-		{"analyze_aaa_pcap", json.RawMessage(`{"file_path":"tests/fixtures/aaa_radius.pcap"}`), "testdata/golden/aaa/aaa_radius_no_key.json"},
+		{"quick_quality_check", json.RawMessage(`{"file_path":"testdata/fixtures/sip_minimal.pcap"}`), "testdata/golden/sip/sip_minimal_quick_quality.json"},
+		{"analyze_network_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/ipsec_ikev2_esp.pcap"}`), "testdata/golden/network_orchestrator/net_ipsec_ikev2_esp.json"},
+		{"analyze_vpn_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/ipsec_ikev2_esp.pcap"}`), "testdata/golden/network_orchestrator/vpn_ipsec_ikev2_esp.json"},
+		{"analyze_routing_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/bgp_failover.pcap","expected_mss":1360}`), "testdata/golden/network_orchestrator/routing_bgp_failover.json"},
+		{"audit_cleartext_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/grpc_mgmt_mix.pcap","allow":["encrypted"]}`), "testdata/golden/network_orchestrator/audit_grpc_mgmt_mix.json"},
+		{"analyze_convergence_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/convergence_dpd.pcap"}`), "testdata/golden/network_orchestrator/conv_dpd.json"},
+		{"analyze_data_plane_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/dp_tcp_health.pcap"}`), "testdata/golden/network_orchestrator/dataplane_tcp_health.json"},
+		{"correlate_pcaps", json.RawMessage(`{"captures":[{"path":"testdata/fixtures/dp_corr_inside.pcap","label":"inside"},{"path":"testdata/fixtures/dp_corr_outside.pcap","label":"outside"}]}`), "testdata/golden/correlate/nat_inside_outside.json"},
+		{"merge_pcap_timelines", json.RawMessage(`{"captures":[{"path":"testdata/fixtures/ospf_failover.pcap","label":"core"}],"measurements":[{"name":"ospf_down_to_up","from":{"event":"neighbor_down"},"to":{"event":"neighbor_up"},"max_s":15}]}`), "testdata/golden/timeline/ospf_icmp_measured.json"},
+		{"analyze_grpc_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/grpc_mgmt_mix.pcap"}`), "testdata/golden/grpc/grpc_mgmt_mix.json"},
+		{"analyze_restconf_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/restconf_cleartext.pcap"}`), "testdata/golden/http_inspect/restconf_cleartext.json"},
+		{"analyze_snmp_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/snmp_v1v2c.pcap"}`), "testdata/golden/snmp/snmp_v1v2c.json"},
+		{"analyze_aaa_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/aaa_radius.pcap"}`), "testdata/golden/aaa/aaa_radius_no_key.json"},
 		{"analyze_esp_pcap", saArgs, "testdata/golden/esp_decrypt/esp_tunnel_sa_file.json"},
 	}
 
@@ -440,10 +440,6 @@ func TestAllFourteenToolsGoldenParityOverStdio(t *testing.T) {
 			res := callToolRPC(t, srv, i+1, tc.tool, tc.args)
 			if res.IsError {
 				t.Fatalf("%s returned IsError=true: %s", tc.tool, res.Content[0].Text)
-			}
-			wantBytes, err := os.ReadFile(tc.golden)
-			if err != nil {
-				t.Fatal(err)
 			}
 			// Compare core parity; merge_pcap_timelines measurement name differs intentionally in test_network_mcp.py style, check separately if needed.
 			if tc.tool == "merge_pcap_timelines" {
@@ -461,9 +457,7 @@ func TestAllFourteenToolsGoldenParityOverStdio(t *testing.T) {
 				}
 				return
 			}
-			if err := parity.CompareJSON(res.StructuredContent, wantBytes); err != nil {
-				t.Fatalf("golden parity mismatch for %s (%s): %v", tc.tool, tc.golden, err)
-			}
+			parity.CompareOrUpdateJSON(t, res.StructuredContent, tc.golden)
 			if tc.tool == "analyze_data_plane_pcap" {
 				dec := json.NewDecoder(bytes.NewReader(res.StructuredContent))
 				_, _ = dec.Token() // '{'
@@ -514,10 +508,10 @@ func TestToolHandlerValidationAndBadArgs(t *testing.T) {
 		sub  string
 	}{
 		{"analyze_network_pcap", `{"file_path":"does-not-exist.pcap"}`, "File not found"},
-		{"analyze_network_pcap", `{"file_path":"tests/fixtures/bgp_session.pcap","options":{"bogus":{}}}`, "detectors_with_options"},
+		{"analyze_network_pcap", `{"file_path":"testdata/fixtures/bgp_session.pcap","options":{"bogus":{}}}`, "detectors_with_options"},
 		{"analyze_data_plane_pcap", `{"file_path":"does-not-exist.pcap"}`, "File not found"},
-		{"audit_cleartext_pcap", `{"file_path":"tests/fixtures/audit_one_leak.pcap","allow":null}`, `"status":"error"`},
-		{"correlate_pcaps", `{"captures":[{"path":"tests/fixtures/dp_corr_inside.pcap","label":"a"}],"max_packets_held":50}`, "at least 100"},
+		{"audit_cleartext_pcap", `{"file_path":"testdata/fixtures/audit_one_leak.pcap","allow":null}`, `"status":"error"`},
+		{"correlate_pcaps", `{"captures":[{"path":"testdata/fixtures/dp_corr_inside.pcap","label":"a"}],"max_packets_held":50}`, "at least 100"},
 		{"merge_pcap_timelines", `{"captures":[],"max_events":0}`, "at least 1"},
 	} {
 		res := callToolRPC(t, srv, 200, tc.tool, json.RawMessage(tc.args))
@@ -537,8 +531,8 @@ func TestToolHandlerValidationAndBadArgs(t *testing.T) {
 
 	// Verify numeric and string event_time on convergence_dpd.pcap match Python's 12.0s delta.
 	for idx, arg := range []string{
-		`{"file_path":"tests/fixtures/convergence_dpd.pcap","event_time":30}`,
-		`{"file_path":"tests/fixtures/convergence_dpd.pcap","event_time":"+30"}`,
+		`{"file_path":"testdata/fixtures/convergence_dpd.pcap","event_time":30}`,
+		`{"file_path":"testdata/fixtures/convergence_dpd.pcap","event_time":"+30"}`,
 	} {
 		conv := callToolRPC(t, srv, 300+idx, "analyze_convergence_pcap", json.RawMessage(arg))
 		if conv.IsError {
@@ -597,7 +591,7 @@ func TestLLMToolsOverStdio(t *testing.T) {
 	}
 
 	// 2. analyze_pcap success on SIP capture with quality + MOS + redaction.
-	ap := callToolRPC(t, srv, 2, "analyze_pcap", json.RawMessage(`{"file_path":"tests/fixtures/sip_minimal.pcap","provider":"openai"}`))
+	ap := callToolRPC(t, srv, 2, "analyze_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/sip_minimal.pcap","provider":"openai"}`))
 	if ap.IsError || strings.Contains(ap.Content[0].Text, secret) || !strings.Contains(ap.Content[0].Text, `"status":"success"`) || !strings.Contains(ap.Content[0].Text, `"call_quality"`) {
 		t.Fatalf("unexpected analyze_pcap response: %+v", ap)
 	}
@@ -607,13 +601,13 @@ func TestLLMToolsOverStdio(t *testing.T) {
 	if miss.IsError || !strings.Contains(miss.Content[0].Text, "File not found") {
 		t.Fatalf("unexpected missing file response: %+v", miss)
 	}
-	nonSIP := callToolRPC(t, srv, 4, "analyze_pcap", json.RawMessage(`{"file_path":"tests/fixtures/bgp_session.pcap"}`))
+	nonSIP := callToolRPC(t, srv, 4, "analyze_pcap", json.RawMessage(`{"file_path":"testdata/fixtures/bgp_session.pcap"}`))
 	if nonSIP.IsError || !strings.Contains(nonSIP.Content[0].Text, "No SIP data found") {
 		t.Fatalf("unexpected non-SIP response: %+v", nonSIP)
 	}
 
 	// 4. analyze_pcap_partial_streaming produces timing + quality + llm_analysis.
-	ps := callToolRPC(t, srv, 5, "analyze_pcap_partial_streaming", json.RawMessage(`{"file_path":"tests/fixtures/sip_minimal.pcap","provider":"openai"}`))
+	ps := callToolRPC(t, srv, 5, "analyze_pcap_partial_streaming", json.RawMessage(`{"file_path":"testdata/fixtures/sip_minimal.pcap","provider":"openai"}`))
 	if ps.IsError || !strings.Contains(ps.Content[0].Text, `"status":"success"`) || !strings.Contains(ps.Content[0].Text, `"timing"`) {
 		t.Fatalf("unexpected partial streaming response: %+v", ps)
 	}
@@ -623,7 +617,7 @@ func TestLLMToolsOverStdio(t *testing.T) {
 
 	// 5. analyze_batch_pcaps handles parallel dir, detailed tier, bad mode, empty dir, missing dir.
 	batchDir := t.TempDir()
-	sipBytes, err := os.ReadFile("tests/fixtures/sip_minimal.pcap")
+	sipBytes, err := os.ReadFile("testdata/fixtures/sip_minimal.pcap")
 	if err != nil {
 		t.Fatal(err)
 	}

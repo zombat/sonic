@@ -44,7 +44,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/ipsec_cleartext_icmp.pcap",
+  "file": "testdata/fixtures/ipsec_cleartext_icmp.pcap",
   "first_violation_frame": 25,
   "frames_allowed": 36,
   "frames_audited": 44,

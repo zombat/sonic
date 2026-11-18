@@ -20,7 +20,7 @@ func TestGoldenSNMPParity(t *testing.T) {
 	}
 	t.Chdir(repoRoot)
 
-	got := AnalyzeCapture(context.Background(), filepath.Join("tests", "fixtures", "snmp_v1v2c.pcap"), Options{})
+	got := AnalyzeCapture(context.Background(), filepath.Join("testdata", "fixtures", "snmp_v1v2c.pcap"), Options{})
 	parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "snmp", "snmp_v1v2c.json"))
 
 	raw, err := json.Marshal(got)

@@ -59,7 +59,7 @@ func TestGoldenEspDecryptParity(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	pcapPath := filepath.Join("tests", "fixtures", "esp_tunnel.pcap")
+	pcapPath := filepath.Join("testdata", "fixtures", "esp_tunnel.pcap")
 	saText, secrets := saFileFixtureText()
 	saFile := writeTempSA(t, saText)
 	xfrmFile := writeTempSA(t, xfrmFixtureText())
@@ -85,13 +85,7 @@ func TestGoldenEspDecryptParity(t *testing.T) {
 					t.Fatalf("secret key leaked in JSON output: %s", sec)
 				}
 			}
-			goldenBytes, err := os.ReadFile(tc.golden)
-			if err != nil {
-				t.Fatalf("read golden failed: %v", err)
-			}
-			if cmpErr := parity.CompareJSON(raw, goldenBytes); cmpErr != nil {
-				t.Fatalf("golden parity mismatch for %s:\n%v", tc.golden, cmpErr)
-			}
+			parity.CompareOrUpdateJSON(t, raw, tc.golden)
 		})
 	}
 }
@@ -104,7 +98,7 @@ func TestEspDecryptBranchesAndHelpers(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	pcapPath := filepath.Join("tests", "fixtures", "esp_tunnel.pcap")
+	pcapPath := filepath.Join("testdata", "fixtures", "esp_tunnel.pcap")
 	saText, _ := saFileFixtureText()
 	saFile := writeTempSA(t, saText)
 
@@ -120,7 +114,7 @@ func TestEspDecryptBranchesAndHelpers(t *testing.T) {
 	}
 
 	assertErr(AnalyzeCapture(ctx, "", Options{}), "File not found")
-	assertErr(AnalyzeCapture(ctx, filepath.Join("tests", "fixtures", "missing.pcap"), Options{}), "File not found")
+	assertErr(AnalyzeCapture(ctx, filepath.Join("testdata", "fixtures", "missing.pcap"), Options{}), "File not found")
 	assertErr(AnalyzeCapture(ctx, t.TempDir(), Options{}), "File not readable")
 	assertErr(AnalyzeCapture(ctx, pcapPath, Options{}), "ESP decryption needs an SA file")
 	assertErr(AnalyzeCapture(ctx, pcapPath, Options{SAFile: t.TempDir()}), "sa_file is not a readable file")

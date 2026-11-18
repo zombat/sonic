@@ -26,7 +26,7 @@ func TestGoldenCorrelateParity(t *testing.T) {
 
 	ctx := context.Background()
 	fix := func(name string) string {
-		return filepath.Join("tests", "fixtures", name)
+		return filepath.Join("testdata", "fixtures", name)
 	}
 	golden := func(name string) string {
 		return filepath.Join("testdata", "golden", "correlate", name)
@@ -66,8 +66,8 @@ func TestCorrelateIdentitiesBranchesAndErrors(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	in := filepath.Join("tests", "fixtures", "dp_corr_inside.pcap")
-	out := filepath.Join("tests", "fixtures", "dp_corr_outside.pcap")
+	in := filepath.Join("testdata", "fixtures", "dp_corr_inside.pcap")
+	out := filepath.Join("testdata", "fixtures", "dp_corr_outside.pcap")
 
 	assertErr := func(r Report, substr string) {
 		t.Helper()
@@ -83,7 +83,7 @@ func TestCorrelateIdentitiesBranchesAndErrors(t *testing.T) {
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in, Label: "a"}}, Options{}), "two or more")
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: ""}, {Path: out}}, Options{}), `needs a "path"`)
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in, Label: "a"}, {Path: out, Label: "a"}}, Options{}), "duplicate capture label")
-	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in}, {Path: filepath.Join("tests", "fixtures", "missing.pcap")}}, Options{}), "File not found")
+	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in}, {Path: filepath.Join("testdata", "fixtures", "missing.pcap")}}, Options{}), "File not found")
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in, Label: "a"}, {Path: out, Label: "b"}}, Options{ClockOffsetsS: map[string]float64{"zz": 1}}), "unknown label")
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in}, {Path: out}}, Options{WindowS: f64Ptr(0)}), "window_s must be")
 	assertErr(CorrelateCaptures(ctx, []CaptureInput{{Path: in}, {Path: out}}, Options{MaxPacketsHeld: 10}), "max_packets_held must be at least 100")

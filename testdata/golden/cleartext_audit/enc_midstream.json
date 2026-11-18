@@ -35,7 +35,7 @@
     "unverified": 2,
     "weak": 0
   },
-  "file": "tests/fixtures/enc_midstream.pcap",
+  "file": "testdata/fixtures/enc_midstream.pcap",
   "first_violation_frame": null,
   "frames_allowed": 18,
   "frames_audited": 18,

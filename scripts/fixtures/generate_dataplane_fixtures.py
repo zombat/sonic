@@ -523,7 +523,9 @@ def build_corr_asymmetric():
 
 
 def main():
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
+    here = os.path.dirname(os.path.abspath(__file__))
+    default_out = os.path.join(os.path.dirname(os.path.dirname(here)), "testdata", "fixtures")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
     single = {
         "dp_pmtu_frag_needed.pcap": build_pmtu_frag_needed,

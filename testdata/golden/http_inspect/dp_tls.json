@@ -67,7 +67,7 @@
     }
   ],
   "credentials": [],
-  "file": "tests/fixtures/dp_tls.pcap",
+  "file": "testdata/fixtures/dp_tls.pcap",
   "issues": [
     {
       "code": "HTTP_TLS_NOT_DECRYPTED",

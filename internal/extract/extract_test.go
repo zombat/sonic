@@ -84,7 +84,7 @@ func TestGoldenRecordsParity(t *testing.T) {
 	ctx := context.Background()
 	for _, stem := range fixtures {
 		t.Run(stem, func(t *testing.T) {
-			pcapPath := filepath.Join("tests", "fixtures", stem+".pcap")
+			pcapPath := filepath.Join("testdata", "fixtures", stem+".pcap")
 			goldenPath := filepath.Join("testdata", "golden", "records", stem+".json")
 			got, err := OpenNetworkRecords(ctx, tshark.StreamOptions{FilePath: pcapPath})
 			if err != nil {

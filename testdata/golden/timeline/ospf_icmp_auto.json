@@ -110,7 +110,7 @@
       "label": "core",
       "overall_status": "warning",
       "packets": 19,
-      "path": "tests/fixtures/ospf_failover.pcap",
+      "path": "testdata/fixtures/ospf_failover.pcap",
       "start": "2026-01-01T00:00:00.000Z",
       "timeline_omitted": 0,
       "verdicts": {
@@ -134,7 +134,7 @@
       "label": "lan",
       "overall_status": "problem",
       "packets": 28,
-      "path": "tests/fixtures/icmp_loss.pcap",
+      "path": "testdata/fixtures/icmp_loss.pcap",
       "start": "2026-01-01T00:00:00.000Z",
       "timeline_omitted": 0,
       "verdicts": {

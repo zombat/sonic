@@ -36,7 +36,7 @@ func TestGoldenHTTPInspectParity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := AnalyzeCapture(context.Background(), filepath.Join("tests", "fixtures", tc.pcap), Options{})
+			got := AnalyzeCapture(context.Background(), filepath.Join("testdata", "fixtures", tc.pcap), Options{})
 			parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "http_inspect", tc.golden))
 
 			raw, err := json.Marshal(got)
@@ -96,8 +96,8 @@ func TestValidationAndCoverage(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	rcPcap := filepath.Join("tests", "fixtures", "restconf_cleartext.pcap")
-	dpTLS := filepath.Join("tests", "fixtures", "dp_tls.pcap")
+	rcPcap := filepath.Join("testdata", "fixtures", "restconf_cleartext.pcap")
+	dpTLS := filepath.Join("testdata", "fixtures", "dp_tls.pcap")
 
 	assertErr := func(r Report, substr string) {
 		t.Helper()
@@ -111,7 +111,7 @@ func TestValidationAndCoverage(t *testing.T) {
 	}
 
 	assertErr(AnalyzeCapture(ctx, "", Options{}), "File not found")
-	assertErr(AnalyzeCapture(ctx, filepath.Join("tests", "fixtures", "no_such.pcap"), Options{}), "File not found")
+	assertErr(AnalyzeCapture(ctx, filepath.Join("testdata", "fixtures", "no_such.pcap"), Options{}), "File not found")
 	assertErr(AnalyzeCapture(ctx, t.TempDir(), Options{}), "File not readable")
 	assertErr(AnalyzeCapture(ctx, rcPcap, Options{KeylogFile: t.TempDir()}), "keylog_file is not a readable file")
 	assertErr(AnalyzeCapture(ctx, rcPcap, Options{MaxPackets: intPtr(0)}), "max_packets must be a positive number")

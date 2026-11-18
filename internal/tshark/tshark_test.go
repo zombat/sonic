@@ -113,7 +113,7 @@ func TestRealTsharkStreamAndErrorPaths(t *testing.T) {
 		t.Fatalf("VersionMajor(missing) = %d, want 0", got)
 	}
 
-	fixture := filepath.Join("..", "..", "testdata", "..", "tests", "fixtures", "audit_one_leak.pcap")
+	fixture := filepath.Join("..", "..", "testdata", "fixtures", "audit_one_leak.pcap")
 	if _, err := os.Stat(fixture); err != nil {
 		t.Fatalf("fixture stat: %v", err)
 	}

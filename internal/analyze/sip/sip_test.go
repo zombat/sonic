@@ -136,7 +136,7 @@ func TestSIPGoldenParity(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	sipMinPath := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
+	sipMinPath := filepath.Join("testdata", "fixtures", "sip_minimal.pcap")
 	_, rawMin, err := extract.ExtractSIPData(ctx, sipMinPath)
 	if err != nil || rawMin == "" {
 		t.Fatalf("ExtractSIPData(sip_minimal) failed: %v", err)
@@ -156,7 +156,7 @@ func TestSIPGoldenParity(t *testing.T) {
 				t.Fatalf("secret %q leaked in QuickQualityCheck JSON", sec)
 			}
 		}
-		got.File = "tests/fixtures/sip_auth_synthetic.pcap"
+		got.File = "testdata/fixtures/sip_auth_synthetic.pcap"
 		parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "sip", "sip_auth_quick_quality.json"))
 	})
 	t.Run("sip_minimal_tracking", func(t *testing.T) {
@@ -434,7 +434,7 @@ func TestTrackingOverlapEndpointsAndQuickPaths(t *testing.T) {
 	if q := QuickQualityCheck(ctx, "/nonexistent/missing.pcap"); q.Status != "error" || !strings.Contains(q.Error, "File not found") {
 		t.Fatalf("unexpected missing-file quick check: %+v", q)
 	}
-	icmpPath := filepath.Join("tests", "fixtures", "icmp_loss.pcap")
+	icmpPath := filepath.Join("testdata", "fixtures", "icmp_loss.pcap")
 	if q := QuickQualityCheck(ctx, icmpPath); q.Status != "success" || q.QualityAnalysis == nil {
 		t.Fatalf("unexpected empty-SIP pcap quick check: %+v", q)
 	}

@@ -35,7 +35,7 @@
     "unverified": 0,
     "weak": 1
   },
-  "file": "tests/fixtures/enc_tls10.pcap",
+  "file": "testdata/fixtures/enc_tls10.pcap",
   "first_violation_frame": null,
   "frames_allowed": 11,
   "frames_audited": 11,

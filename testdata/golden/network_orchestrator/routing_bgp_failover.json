@@ -102,7 +102,7 @@
       "time": "2026-01-01T00:01:10.500Z"
     }
   ],
-  "file": "tests/fixtures/bgp_failover.pcap",
+  "file": "testdata/fixtures/bgp_failover.pcap",
   "issues": [
     {
       "bgp_code": 4,

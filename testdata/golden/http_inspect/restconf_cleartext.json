@@ -99,7 +99,7 @@
       "value": "masked"
     }
   ],
-  "file": "tests/fixtures/restconf_cleartext.pcap",
+  "file": "testdata/fixtures/restconf_cleartext.pcap",
   "issues": [
     {
       "code": "CLEARTEXT_CREDENTIAL",

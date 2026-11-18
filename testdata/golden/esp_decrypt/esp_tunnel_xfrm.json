@@ -9,7 +9,7 @@
     "tshark": "TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)",
     "warnings": []
   },
-  "file": "tests/fixtures/esp_tunnel.pcap",
+  "file": "testdata/fixtures/esp_tunnel.pcap",
   "inner_analysis": {
     "issues": [],
     "overall_status": "ok",

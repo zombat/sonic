@@ -27,7 +27,7 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 
 	// 1. dump --file reproduces golden record JSON.
 	var dumpOut, dumpErr bytes.Buffer
-	code := run(ctx, []string{"dump", "--file", filepath.Join("tests", "fixtures", "audit_one_leak.pcap")}, &dumpOut, &dumpErr)
+	code := run(ctx, []string{"dump", "--file", filepath.Join("testdata", "fixtures", "audit_one_leak.pcap")}, &dumpOut, &dumpErr)
 	if code != 0 {
 		t.Fatalf("dump exited %d: %s", code, dumpErr.String())
 	}
@@ -42,7 +42,7 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 	// 2. Standalone --detectors cleartext_audit --allow crypto --json reproduces golden audit JSON.
 	var auditOut, auditErr bytes.Buffer
 	code = run(ctx, []string{
-		"--file", filepath.Join("tests", "fixtures", "audit_one_leak.pcap"),
+		"--file", filepath.Join("testdata", "fixtures", "audit_one_leak.pcap"),
 		"--detectors", "cleartext_audit",
 		"--allow", "crypto",
 		"--json",
@@ -62,7 +62,7 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 	var netAuditOut, netAuditErr bytes.Buffer
 	code = run(ctx, []string{
 		"--network-only",
-		"--file", filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap"),
+		"--file", filepath.Join("testdata", "fixtures", "grpc_mgmt_mix.pcap"),
 		"--detectors", "cleartext_audit",
 		"--allow", "encrypted",
 		"--json",
@@ -82,7 +82,7 @@ func TestCLIDumpAndAuditGoldenParity(t *testing.T) {
 
 	// 3. Human-readable verdict mode without --json.
 	var textOut, textErr bytes.Buffer
-	code = run(ctx, []string{"--detectors", "cleartext_audit", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
+	code = run(ctx, []string{"--detectors", "cleartext_audit", "--file", filepath.Join("testdata", "fixtures", "ipsec_ikev2_esp.pcap"), "--max-packets", "10"}, &textOut, &textErr)
 	if code != 0 || !strings.Contains(textOut.String(), "PASS:") {
 		t.Fatalf("text mode = (code=%d, out=%q, err=%q)", code, textOut.String(), textErr.String())
 	}
@@ -150,15 +150,15 @@ func TestCLIProtocolModesAndSaveFile(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"network_text_save", []string{"--network-only", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--save_file", filepath.Join(tmp, "net.md")}, "S.O.N.I.C. network analysis"},
-		{"network_json", []string{"--network-only", "--file", filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"), "--detectors", "ipsec", "--json"}, `"encryption_verdict"`},
-		{"grpc_text_save", []string{"--grpc", "--file", filepath.Join("tests", "fixtures", "grpc_h2_trouble.pcap"), "--proto-path", tmp, "--save_file", filepath.Join(tmp, "grpc.md")}, "S.O.N.I.C. gRPC troubleshooting"},
-		{"restconf_text_save", []string{"--restconf", "--file", filepath.Join("tests", "fixtures", "restconf_cleartext.pcap"), "--save_file", filepath.Join(tmp, "http.json")}, "S.O.N.I.C. RESTCONF and REST troubleshooting"},
-		{"snmp_text_save", []string{"--snmp", "--file", filepath.Join("tests", "fixtures", "snmp_v1v2c.pcap"), "--save_file", filepath.Join(tmp, "snmp.md")}, "S.O.N.I.C. SNMP troubleshooting"},
-		{"aaa_text_save", []string{"--aaa", "--file", filepath.Join("tests", "fixtures", "aaa_radius.pcap"), "--save_file", filepath.Join(tmp, "aaa.md")}, "S.O.N.I.C. TACACS+ and RADIUS troubleshooting"},
-		{"esp_text_save", []string{"--esp-decrypt", "--esp-sa", saPath, "--file", filepath.Join("tests", "fixtures", "esp_tunnel.pcap"), "--save_file", filepath.Join(tmp, "esp.md")}, "S.O.N.I.C. IPsec ESP decryption"},
-		{"quality_json", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.json"), "--json"}, `"mos_analysis"`},
-		{"quality_text", []string{"--quality-only", "--file", filepath.Join("tests", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.md")}, "Quality Grade:"},
+		{"network_text_save", []string{"--network-only", "--file", filepath.Join("testdata", "fixtures", "ipsec_ikev2_esp.pcap"), "--save_file", filepath.Join(tmp, "net.md")}, "S.O.N.I.C. network analysis"},
+		{"network_json", []string{"--network-only", "--file", filepath.Join("testdata", "fixtures", "ipsec_ikev2_esp.pcap"), "--detectors", "ipsec", "--json"}, `"encryption_verdict"`},
+		{"grpc_text_save", []string{"--grpc", "--file", filepath.Join("testdata", "fixtures", "grpc_h2_trouble.pcap"), "--proto-path", tmp, "--save_file", filepath.Join(tmp, "grpc.md")}, "S.O.N.I.C. gRPC troubleshooting"},
+		{"restconf_text_save", []string{"--restconf", "--file", filepath.Join("testdata", "fixtures", "restconf_cleartext.pcap"), "--save_file", filepath.Join(tmp, "http.json")}, "S.O.N.I.C. RESTCONF and REST troubleshooting"},
+		{"snmp_text_save", []string{"--snmp", "--file", filepath.Join("testdata", "fixtures", "snmp_v1v2c.pcap"), "--save_file", filepath.Join(tmp, "snmp.md")}, "S.O.N.I.C. SNMP troubleshooting"},
+		{"aaa_text_save", []string{"--aaa", "--file", filepath.Join("testdata", "fixtures", "aaa_radius.pcap"), "--save_file", filepath.Join(tmp, "aaa.md")}, "S.O.N.I.C. TACACS+ and RADIUS troubleshooting"},
+		{"esp_text_save", []string{"--esp-decrypt", "--esp-sa", saPath, "--file", filepath.Join("testdata", "fixtures", "esp_tunnel.pcap"), "--save_file", filepath.Join(tmp, "esp.md")}, "S.O.N.I.C. IPsec ESP decryption"},
+		{"quality_json", []string{"--quality-only", "--file", filepath.Join("testdata", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.json"), "--json"}, `"mos_analysis"`},
+		{"quality_text", []string{"--quality-only", "--file", filepath.Join("testdata", "fixtures", "sip_minimal.pcap"), "--save_file", filepath.Join(tmp, "q.md")}, "Quality Grade:"},
 	}
 	for _, tc := range runs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestCLIProtocolModesAndSaveFile(t *testing.T) {
 
 	// Default save path writes <capture>.network.md when --save_file and --json are omitted.
 	tmpCap := filepath.Join(tmp, "wan.pcap")
-	capBytes, err := os.ReadFile(filepath.Join("tests", "fixtures", "ipsec_ikev2_esp.pcap"))
+	capBytes, err := os.ReadFile(filepath.Join("testdata", "fixtures", "ipsec_ikev2_esp.pcap"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func TestPhase7LLMFetchProtosStreamPartialAndBatch(t *testing.T) {
 	t.Setenv("OPENAI_BASE_URL", srv.URL)
 
 	tmpOut := t.TempDir()
-	sipFix := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
+	sipFix := filepath.Join("testdata", "fixtures", "sip_minimal.pcap")
 
 	// 2a. Standard --provider openai --model detailed --quality --mos saving markdown + redacted secret.
 	mdPath := filepath.Join(tmpOut, "diag.md")

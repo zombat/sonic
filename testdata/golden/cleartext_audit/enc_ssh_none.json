@@ -42,7 +42,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/enc_ssh_none.pcap",
+  "file": "testdata/fixtures/enc_ssh_none.pcap",
   "first_violation_frame": 1,
   "frames_allowed": 0,
   "frames_audited": 14,

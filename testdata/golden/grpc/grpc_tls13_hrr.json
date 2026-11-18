@@ -91,7 +91,7 @@
   ],
   "connections_omitted": 0,
   "credentials": [],
-  "file": "tests/fixtures/grpc_tls13_hrr.pcap",
+  "file": "testdata/fixtures/grpc_tls13_hrr.pcap",
   "issues": [
     {
       "code": "TLS_NO_SNI",

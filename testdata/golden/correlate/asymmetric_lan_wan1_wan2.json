@@ -6,7 +6,7 @@
       "end": "2026-01-01T00:00:01.531Z",
       "label": "lan",
       "packets": 8,
-      "path": "tests/fixtures/dp_corr_lan.pcap",
+      "path": "testdata/fixtures/dp_corr_lan.pcap",
       "start": "2026-01-01T00:00:00.000Z",
       "unmatched_packets": 0,
       "warnings": []
@@ -17,7 +17,7 @@
       "end": "2026-01-01T00:00:01.501Z",
       "label": "wan1",
       "packets": 4,
-      "path": "tests/fixtures/dp_corr_wan1.pcap",
+      "path": "testdata/fixtures/dp_corr_wan1.pcap",
       "start": "2026-01-01T00:00:00.001Z",
       "unmatched_packets": 0,
       "warnings": []
@@ -28,7 +28,7 @@
       "end": "2026-01-01T00:00:01.530Z",
       "label": "wan2",
       "packets": 4,
-      "path": "tests/fixtures/dp_corr_wan2.pcap",
+      "path": "testdata/fixtures/dp_corr_wan2.pcap",
       "start": "2026-01-01T00:00:00.030Z",
       "unmatched_packets": 0,
       "warnings": []

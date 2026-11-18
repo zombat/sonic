@@ -42,7 +42,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/enc_tls13_integrity_only.pcap",
+  "file": "testdata/fixtures/enc_tls13_integrity_only.pcap",
   "first_violation_frame": 1,
   "frames_allowed": 0,
   "frames_audited": 8,

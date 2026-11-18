@@ -41,7 +41,7 @@ func TestGoldenAAAParity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := AnalyzeCapture(context.Background(), filepath.Join("tests", "fixtures", tc.pcap), Options{
+			got := AnalyzeCapture(context.Background(), filepath.Join("testdata", "fixtures", tc.pcap), Options{
 				KeysFile: tc.keysFile,
 			})
 			parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "aaa", tc.golden))
@@ -99,7 +99,7 @@ func TestReadKeysFileWrongSecretAndErrorPaths(t *testing.T) {
 	if err := os.WriteFile(wrongPath, []byte("radius_secret: this-is-the-wrong-secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	repWrong := AnalyzeCapture(context.Background(), filepath.Join("tests", "fixtures", "aaa_radius.pcap"), Options{
+	repWrong := AnalyzeCapture(context.Background(), filepath.Join("testdata", "fixtures", "aaa_radius.pcap"), Options{
 		KeysFile: wrongPath,
 	})
 	foundBadAuth := false
@@ -120,7 +120,7 @@ func TestReadKeysFileWrongSecretAndErrorPaths(t *testing.T) {
 	if rep := AnalyzeCapture(ctx, tmp, Options{}); rep.Status != "error" {
 		t.Fatalf("directory capture should return error")
 	}
-	radPath := filepath.Join("tests", "fixtures", "aaa_radius.pcap")
+	radPath := filepath.Join("testdata", "fixtures", "aaa_radius.pcap")
 	zero := 0
 	if rep := AnalyzeCapture(ctx, radPath, Options{MaxPackets: &zero}); rep.Status != "error" {
 		t.Fatalf("max_packets=0 should return error")

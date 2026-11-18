@@ -207,7 +207,8 @@ def main():
         print(f"capturing SNMP v1, v2c and v3 from net-snmp into {out} (needs Docker) ...")
         print(f"wrote {generate_v3_captures(out)} and snmp-users.txt")
         return
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else HERE
+    default_out = os.path.join(os.path.dirname(os.path.dirname(HERE)), "testdata", "fixtures")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "snmp_v1v2c.pcap")
     build_v1v2c().write(path)

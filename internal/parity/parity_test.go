@@ -2,7 +2,6 @@
 package parity
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -142,16 +141,24 @@ func TestCompareJSON(t *testing.T) {
 	}
 }
 
-// TestCompareGolden verifies CompareGolden against a temporary golden JSON file.
+// TestCompareGolden verifies CompareGolden and writeGolden against a temporary file.
 func TestCompareGolden(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sample.json")
-	if err := os.WriteFile(path, []byte(`{"name":"sonic","values":[1,2,3]}`), 0o600); err != nil {
-		t.Fatalf("write golden: %v", err)
+	if err := writeGolden(path, []byte(`{"values":[1,2,3],"name":"sonic"}`)); err != nil {
+		t.Fatalf("writeGolden: %v", err)
 	}
 	got := map[string]any{
 		"name":   "sonic",
 		"values": []int{1, 2, 3},
 	}
 	CompareGolden(t, got, path)
+
+	old := *updateGolden
+	*updateGolden = true
+	t.Cleanup(func() { *updateGolden = old })
+	updatedPath := filepath.Join(dir, "nested", "updated.json")
+	CompareGolden(t, got, updatedPath)
+	*updateGolden = false
+	CompareGolden(t, got, updatedPath)
 }

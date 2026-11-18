@@ -42,7 +42,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/enc_tls12_null.pcap",
+  "file": "testdata/fixtures/enc_tls12_null.pcap",
   "first_violation_frame": 1,
   "frames_allowed": 0,
   "frames_audited": 11,

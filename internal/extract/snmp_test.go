@@ -69,7 +69,7 @@ func TestExtractSNMPFixture(t *testing.T) {
 	}
 	t.Chdir(repoRoot)
 
-	rows, communities, warnings, err := ExtractSNMP(context.Background(), filepath.Join("tests", "fixtures", "snmp_v1v2c.pcap"), []SnmpUser{
+	rows, communities, warnings, err := ExtractSNMP(context.Background(), filepath.Join("testdata", "fixtures", "snmp_v1v2c.pcap"), []SnmpUser{
 		{User: "u1", Auth: "SHA1", AuthPass: "authpass1", Priv: "AES", PrivPass: "privpass1"},
 	}, "", nil)
 	if err != nil {

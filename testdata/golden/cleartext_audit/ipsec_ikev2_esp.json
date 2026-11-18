@@ -35,7 +35,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/ipsec_ikev2_esp.pcap",
+  "file": "testdata/fixtures/ipsec_ikev2_esp.pcap",
   "first_violation_frame": null,
   "frames_allowed": 36,
   "frames_audited": 36,

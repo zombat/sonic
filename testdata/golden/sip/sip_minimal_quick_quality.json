@@ -1,5 +1,5 @@
 {
-  "file": "tests/fixtures/sip_minimal.pcap",
+  "file": "testdata/fixtures/sip_minimal.pcap",
   "mos_analysis": {
     "average_mos": 0.0,
     "best_mos": 0.0,

@@ -25,8 +25,8 @@ func TestGoldenTimelineParity(t *testing.T) {
 
 	ctx := context.Background()
 	captures := []CaptureInput{
-		{Path: filepath.Join("tests", "fixtures", "ospf_failover.pcap"), Label: "core"},
-		{Path: filepath.Join("tests", "fixtures", "icmp_loss.pcap"), Label: "lan"},
+		{Path: filepath.Join("testdata", "fixtures", "ospf_failover.pcap"), Label: "core"},
+		{Path: filepath.Join("testdata", "fixtures", "icmp_loss.pcap"), Label: "lan"},
 	}
 
 	t.Run("ospf_icmp_auto", func(t *testing.T) {
@@ -61,8 +61,8 @@ func TestTimelineOptionsSelectorsAndErrors(t *testing.T) {
 
 	ctx := context.Background()
 	captures := []CaptureInput{
-		{Path: filepath.Join("tests", "fixtures", "ospf_failover.pcap"), Label: "core"},
-		{Path: filepath.Join("tests", "fixtures", "icmp_loss.pcap"), Label: "lan"},
+		{Path: filepath.Join("testdata", "fixtures", "ospf_failover.pcap"), Label: "core"},
+		{Path: filepath.Join("testdata", "fixtures", "icmp_loss.pcap"), Label: "lan"},
 	}
 
 	assertErr := func(r Report, substr string) {
@@ -91,7 +91,7 @@ func TestTimelineOptionsSelectorsAndErrors(t *testing.T) {
 		From: &Selector{Capture: strPtr("nope")},
 		To:   &Selector{},
 	}}}), "unknown capture")
-	assertErr(MergeTimelines(ctx, []CaptureInput{captures[0], {Path: filepath.Join("tests", "fixtures", "missing.pcap"), Label: "bad"}}, Options{}), "bad:")
+	assertErr(MergeTimelines(ctx, []CaptureInput{captures[0], {Path: filepath.Join("testdata", "fixtures", "missing.pcap"), Label: "bad"}}, Options{}), "bad:")
 
 	// JSON unmarshaling of Selector (string/int occurrence, unknown keys).
 	var sel Selector

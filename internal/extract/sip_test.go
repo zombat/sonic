@@ -164,7 +164,7 @@ func TestSIPMaskingExtractionAndGoldenParity(t *testing.T) {
 
 	// Live tshark + golden parity on sip_minimal.pcap.
 	ctx := context.Background()
-	sipMinPath := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
+	sipMinPath := filepath.Join("testdata", "fixtures", "sip_minimal.pcap")
 	sumMin, rawMin, err := ExtractSIPData(ctx, sipMinPath)
 	if err != nil || sumMin == nil || rawMin == "" {
 		t.Fatalf("ExtractSIPData(sip_minimal) failed: sum=%v err=%v", sumMin, err)

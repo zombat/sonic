@@ -143,8 +143,8 @@ func TestCodecsAndRecoveryHelpers(t *testing.T) {
 func TestOrchestrationCombinedModesPartialAndBatch(t *testing.T) {
 	chdirRepoRoot(t)
 	ctx := context.Background()
-	sipFix := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
-	nonSIPFix := filepath.Join("tests", "fixtures", "icmp_loss.pcap")
+	sipFix := filepath.Join("testdata", "fixtures", "sip_minimal.pcap")
+	nonSIPFix := filepath.Join("testdata", "fixtures", "icmp_loss.pcap")
 
 	// Empty SIP input skips cleanly.
 	if res := SIPDiagnosticTest(ctx, Deps{}, "ollama", "fast", "", "", ""); res.Status != "skipped" {
@@ -293,7 +293,7 @@ func TestOrchestrationCombinedModesPartialAndBatch(t *testing.T) {
 func TestAIEdgeNormalizationAndErrorFallbacks(t *testing.T) {
 	chdirRepoRoot(t)
 	ctx := context.Background()
-	sipFix := filepath.Join("tests", "fixtures", "sip_minimal.pcap")
+	sipFix := filepath.Join("testdata", "fixtures", "sip_minimal.pcap")
 	creds, _ := llm.NewCredentialStore("")
 
 	// 1. Validate fills missing fields on sparse DiagnosticArtifact; snake_case decoding preserves flow pointers.

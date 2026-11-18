@@ -23,7 +23,7 @@
       "value": "masked"
     }
   ],
-  "file": "tests/fixtures/snmp_v1v2c.pcap",
+  "file": "testdata/fixtures/snmp_v1v2c.pcap",
   "issues": [
     {
       "code": "SNMP_CLEARTEXT_COMMUNITY",

@@ -271,7 +271,8 @@ def build_restconf_tls13_keylog(out_dir, client_port=46000, start=0.0, cap=None,
 
 
 def main():
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else HERE
+    default_out = os.path.join(os.path.dirname(os.path.dirname(HERE)), "testdata", "fixtures")
+    out_dir = sys.argv[1] if len(sys.argv) > 1 else default_out
     os.makedirs(out_dir, exist_ok=True)
     builders = {"restconf_cleartext.pcap": build_restconf_cleartext}
     for name, builder in builders.items():

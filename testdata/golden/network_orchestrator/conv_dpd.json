@@ -25,7 +25,7 @@
   "event_time": null,
   "failed_peer": "192.0.2.1",
   "failed_peer_source": "inferred: the first peer whose ESP stopped",
-  "file": "tests/fixtures/convergence_dpd.pcap",
+  "file": "testdata/fixtures/convergence_dpd.pcap",
   "issues": [],
   "measurements": {
     "detection": {

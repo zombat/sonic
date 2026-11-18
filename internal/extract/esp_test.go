@@ -130,7 +130,7 @@ func TestESPPacketReconstructionAndDecrypt(t *testing.T) {
 		t.Fatal("IPv6 tunnel innerIPPacket mismatch")
 	}
 
-	// Live DecryptESP on tests/fixtures/esp_tunnel.pcap.
+	// Live DecryptESP on testdata/fixtures/esp_tunnel.pcap.
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestESPPacketReconstructionAndDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	res, err := DecryptESP(ctx, filepath.Join("tests", "fixtures", "esp_tunnel.pcap"), sas, "", nil)
+	res, err := DecryptESP(ctx, filepath.Join("testdata", "fixtures", "esp_tunnel.pcap"), sas, "", nil)
 	if err != nil {
 		t.Fatalf("DecryptESP failed: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestESPPacketReconstructionAndDecrypt(t *testing.T) {
 	}
 	// Wrong key still attempts decryption and detects ICV_BAD on row processing.
 	wrongSAS, _ := ParseSAFile("src: 198.51.100.1\ndst: 198.51.100.2\nspi: 0x00001001\nencryption: aes-cbc\nencryption_key: 0xffffffffffffffffffffffffffffffff\nintegrity: hmac-sha1-96\nintegrity_key: 0xffffffffffffffffffffffffffffffffffffffff\n")
-	wrongRes, err := DecryptESP(ctx, filepath.Join("tests", "fixtures", "esp_tunnel.pcap"), wrongSAS, "esp.spi == 0x00001001", nil)
+	wrongRes, err := DecryptESP(ctx, filepath.Join("testdata", "fixtures", "esp_tunnel.pcap"), wrongSAS, "esp.spi == 0x00001001", nil)
 	if err != nil {
 		t.Fatalf("DecryptESP wrong key failed: %v", err)
 	}

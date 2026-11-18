@@ -52,7 +52,7 @@ func TestGoldenReachabilityAndConversationsParity(t *testing.T) {
 	for _, stem := range reachCases {
 		t.Run("reachability/"+stem, func(t *testing.T) {
 			det := NewReachabilityDetector()
-			ctx := feedFixtureRecords(t, filepath.Join("tests", "fixtures", stem+".pcap"), det.Feed)
+			ctx := feedFixtureRecords(t, filepath.Join("testdata", "fixtures", stem+".pcap"), det.Feed)
 			got := det.Report(ctx)
 			parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "reachability", stem+".json"))
 		})
@@ -67,7 +67,7 @@ func TestGoldenReachabilityAndConversationsParity(t *testing.T) {
 	for _, stem := range convCases {
 		t.Run("conversations/"+stem, func(t *testing.T) {
 			det := NewConversationDetector()
-			ctx := feedFixtureRecords(t, filepath.Join("tests", "fixtures", stem+".pcap"), det.Feed)
+			ctx := feedFixtureRecords(t, filepath.Join("testdata", "fixtures", stem+".pcap"), det.Feed)
 			got := det.Report(ctx)
 			parity.CompareGolden(t, got, filepath.Join("testdata", "golden", "conversations", stem+".json"))
 		})

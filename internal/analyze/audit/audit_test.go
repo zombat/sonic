@@ -42,7 +42,7 @@ func TestGoldenCleartextAuditParity(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			pcapPath := filepath.Join("tests", "fixtures", tc.pcap+".pcap")
+			pcapPath := filepath.Join("testdata", "fixtures", tc.pcap+".pcap")
 			goldenPath := filepath.Join("testdata", "golden", "cleartext_audit", tc.golden+".json")
 			got, err := AuditCleartextCapture(ctx, AuditOptions{
 				FilePath: pcapPath,
@@ -277,7 +277,7 @@ func TestAddGrpcFindingsAndGoldenMix(t *testing.T) {
 	t.Chdir(repoRoot)
 
 	ctx := context.Background()
-	pcap := filepath.Join("tests", "fixtures", "grpc_mgmt_mix.pcap")
+	pcap := filepath.Join("testdata", "fixtures", "grpc_mgmt_mix.pcap")
 	rep, err := AuditCleartextCapture(ctx, AuditOptions{FilePath: pcap})
 	if err != nil {
 		t.Fatalf("AuditCleartextCapture: %v", err)
@@ -296,7 +296,7 @@ func TestAddGrpcFindingsAndGoldenMix(t *testing.T) {
 		Status:      "success",
 		TCPSessions: []model.TCPSession{{Protocol: "http2 (tcp/50001)"}},
 	}
-	AddGrpcFindings(ctx, &errRep, filepath.Join("tests", "fixtures", "missing.pcap"), "", nil)
+	AddGrpcFindings(ctx, &errRep, filepath.Join("testdata", "fixtures", "missing.pcap"), "", nil)
 	if errRep.Grpc == nil || errRep.Grpc.Checked || errRep.Grpc.Error == "" {
 		t.Fatalf("expected checked=false error on missing capture: %+v", errRep.Grpc)
 	}

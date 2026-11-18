@@ -20,7 +20,7 @@ func TestGoldenGreNhrpParity(t *testing.T) {
 
 	for _, stem := range []string{"gre_nhrp", "nhrp_phase3_broken", "routing_over_gre", "audit_one_leak"} {
 		t.Run(stem, func(t *testing.T) {
-			pcapPath := filepath.Join("tests", "fixtures", stem+".pcap")
+			pcapPath := filepath.Join("testdata", "fixtures", stem+".pcap")
 			out, err := extract.OpenNetworkRecords(context.Background(), tshark.StreamOptions{FilePath: pcapPath})
 			if err != nil {
 				t.Fatalf("OpenNetworkRecords: %v", err)

@@ -35,7 +35,7 @@
     "unverified": 0,
     "weak": 0
   },
-  "file": "tests/fixtures/ipsec_natt.pcap",
+  "file": "testdata/fixtures/ipsec_natt.pcap",
   "first_violation_frame": null,
   "frames_allowed": 20,
   "frames_audited": 20,

@@ -280,7 +280,7 @@
   ],
   "connections_omitted": 0,
   "credentials": [],
-  "file": "tests/fixtures/grpc_connection_trouble.pcap",
+  "file": "testdata/fixtures/grpc_connection_trouble.pcap",
   "issues": [
     {
       "code": "HTTP2_TOO_MANY_PINGS",

@@ -223,7 +223,7 @@
     },
     "verdict": "No ESP in this capture."
   },
-  "file": "tests/fixtures/dp_qos_rtp.pcap",
+  "file": "testdata/fixtures/dp_qos_rtp.pcap",
   "gre_nhrp": {
     "detector": "gre_nhrp",
     "dmvpn_phase_hint": "unknown",
