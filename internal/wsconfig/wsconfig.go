@@ -140,10 +140,14 @@ func validateUATName(name string) error {
 	return nil
 }
 
-// writeSecretFile creates a mode-0600 file inside dirPath and writes content.
+// writeSecretFile creates a mode-0600 file inside dirPath under os.Root and writes content.
 func writeSecretFile(dirPath, name, content string) error {
-	target := filepath.Join(dirPath, name)
-	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	root, err := os.OpenRoot(dirPath)
+	if err != nil {
+		return fmt.Errorf("open secret dir %s: %w", dirPath, err)
+	}
+	defer func() { _ = root.Close() }()
+	f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("create secret file %s: %w", name, err)
 	}

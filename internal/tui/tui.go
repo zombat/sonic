@@ -199,21 +199,29 @@ func (st *viewState) render(out io.Writer) error {
 
 	var sb strings.Builder
 	sb.WriteString("\x1b[2J\x1b[H")
-	fmt.Fprintf(&sb, "S.O.N.I.C. TUI | %s\r\n", st.digest.Title)
-	fmt.Fprintf(&sb, "%s\r\n", headerTabs.String())
-	sb.WriteString(strings.Repeat("-", 78) + "\r\n")
+	writeTermLine(&sb, "S.O.N.I.C. TUI | "+st.digest.Title)
+	sb.WriteString(headerTabs.String())
+	sb.WriteByte('\r')
+	sb.WriteByte('\n')
+	writeTermLine(&sb, strings.Repeat("-", 78))
 	for _, line := range visible {
-		sb.WriteString(line + "\r\n")
+		writeTermLine(&sb, line)
 	}
-	sb.WriteString(strings.Repeat("-", 78) + "\r\n")
+	writeTermLine(&sb, strings.Repeat("-", 78))
 	if st.query {
-		fmt.Fprintf(&sb, "Filter: /%s_  (Enter apply, Esc cancel)\r\n", st.filter)
+		writeTermLine(&sb, fmt.Sprintf("Filter: /%s_  (Enter apply, Esc cancel)", st.filter))
 	} else {
-		fmt.Fprintf(&sb, "Keys: [1-5] tabs  [j/k/arrows] scroll  [n/p] page  [/] filter (%q)  [c] clear  [q] quit  (lines %d-%d/%d)\r\n",
-			st.filter, st.scroll+1, end, len(lines))
+		writeTermLine(&sb, fmt.Sprintf("Keys: [1-5] tabs  [j/k/arrows] scroll  [n/p] page  [/] filter (%q)  [c] clear  [q] quit  (lines %d-%d/%d)",
+			st.filter, st.scroll+1, end, len(lines)))
 	}
 	_, err := io.WriteString(out, sb.String())
 	return err
+}
+
+func writeTermLine(sb *strings.Builder, line string) {
+	sb.WriteString(SanitizeTerminalText(line))
+	sb.WriteByte('\r')
+	sb.WriteByte('\n')
 }
 
 func parseInputTokens(raw []byte) []string {

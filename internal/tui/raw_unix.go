@@ -1,5 +1,6 @@
 //go:build !windows
 
+// Package tui implements POSIX termios raw terminal input handling via stty.
 package tui
 
 import (

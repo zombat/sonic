@@ -284,6 +284,33 @@ func TestSkillWriteRefusalRerunAndStalePruning(t *testing.T) {
 	if code := guide.CreateSkillCommand(okDir, specs, "sonic", guide.DefaultCLIFlags(), &out, &errOut); code != 0 || !strings.Contains(out.String(), "Skill 'sonic'") {
 		t.Fatalf("expected exit 0 summary, got code=%d out=%s err=%s", code, out.String(), errOut.String())
 	}
+
+	// Direct WriteAtomic writes new file cleanly, and WriteSkill rejects symlink escapes under os.Root.
+	atomicTarget := filepath.Join(tmp, "standalone", "ATOMIC.md")
+	if err := guide.WriteAtomic(atomicTarget, guide.SkillMarker+" -->\nbody\n"); err != nil {
+		t.Fatalf("WriteAtomic failed: %v", err)
+	}
+	if !guide.WrittenBySonic(atomicTarget) {
+		t.Fatal("WrittenBySonic should detect atomic skill marker")
+	}
+	if _, err := guide.WriteSkill(atomicTarget, map[string]string{"SKILL.md": "x"}); err == nil {
+		t.Fatal("WriteSkill should fail when targetDir is a regular file")
+	}
+
+	escapeDir := filepath.Join(tmp, "escape-root")
+	outsideFile := filepath.Join(tmp, "outside.md")
+	if err := os.WriteFile(outsideFile, []byte("outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(escapeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outsideFile, filepath.Join(escapeDir, "SKILL.md")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := guide.WriteSkill(escapeDir, map[string]string{"SKILL.md": guide.SkillMarker + " -->\n"}); err == nil {
+		t.Fatal("WriteSkill under os.Root should refuse symlink escaping root")
+	}
 }
 
 func TestExtractCreateSkillFlagVariants(t *testing.T) {

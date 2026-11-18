@@ -66,3 +66,54 @@ func TestInteractiveTUINavigationFilterAndQuit(t *testing.T) {
 		t.Fatalf("parseInputTokens unexpected: %v", toks)
 	}
 }
+
+func TestTUISanitizesANSIEscapesAndControlChars(t *testing.T) {
+	t.Parallel()
+
+	payload := "\x1b[2J\x1b[H\x1b]0;spoof\x07evil\r\ninjected\x1b\\next"
+	digest := report.ReportDigest{
+		Title: payload,
+		File:  "cap\x1b[31m.pcap",
+		Issues: []report.DigestIssue{{
+			Severity: "warning",
+			Detector: "sip",
+			Code:     "CODE",
+			Message:  payload,
+		}},
+		PrettyJSON: `{"verdict":"` + payload + `"}`,
+	}
+	var out bytes.Buffer
+	if err := Run(digest, strings.NewReader("25q"), &out); err != nil {
+		t.Fatalf("tui Run failed: %v", err)
+	}
+	rendered := out.String()
+	if !strings.Contains(rendered, "evil injected") {
+		t.Fatalf("expected sanitized text 'evil injected', got %q", rendered)
+	}
+	if strings.Contains(rendered, "\x1b]0;spoof") || strings.Contains(rendered, "\x1b[31m") {
+		t.Fatalf("terminal escape injection leaked into TUI output: %q", rendered)
+	}
+	if got := SanitizeTerminalText("ok\u009b31m\x7f\x01\tdone\x1b"); got != "ok31m\tdone" {
+		t.Fatalf("SanitizeTerminalText = %q", got)
+	}
+}
+
+func FuzzSanitizeTerminalText(f *testing.F) {
+	for _, seed := range []string{
+		"",
+		"plain ascii",
+		"\x1b[2J\x1b[H\x1b]0;spoof\x07evil\r\ninjected",
+		"\x1bPdevice\x1b\\\u009b1m\x7f\x00test",
+		"\x1b",
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		out := SanitizeTerminalText(s)
+		for _, r := range out {
+			if r == 0x1b || r == '\r' || r == '\n' || (r < 0x20 && r != '\t') || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
+				t.Fatalf("unsanitized rune %#x in output %q", r, out)
+			}
+		}
+	})
+}

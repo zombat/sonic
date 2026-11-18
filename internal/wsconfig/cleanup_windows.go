@@ -5,7 +5,6 @@ package wsconfig
 
 import (
 	"os"
-	"path/filepath"
 	"syscall"
 )
 
@@ -17,14 +16,18 @@ func removeOrphans(root string) {
 	if err != nil {
 		return
 	}
+	rootDir, err := os.OpenRoot(root)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rootDir.Close() }()
 	selfPID := os.Getpid()
 	for _, entry := range entries {
 		pid, ok := parseDirPID(entry.Name())
 		if !ok || pid == selfPID {
 			continue
 		}
-		fullPath := filepath.Join(root, entry.Name())
-		info, err := os.Lstat(fullPath)
+		info, err := rootDir.Lstat(entry.Name())
 		if err != nil || !info.IsDir() {
 			continue
 		}
@@ -34,6 +37,6 @@ func removeOrphans(root string) {
 			_ = syscall.CloseHandle(h)
 			continue
 		}
-		_ = os.RemoveAll(fullPath)
+		_ = rootDir.RemoveAll(entry.Name())
 	}
 }

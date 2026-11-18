@@ -6,7 +6,6 @@ package wsconfig
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"syscall"
 )
 
@@ -23,6 +22,11 @@ func removeOrphans(root string) {
 	if err != nil {
 		return
 	}
+	rootDir, err := os.OpenRoot(root)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rootDir.Close() }()
 	uid := uint32(os.Getuid())
 	selfPID := os.Getpid()
 	for _, entry := range entries {
@@ -30,9 +34,8 @@ func removeOrphans(root string) {
 		if !ok || pid == selfPID {
 			continue
 		}
-		fullPath := filepath.Join(root, entry.Name())
-		// Use Lstat so symlinks are never followed out of root.
-		info, err := os.Lstat(fullPath)
+		// Use Lstat inside os.Root so symlinks are never followed out of root.
+		info, err := rootDir.Lstat(entry.Name())
 		if err != nil || !info.IsDir() {
 			continue
 		}
@@ -41,7 +44,7 @@ func removeOrphans(root string) {
 			continue
 		}
 		if err := syscall.Kill(pid, 0); errors.Is(err, syscall.ESRCH) {
-			_ = os.RemoveAll(fullPath)
+			_ = rootDir.RemoveAll(entry.Name())
 		}
 	}
 }

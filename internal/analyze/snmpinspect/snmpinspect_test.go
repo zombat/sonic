@@ -3,6 +3,7 @@ package snmpinspect
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,5 +159,17 @@ func TestSnmpErrorsAndV3Helpers(t *testing.T) {
 	v3Rep := buildSNMPReport(ctx, "synth.pcap", Options{DisplayFilter: "snmp"}, v3Users, true, rows, nil, []string{"snmp_users: bad row"})
 	if v3Rep.Summary.Messages != 4 || v3Rep.OverallStatus != model.StatusProblem || len(v3Rep.V3Users) != 1 {
 		t.Fatalf("unexpected v3 report: %+v", v3Rep)
+	}
+
+	rawCredRow := MessageRow{Version: "v2c", Src: "10.0.0.1", Dst: "10.0.0.2", SecurityLevel: "community", Credential: "top-secret-comm"}
+	for _, s := range []string{
+		fmt.Sprintf("%v", rawCredRow),
+		fmt.Sprintf("%+v", rawCredRow),
+		fmt.Sprintf("%#v", rawCredRow),
+		rawCredRow.LogValue().String(),
+	} {
+		if strings.Contains(s, "top-secret-comm") {
+			t.Fatalf("credential leaked in MessageRow formatted output: %s", s)
+		}
 	}
 }

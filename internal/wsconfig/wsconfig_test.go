@@ -253,6 +253,16 @@ func TestNilAndCleanupBranches(t *testing.T) {
 	if err := writeSecretFile(filepath.Join(t.TempDir(), "missing"), "f", "x"); err == nil {
 		t.Fatal("writeSecretFile into nonexistent dir should fail")
 	}
+	// os.Root confines writeSecretFile strictly inside dirPath even against traversal or symlink targets.
+	secretDir := t.TempDir()
+	outsideSecret := filepath.Join(t.TempDir(), "outside-secret")
+	_ = os.Symlink(outsideSecret, filepath.Join(secretDir, "sym"))
+	if err := writeSecretFile(secretDir, "../escape", "x"); err == nil {
+		t.Fatal("writeSecretFile should reject path traversal under os.Root")
+	}
+	if err := writeSecretFile(secretDir, "sym", "x"); err == nil {
+		t.Fatal("writeSecretFile should reject escaping symlink under os.Root")
+	}
 }
 
 // TestSecretDirRootAndOrphanEdgeCases covers non-dir roots, missing mount info, and orphan symlinks.

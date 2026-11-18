@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -336,6 +337,46 @@ func TestStreamErrorCasesAndTruncations(t *testing.T) {
 	cancel()
 	if err := sleepCtx(ctxCancel, time.Second); !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestConfigAndEndpointRedaction(t *testing.T) {
+	t.Parallel()
+	secret := "sk-secret-test-key-12345"
+	cfg := Config{Provider: "openai", ModelName: "gpt-4o", APIKey: secret, Temperature: 0.2, MaxTokens: 512}
+	u, _ := url.Parse("https://user:" + secret + "@api.example.com/v1")
+	ep := Endpoint{Base: u, Key: secret, APIVersion: "2024-06-01"}
+
+	for _, s := range []string{
+		fmt.Sprintf("%v", cfg),
+		fmt.Sprintf("%+v", cfg),
+		fmt.Sprintf("%#v", cfg),
+		cfg.LogValue().String(),
+		fmt.Sprintf("%v", ep),
+		fmt.Sprintf("%+v", ep),
+		fmt.Sprintf("%#v", ep),
+		ep.LogValue().String(),
+	} {
+		if strings.Contains(s, secret) {
+			t.Fatalf("secret leaked in formatted output: %s", s)
+		}
+		if !strings.Contains(s, redactedMarker) && !strings.Contains(s, "REDACTED") {
+			t.Fatalf("expected redaction marker in %s", s)
+		}
+	}
+	bCfg, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal cfg: %v", err)
+	}
+	bEp, err := json.Marshal(ep)
+	if err != nil {
+		t.Fatalf("marshal ep: %v", err)
+	}
+	if strings.Contains(string(bCfg)+string(bEp), secret) {
+		t.Fatalf("secret leaked in JSON: cfg=%s ep=%s", bCfg, bEp)
+	}
+	if got := redactFlag(""); got != "" {
+		t.Fatalf("redactFlag(\"\") = %q, want empty", got)
 	}
 }
 

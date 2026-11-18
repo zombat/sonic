@@ -4,6 +4,8 @@ package snmpinspect
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 
 	"github.com/zombat/sonic/internal/model"
 )
@@ -65,7 +67,7 @@ type MessageRow struct {
 	Dst           string
 	PDU           *string
 	SecurityLevel string
-	Credential    string
+	Credential    string `json:"-"`
 	User          *string
 	EngineID      *string
 	Role          string
@@ -75,6 +77,37 @@ type MessageRow struct {
 	Reason        *string
 	isV3          bool
 	hasAuth       bool
+}
+
+func (m MessageRow) redactedCredential() string {
+	if m.Credential == "" {
+		return ""
+	}
+	return "masked"
+}
+
+// String formats MessageRow for %v/%+v while masking Credential.
+func (m MessageRow) String() string {
+	return fmt.Sprintf("{Version:%s Src:%s Dst:%s SecurityLevel:%s Credential:%s Outcome:%s}",
+		m.Version, m.Src, m.Dst, m.SecurityLevel, m.redactedCredential(), m.Outcome)
+}
+
+// GoString formats MessageRow for %#v while masking Credential.
+func (m MessageRow) GoString() string {
+	return fmt.Sprintf("snmpinspect.MessageRow{Version:%q, Src:%q, Dst:%q, SecurityLevel:%q, Credential:%q, Outcome:%q}",
+		m.Version, m.Src, m.Dst, m.SecurityLevel, m.redactedCredential(), m.Outcome)
+}
+
+// LogValue emits MessageRow attributes to slog while masking Credential.
+func (m MessageRow) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("version", m.Version),
+		slog.String("src", m.Src),
+		slog.String("dst", m.Dst),
+		slog.String("security_level", m.SecurityLevel),
+		slog.String("credential", m.redactedCredential()),
+		slog.String("outcome", m.Outcome),
+	)
 }
 
 // MarshalJSON serializes v1/v2c vs v3 fields matching Python's dynamic message dicts.

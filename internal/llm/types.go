@@ -46,7 +46,7 @@ var Profiles = []string{ProfileFast, ProfileDetailed, ProfileDeep}
 type Config struct {
 	Provider    string
 	ModelName   string
-	APIKey      string
+	APIKey      string `json:"-"`
 	Temperature float64
 	MaxTokens   int
 	// HTTPClient optionally overrides the HTTP transport client (used in unit tests).
@@ -59,7 +59,7 @@ type Config struct {
 type Endpoint struct {
 	Base       *url.URL
 	Client     *http.Client
-	Key        string
+	Key        string `json:"-"`
 	APIVersion string
 }
 
