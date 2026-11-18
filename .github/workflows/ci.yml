@@ -47,4 +47,9 @@ jobs:
         run: make fuzz
 
       - name: Build binaries and cross-platform release archives
-        run: make build release && ls -lh build/release/
+        run: |
+          make build release
+          ls -lh build/release/
+          ./build/sonic --version
+          ./build/sonic-mcp --version
+          (cd build/release && sha256sum -c SHA256SUMS)
