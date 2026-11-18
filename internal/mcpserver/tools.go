@@ -21,8 +21,8 @@ var toolsJSON []byte
 // ServerName matches the Python server's MCP name.
 const ServerName = "S.O.N.I.C. VoIP and Network Analyzer"
 
-// Version identifies this Go server build in serverInfo.
-const Version = "0.6.0-go"
+// Version identifies this Go server build in serverInfo when built without ldflags.
+const Version = "4.0.0"
 
 // Handler runs one tool: it decodes args and returns the report as JSON.
 type Handler func(ctx context.Context, args json.RawMessage) ([]byte, error)
@@ -90,6 +90,15 @@ func newServer(defs []toolDef, handlers map[string]Handler) (*Server, error) {
 	}
 	s.instructions = guide.Instructions(s.ToolSpecs())
 	return s, nil
+}
+
+// ServerName and SetVersion helpers follow.
+
+// SetVersion overrides the serverInfo version string reported during initialize.
+func (s *Server) SetVersion(v string) {
+	if strings.TrimSpace(v) != "" {
+		s.version = v
+	}
 }
 
 // ToolSpecs returns guide descriptors for every registered tool in definition order.

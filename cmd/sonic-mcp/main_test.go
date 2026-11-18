@@ -59,6 +59,18 @@ func TestRunMCPReserveStdoutAndCreateSkill(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(target, "SKILL.md")); err != nil {
 		t.Fatalf("missing generated SKILL.md: %v", err)
 	}
+
+	out.Reset()
+	errOut.Reset()
+	if code := runWithArgs(context.Background(), []string{"--version"}, strings.NewReader(""), &out, &errOut, false, defaultDeps()); code != 0 || !strings.Contains(out.String(), "sonic-mcp") {
+		t.Fatalf("--version failed (%d): out=%q err=%q", code, out.String(), errOut.String())
+	}
+	if got := resolveServerVersion("v4.0.0", "abc1234"); got != "v4.0.0 (abc1234)" {
+		t.Fatalf("unexpected resolved version with commit: %q", got)
+	}
+	if got := resolveServerVersion("v4.0.0", "none"); got != "v4.0.0" {
+		t.Fatalf("unexpected resolved version without commit: %q", got)
+	}
 }
 
 func TestRunMCPErrorPaths(t *testing.T) {

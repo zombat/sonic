@@ -20,10 +20,26 @@ import (
 	"github.com/zombat/sonic/internal/report"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+)
+
 type runtimeDeps struct {
 	loadCreds     func(envFile string) (*llm.CredentialStore, error)
 	newServer     func(deps ai.Deps) (*mcpserver.Server, error)
 	reserveStdout func() (*os.File, func(), error)
+}
+
+// resolveServerVersion formats build-injected tag and commit metadata for serverInfo.
+func resolveServerVersion(ver, sha string) string {
+	if ver == "" || ver == "dev" {
+		return mcpserver.Version
+	}
+	if sha != "" && sha != "none" {
+		return fmt.Sprintf("%s (%s)", ver, sha)
+	}
+	return ver
 }
 
 func defaultDeps() runtimeDeps {
@@ -45,11 +61,16 @@ func runWithArgs(ctx context.Context, args []string, in io.Reader, out io.Writer
 	var envFile, skillDoc string
 	fs.StringVar(&envFile, "env-file", "", "dotenv file to read API keys from when unset ($SONIC_ENV_FILE)")
 	fs.StringVar(&skillDoc, "create-skill", "", "write S.O.N.I.C. Agent Skill into DIR (default .claude/skills/sonic) and exit")
+	showVersion := fs.Bool("version", false, "print sonic-mcp version and commit and exit")
 	if err := fs.Parse(cleanArgs); err != nil {
 		if err == flag.ErrHelp {
 			return 0
 		}
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(out, "sonic-mcp %s (%s)\n", version, commit)
+		return 0
 	}
 
 	creds, cerr := deps.loadCreds(envFile)
@@ -67,6 +88,7 @@ func runWithArgs(ctx context.Context, args []string, in io.Reader, out io.Writer
 		fmt.Fprintf(errOut, "initialize mcp server: %s\n", redact.RedactText(err.Error()))
 		return 1
 	}
+	srv.SetVersion(resolveServerVersion(version, commit))
 	if createSkill {
 		return guide.CreateSkillCommand(skillDir, srv.ToolSpecs(), "sonic", guide.DefaultCLIFlags(), out, errOut)
 	}

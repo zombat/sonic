@@ -963,7 +963,7 @@
             }
           ],
           "default": null,
-          "description": "Optional directories of .proto files for Wireshark's protobuf dissector\n(default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from\n`sonic.py --fetch-grpc-protos`). Without them gNMI is still decoded."
+          "description": "Optional directories of .proto files for Wireshark's protobuf dissector\n(default SONIC_PROTO_PATH, else ~/.cache/sonic/grpc-protos from\n`sonic --fetch-grpc-protos`). Without them gNMI is still decoded."
         },
         "ports": {
           "anyOf": [

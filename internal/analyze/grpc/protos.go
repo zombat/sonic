@@ -142,7 +142,7 @@ func FetchProtos(
 		written = append(written, entry.target)
 	}
 	readme := fmt.Sprintf(
-		"These files were downloaded by `sonic.py --fetch-grpc-protos` for Wireshark's protobuf\n"+
+		"These files were downloaded by `sonic --fetch-grpc-protos` for Wireshark's protobuf\n"+
 			"dissector, which S.O.N.I.C. points at this directory when it analyzes gRPC captures.\n"+
 			"They are not part of S.O.N.I.C. and keep their own licenses (LICENSES/):\n"+
 			"  github.com/openconfig/gnmi  %s (%s), Apache-2.0\n"+

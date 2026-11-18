@@ -21,6 +21,8 @@ import (
 	"github.com/zombat/sonic/internal/tshark"
 )
 
+var version, commit = "dev", "none"
+
 type cliOptions struct {
 	file          string
 	saveFile      string
@@ -131,6 +133,7 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 	fs.StringVar(&o.aaaSecrets, "aaa-secrets", "", "AAA shared secret file path")
 	fs.StringVar(&o.espSA, "esp-sa", "", "IPsec SA file path for ESP decryption")
 	fs.StringVar(&o.envFile, "env-file", "", "dotenv file to read API keys from when unset in process env ($SONIC_ENV_FILE)")
+	showVersion := fs.Bool("version", false, "print sonic version and commit and exit")
 	registerLLMFlags(fs, &lo)
 	configureCLIUsage(fs, stderr)
 
@@ -139,6 +142,10 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 			return 0
 		}
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(stdout, "sonic %s (%s)\n", version, commit)
+		return 0
 	}
 	if createSkill {
 		specs, err := mcpserver.DefaultToolSpecs()

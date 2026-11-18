@@ -1,34 +1,25 @@
-# S.O.N.I.C. Makefile
-#
-# Compile & install Go binaries (tshark required on PATH at runtime):
-#   make               Compile ./build/sonic and ./build/sonic-mcp
-#   make install       Install binaries into $(PREFIX) (default ~/.local/bin)
-#   make release       Cross-compile stripped CGO_ENABLED=0 binaries + SHA256SUMS
-#   make test          Run all 34 Go packages with -race and statement coverage
-#   make help          List all targets and configurable variables
+# Build, install, release, test, and verify S.O.N.I.C. (pure Go runtime).
+# Common usage:
+#   make               Compile build/sonic and build/sonic-mcp
+#   make install       Install sonic and sonic-mcp into PREFIX (~/.local/bin)
+#   make release       Build release archives (.tar.gz / .zip) + SHA256SUMS for 6 platforms
+#   make test          Run all Go packages with -race and coverage
+#   make update-golden Update golden JSON snapshots via go test -update
+#   make help          Print all available targets
 
-ifneq (,$(wildcard venv/bin/python))
-PYTHON := $(CURDIR)/venv/bin/python
-else
-PYTHON := python3
-endif
-
-GOENV     ?= GOMAXPROCS=4 GOMEMLIMIT=2400MiB
+GOENV ?= GOMAXPROCS=4 GOMEMLIMIT=2400MiB
 BUILD_DIR ?= build
-REL_DIR   ?= $(BUILD_DIR)/release
-PREFIX    ?= $(HOME)/.local/bin
-LDFLAGS   ?= -s -w
-GO_FLAGS  ?= -trimpath -ldflags="$(LDFLAGS)"
-
-PLATFORMS := \
-	linux/amd64 \
-	linux/arm64 \
-	darwin/amd64 \
-	darwin/arm64 \
-	windows/amd64
+REL_DIR ?= $(BUILD_DIR)/release
+PREFIX ?= $(HOME)/.local/bin
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null || git describe --tags --always --dirty 2>/dev/null || echo dev)
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+LDFLAGS ?= -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT)
+GO_FLAGS ?= -trimpath -ldflags="$(LDFLAGS)"
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
 .DEFAULT_GOAL := build
-.PHONY: all build install uninstall clean release golden fmt vet test fuzz parity mcp-parity help
+
+.PHONY: all build install uninstall release clean fmt vet test fuzz parity update-golden help
 
 all: build
 
@@ -38,7 +29,7 @@ build:
 	CGO_ENABLED=0 $(GOENV) go build $(GO_FLAGS) -o "$(BUILD_DIR)/sonic-mcp" ./cmd/sonic-mcp
 
 install: build
-	@mkdir -p "$(PREFIX)"
+	install -d "$(PREFIX)"
 	install -m 0755 "$(BUILD_DIR)/sonic" "$(PREFIX)/sonic"
 	install -m 0755 "$(BUILD_DIR)/sonic-mcp" "$(PREFIX)/sonic-mcp"
 
@@ -46,23 +37,23 @@ uninstall:
 	rm -f "$(PREFIX)/sonic" "$(PREFIX)/sonic-mcp"
 
 release:
-	@mkdir -p "$(REL_DIR)"
-	@set -e; for pair in $(PLATFORMS); do \
-		os="$${pair%/*}"; \
-		arch="$${pair#*/}"; \
-		ext=""; \
+	@rm -rf "$(REL_DIR)" && mkdir -p "$(REL_DIR)/stage"
+	@for p in $(PLATFORMS); do \
+		os="$${p%/*}"; arch="$${p#*/}"; ext=""; \
 		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
-		echo "Building $$os/$$arch..."; \
-		CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" $(GOENV) go build $(GO_FLAGS) -o "$(REL_DIR)/sonic-$$os-$$arch$$ext" ./cmd/sonic; \
-		CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" $(GOENV) go build $(GO_FLAGS) -o "$(REL_DIR)/sonic-mcp-$$os-$$arch$$ext" ./cmd/sonic-mcp; \
+		bundle="$(REL_DIR)/stage/sonic-$(VERSION)-$$os-$$arch"; \
+		mkdir -p "$$bundle"; \
+		echo "Building $$os/$$arch ($(VERSION))..."; \
+		CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" $(GOENV) go build $(GO_FLAGS) -o "$$bundle/sonic$$ext" ./cmd/sonic || exit 1; \
+		CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" $(GOENV) go build $(GO_FLAGS) -o "$$bundle/sonic-mcp$$ext" ./cmd/sonic-mcp || exit 1; \
+		cp LICENSE README.md "$$bundle/" || exit 1; \
 	done
-	@cd "$(REL_DIR)" && sha256sum sonic-* > SHA256SUMS
+	$(GOENV) go run tools/pack_release.go -stage "$(REL_DIR)/stage" -out "$(REL_DIR)"
+	@rm -rf "$(REL_DIR)/stage"
+	@cat "$(REL_DIR)/SHA256SUMS"
 
 clean:
 	rm -rf "$(BUILD_DIR)"
-
-golden:
-	$(PYTHON) tools/gen_golden.py
 
 fmt:
 	gofmt -w .
@@ -80,24 +71,21 @@ fuzz:
 	$(GOENV) go test -run=^$$ -fuzz=FuzzArtifactFactoryBuild -fuzztime=1s ./internal/ai
 
 parity:
-	$(GOENV) go test -race -p 1 -count=1 -run 'Golden' ./internal/extract/... ./internal/analyze/audit/... ./cmd/sonic/... ./internal/mcpserver/...
+	$(GOENV) go test -race -p 1 -count=1 -run 'Golden' ./...
 
-mcp-parity: build
-	$(GOENV) go build -o "$(BUILD_DIR)/sonic-mcp-stub" ./tests/stub_llm_mcp_server.go
-	SONIC_CLI_BINARY="$(CURDIR)/$(BUILD_DIR)/sonic" SONIC_MCP_BINARY="$(CURDIR)/$(BUILD_DIR)/sonic-mcp" SONIC_MCP_STUB_BINARY="$(CURDIR)/$(BUILD_DIR)/sonic-mcp-stub" $(PYTHON) -m pytest -q test_mcp_stdio.py test_mcp_guidance.py
-	SONIC_MCP_BINARY="$(CURDIR)/$(BUILD_DIR)/sonic-mcp" $(PYTHON) -m pytest -q test_network_mcp.py -k TestMcpStdioHandshake
+update-golden:
+	$(GOENV) go test -p 1 -count=1 ./... -update
 
 help:
-	@echo "S.O.N.I.C. Makefile targets:"
-	@echo "  build       Compile $(BUILD_DIR)/sonic and $(BUILD_DIR)/sonic-mcp (default)"
-	@echo "  install     Install sonic and sonic-mcp into PREFIX (default: $(PREFIX))"
-	@echo "  uninstall   Remove sonic and sonic-mcp from PREFIX"
-	@echo "  release     Cross-compile stripped static binaries ($(PLATFORMS)) + SHA256SUMS"
-	@echo "  vet         Run go vet ./..."
-	@echo "  fmt         Format all Go files with gofmt -w ."
-	@echo "  test        Run all 34 Go packages with -race and coverage"
-	@echo "  fuzz        Run 1s fuzz smoke tests on SSE, NDJSON, JSON recovery, and ArtifactFactory"
-	@echo "  parity      Run Go golden JSON parity tests"
-	@echo "  mcp-parity  Run Python MCP stdio/guidance suites against compiled Go binaries"
-	@echo "  golden      Regenerate Python golden JSON fixtures"
-	@echo "  clean       Remove $(BUILD_DIR)/ artifacts"
+	@printf "S.O.N.I.C. Makefile targets:\n"
+	@printf "  build          Compile build/sonic and build/sonic-mcp (default)\n"
+	@printf "  install        Install sonic and sonic-mcp into PREFIX (default: $(HOME)/.local/bin)\n"
+	@printf "  uninstall      Remove sonic and sonic-mcp from PREFIX\n"
+	@printf "  release        Cross-compile archives (.tar.gz / .zip) + SHA256SUMS for 6 OS/arch targets\n"
+	@printf "  vet            Run go vet ./...\n"
+	@printf "  fmt            Format all Go files with gofmt -w .\n"
+	@printf "  test           Run all Go packages with -race and coverage\n"
+	@printf "  fuzz           Run 1s fuzz smoke tests on SSE, NDJSON, JSON recovery, and ArtifactFactory\n"
+	@printf "  parity         Run Go golden JSON parity tests against testdata/golden/\n"
+	@printf "  update-golden  Regenerate golden JSON snapshots via go test -update\n"
+	@printf "  clean          Remove build/ artifacts\n"
