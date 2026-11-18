@@ -32,20 +32,27 @@ func snmpPrivate(s *model.SNMPHeader) bool {
 	return err == nil && flags&snmpPrivacyBit != 0
 }
 
-// snmpCategory is the protection of an SNMP frame. Only an SNMPv3 message
-// with privacy is encrypted. Everything else is cleartext, including v3
-// discovery and authenticated-only messages, whose PDUs are readable.
+// snmpCategory is the protection of an SNMP frame. An SNMPv3 message with
+// privacy is encrypted. Engine discovery is a key exchange: it carries no
+// security and no data, as IKE's handshake is classed. Everything else is
+// cleartext, including authenticated-only messages, whose PDUs are readable.
 func snmpCategory(s *model.SNMPHeader) string {
-	if snmpPrivate(s) {
+	switch {
+	case snmpPrivate(s):
 		return "encrypted"
+	case s.Discovery:
+		return "key_exchange"
+	default:
+		return "cleartext"
 	}
-	return "cleartext"
 }
 
 // snmpLabel names an SNMP frame for the report, saying whether v3 has privacy.
 func snmpLabel(s *model.SNMPHeader) string {
 	// tshark's snmp.version: 0 is v1, 1 is v2c, 3 is v3.
 	switch {
+	case s.Discovery:
+		return "snmp v3 (engine discovery)"
 	case s.Version == 0:
 		return "snmp v1"
 	case s.Version == 1:

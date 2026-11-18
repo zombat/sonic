@@ -15,7 +15,7 @@ var DefaultAllow = []string{"encrypted"}
 // Groups expands high-level allowlist group tokens into concrete protocol tokens.
 var Groups = map[string][]string{
 	"crypto":     {"esp", "ike", "nat-t"},
-	"encrypted":  {"esp", "ike", "nat-t", "ssh", "tls"},
+	"encrypted":  {"esp", "ike", "nat-t", "ssh", "tls", "snmp-v3-privacy", "snmp-v3-discovery"},
 	"routing":    {"bgp", "ospf", "eigrp", "rip", "ldp", "bfd", "pim", "vrrp", "hsrp"},
 	"l2-control": {"cdp", "stp", "lldp", "lacp", "loop"},
 }
@@ -28,7 +28,7 @@ var Single = map[string]bool{
 	"vrrp": true, "hsrp": true, "gre": true, "cdp": true, "stp": true,
 	"lldp": true, "lacp": true, "loop": true, "dhcp": true, "dns": true,
 	"ntp": true, "ssh": true, "netconf": true, "tls": true, "http2": true,
-	"snmp": true, "snmp-v3-privacy": true, "syslog": true, "tacacs": true, "radius": true,
+	"snmp": true, "snmp-v3-privacy": true, "snmp-v3-discovery": true, "syslog": true, "tacacs": true, "radius": true,
 }
 
 // Hints explains what each audit category represents on a link.

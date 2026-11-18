@@ -149,9 +149,12 @@ func TokensFor(rec *model.Record) (map[string]bool, string, string) {
 		return tokens, "ah", "authenticated_only"
 	}
 	if rec.SNMP != nil {
-		// Only encrypted SNMPv3 has a token, so allowing it never allows cleartext SNMP.
-		if snmpPrivate(rec.SNMP) {
+		// Each SNMP token names only what it covers, so allowing one never admits cleartext SNMP.
+		switch {
+		case snmpPrivate(rec.SNMP):
 			tokens["snmp-v3-privacy"] = true
+		case rec.SNMP.Discovery:
+			tokens["snmp-v3-discovery"] = true
 		}
 		return tokens, snmpLabel(rec.SNMP), snmpCategory(rec.SNMP)
 	}
@@ -166,8 +169,8 @@ func ProtectionOf(rec *model.Record, category string) string {
 		}
 		return "key_exchange"
 	}
-	if category == "encrypted" {
-		return "encrypted"
+	if category == "encrypted" || category == "key_exchange" {
+		return category
 	}
 	if p, ok := protectionMap[category]; ok {
 		return p

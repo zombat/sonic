@@ -45,6 +45,8 @@ type Record struct {
 type SNMPHeader struct {
 	Version int    `json:"version"`
 	Flags   string `json:"flags,omitempty"`
+	// Discovery marks SNMPv3 engine discovery: no security, no data.
+	Discovery bool `json:"discovery,omitempty"`
 }
 
 // IPHeader captures the outer IPv4 or IPv6 header fields.

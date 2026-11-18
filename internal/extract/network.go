@@ -161,7 +161,11 @@ func RecordFromTShark(row tshark.Row, versionMajor int) model.Record {
 		if p := row.FirstPtr("snmp.flags"); p != nil {
 			flags = *p
 		}
-		rec.SNMP = &model.SNMPHeader{Version: *version, Flags: flags}
+		rec.SNMP = &model.SNMPHeader{
+			Version:   *version,
+			Flags:     flags,
+			Discovery: snmpDiscovery(*version, flags, row.All("snmp.oids")),
+		}
 	}
 
 	if row.Has("arp.opcode") {

@@ -42,6 +42,7 @@ var NetworkFields = []FieldSpec{
 	{Key: "snmp.version", Candidates: []string{"snmp.version"}},
 	{Key: "snmp.msg_version", Candidates: []string{"snmp.msgVersion"}},
 	{Key: "snmp.flags", Candidates: []string{"snmp.msgFlags"}},
+	{Key: "snmp.oids", Candidates: []string{"snmp.name"}},
 	{Key: "isakmp.exchtype", Candidates: []string{"isakmp.exchangetype", "isakmp.exchtype"}},
 	{Key: "isakmp.flags", Candidates: []string{"isakmp.flags"}},
 	{Key: "isakmp.messageid", Candidates: []string{"isakmp.messageid"}},

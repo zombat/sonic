@@ -66,26 +66,27 @@ func TestLabCapture_PlaintextGRPCIsCleartextWithItsCredentials(t *testing.T) {
 
 // TestLabCapture_SNMPWithItsPortDecodedIsClassedByVersion proves that, with the
 // agent's port named, SNMP is classed by version and its security flags: v2c
-// and v3 without privacy are cleartext, since their PDUs are readable, and v3
-// with privacy is encrypted. The 4 frames of v3 discovery carry no PDU and stay
-// cleartext.
+// and v3 without privacy carry readable PDUs, so they are cleartext, v3 with
+// privacy is encrypted, and the 4 frames of v3 engine discovery, which carry no
+// security and no data, are a key exchange.
 func TestLabCapture_SNMPWithItsPortDecodedIsClassedByVersion(t *testing.T) {
 	ports := []int{1161}
 
 	if rep := labCapture(t, "snmp-v2c", ports); rep.Protection["cleartext"] != 16 || rep.Protection["encrypted"] != 0 {
 		t.Errorf("snmp v2c: want 16 cleartext, got %v", rep.Protection)
 	}
-	if rep := labCapture(t, "snmp-v3-authnopriv", ports); rep.Protection["cleartext"] != 18 {
-		t.Errorf("snmp v3 without privacy: want 18 cleartext, got %v", rep.Protection)
+	if rep := labCapture(t, "snmp-v3-authnopriv", ports); rep.Protection["cleartext"] != 14 || rep.Protection["key_exchange"] != 4 {
+		t.Errorf("snmp v3 without privacy: want 14 cleartext data frames and 4 discovery, got %v", rep.Protection)
 	}
-	if rep := labCapture(t, "snmp-v3-authpriv", ports); rep.Protection["encrypted"] != 14 || rep.Protection["cleartext"] != 4 {
-		t.Errorf("snmp v3 with privacy: want 14 encrypted and 4 discovery cleartext, got %v", rep.Protection)
+	if rep := labCapture(t, "snmp-v3-authpriv", ports); !rep.Passed || rep.Protection["encrypted"] != 14 ||
+		rep.Protection["key_exchange"] != 4 || rep.Protection["cleartext"] != 0 {
+		t.Errorf("snmp v3 with privacy: want a default pass with 14 encrypted and 4 discovery, got %v (%q)", rep.Protection, rep.Verdict)
 	}
 }
 
-// TestLabCapture_SNMPv3PrivacyIsAllowedByItsOwnToken proves the encrypted SNMPv3
-// frames pass when the operator allows the snmp-v3-privacy token, and the
-// cleartext discovery frames still fail, so the token never admits cleartext SNMP.
+// TestLabCapture_SNMPv3PrivacyIsAllowedByItsOwnToken proves the snmp-v3-privacy
+// token admits only the encrypted frames: with it alone allowed, the discovery
+// frames, which the default allows, are outside the allowlist.
 func TestLabCapture_SNMPv3PrivacyIsAllowedByItsOwnToken(t *testing.T) {
 	rep2, err := AuditCleartextCapture(context.Background(), AuditOptions{
 		FilePath:  filepath.Join("..", "..", "..", "testdata", "lab", "snmp-v3-authpriv.pcap"),
@@ -95,8 +96,8 @@ func TestLabCapture_SNMPv3PrivacyIsAllowedByItsOwnToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep2.FramesOutsideAllowlist != 4 || rep2.Protection["cleartext"] != 4 {
-		t.Errorf("with the privacy token: want only the 4 discovery frames outside the allowlist, got %d outside (%v)",
+	if rep2.FramesOutsideAllowlist != 4 || rep2.Protection["key_exchange"] != 4 {
+		t.Errorf("with the privacy token alone: want only the 4 discovery frames outside the allowlist, got %d outside (%v)",
 			rep2.FramesOutsideAllowlist, rep2.Protection)
 	}
 }
