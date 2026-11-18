@@ -4,7 +4,7 @@
 [![Go 1.27+](https://img.shields.io/badge/go-1.27+-00ADD8.svg)](https://go.dev/dl/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a dependency-free Go packet capture inspection engine and 18-tool MCP server (`sonic` and `sonic-mcp`). Originally built for AI-assisted VoIP/SIP/RTP call quality and MOS troubleshooting, it provides deterministic (`No LLM`) inspection of IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes, gRPC/gNMI/gNOI, zero-cleartext audits, multi-capture correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), alongside optional local or cloud LLM VoIP diagnostics. (Anyone needing the retired Python runtime or pure-Python `scapy` fallback can use the pinned `v3.3.0` release tag.)
+**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a dependency-free Go packet capture inspection engine and 21-tool MCP server (`sonic` and `sonic-mcp`). Originally built for AI-assisted VoIP/SIP/RTP call quality and MOS troubleshooting, it provides deterministic (`No LLM`) inspection of IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes (including a pure-Go `go-fast` L2-L4 path), gRPC/gNMI/gNOI, zero-cleartext audits, CI policy gates (`sonic gate`), baseline diffing (`sonic diff`), multi-capture correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), alongside offline HTML reports, an ANSI TUI, and optional local or cloud LLM VoIP diagnostics. (Anyone needing the retired Python runtime or pure-Python `scapy` fallback can use the pinned `v3.3.0` release tag.)
 
 ### Quick Navigation
 - [Prerequisites & Go Build](#-prerequisites)
@@ -13,7 +13,7 @@
 - [gRPC Troubleshooting](#-grpc-troubleshooting-gnmi-gnoi-any-grpc-service)
 - [Decryption with Your Own Keys](#-decryption-with-your-own-keys)
 - [Multi-Provider LLM Support & API Keys](#-multi-provider-llm-support)
-- [MCP Integration (18 Tools)](#-mcp-integration)
+- [MCP Integration (21 Tools)](#-mcp-integration)
 - [Troubleshooting](#-troubleshooting)
 - [Go vs Python Performance](#-go-vs-python-performance) ([benchmark.md](benchmark.md))
 - [Testing & Development Setup](#-testing)
@@ -203,9 +203,19 @@ sonic --file aaa.pcap --aaa --aaa-secrets aaa-keys.txt
 
 # IPsec ESP: decrypt with SA keys (an SA file or `ip -s xfrm state` output) and analyze the inner traffic
 sonic --file tunnel.pcap --esp-decrypt --esp-sa xfrm-state.txt
+
+# VoIP quality + post-200 OK clipping + RFC 4733 DTMF + underlay correlation
+sonic --file call.pcap --quality-only --json
+sonic --file call.pcap --correlate-media --html report.html
+
+# Pure-Go L2-L4 fast path, time windowing, CI policy gates, baseline diffing, and interactive TUI
+sonic --network-only --file capture.pcap --detectors tcp,path_mtu,qos --fast-path always --since 1700000000 --until 1700000120 --json
+sonic gate --file capture.pcap --policy zero-cleartext,no-weak-crypto,mos-min=3.8,max-clipping-ms=500 --format sarif
+sonic diff --baseline good.pcap --target broken.pcap --redact-audit
+sonic tui --file capture.pcap --network-only
 ```
 
-Each writes `<capture>.restconf.md`, `.snmp.md`, `.aaa.md` or `.esp.md` (or `--save_file`; `--json` prints JSON). See the Decryption section below.
+Each mode writes its default report (or `--save_file`, `--html FILE` for a self-contained offline HTML5 report, `--json` on stdout, or `--redact-audit` for secret-masking counts). Passing a `--save_file` path ending in `.html`/`.htm` writes the offline HTML5 report automatically. See the Decryption section below.
 
 ### Basic LLM Analysis (Local Ollama)
 ```bash
@@ -562,13 +572,13 @@ S.O.N.I.C. decrypts what a capture holds encrypted when the operator has the key
 
 ## 🏗️ Architecture
 
-S.O.N.I.C. compiles into static dependency-free Go binaries (`cmd/sonic` and `cmd/sonic-mcp`) sharing extractors over `tshark`, 21 analyzer packages under `internal/analyze/`, reporting formatters (`internal/report`), credential scrubbing (`internal/redact`, `internal/wsconfig`), and direct-HTTP LLM clients (`internal/llm` + `ArtifactFactory` in `internal/ai`) with zero external Go modules.
+S.O.N.I.C. compiles into static dependency-free Go binaries (`cmd/sonic` and `cmd/sonic-mcp`) sharing extractors over `tshark` and pure-Go L2-L4 parsing, 22 analyzer packages under `internal/analyze/`, CI policy gates (`internal/gate`), HTML/Markdown/JSON/TUI reporting (`internal/report`, `internal/tui`), credential scrubbing with redaction counts (`internal/redact`, `internal/wsconfig`), and direct-HTTP LLM clients (`internal/llm` + `ArtifactFactory` in `internal/ai`) with zero external Go modules.
 
 ```mermaid
 flowchart LR
     CLI["cmd/sonic CLI"] --> ORCH
     MCP["cmd/sonic-mcp MCP stdio"] --> ORCH
-    subgraph ORCH["Orchestrators & 21 Analyzer Packages"]
+    subgraph ORCH["Orchestrators, Gate, Diff & 22 Analyzers"]
         direction TB
         O1["SIP + ArtifactFactory + LLM"]
         O2["Network, VPN, Data Plane & Correlation"]
@@ -618,9 +628,10 @@ S.O.N.I.C. provides comprehensive VoIP diagnostics for the most common real-worl
 
 ### Current Gaps (Planned for Future Releases)
 
-**DTMF Analysis**
-- ❌ Deep DTMF negotiation analysis (payload type validation, RFC 4733 edge cases)
-- 📋 Tracks basic RFC 4733 support; full DTMF tone detection not yet implemented
+**DTMF & Media Startup (Implemented in v4.0.0)**
+- ✅ Dynamic SDP `telephone-event` payload-type mapping (`96-127`), RFC 4733 digit sequence decoding, incomplete `end_of_event` checks, and payload-type mismatch warnings
+- ✅ Post-`200 OK` bidirectional RTP clipping delay (`>500 ms` warning, `>2000 ms` critical), early media awareness, and dynamic SDP RTP port decode-as beyond `10000-20000`
+- ✅ Cross-layer `--correlate-media` linking VoIP MOS/clipping/DTMF symptoms to same-capture underlay faults (`internal/analyze/netorch`)
 
 **Echo & Feedback**
 - 🔄 In progress - Basic detection infrastructure exists
@@ -635,11 +646,11 @@ S.O.N.I.C. provides comprehensive VoIP diagnostics for the most common real-worl
 **SIP Trunk Interoperability**
 - ❌ CUBE (Cisco Unified Border Element) hairpinning scenarios
 - ❌ SRTP negotiation failure edge cases
-- ❌ Vendor-specific SIP dialect conflicts (Avaya, Nortel, older systems)
+- ❌ Vendor-specific SIP dialect conflicts (older proprietary systems)
 
 **Offer/Answer Negotiation**
-- ❌ Early offer vs delayed offer detection
-- ❌ Reinvite flow analysis for media stream changes
+- ✅ Early offer vs delayed offer detection per `Call-ID` (implemented in v4.0.0)
+- ❌ Reinvite flow analysis for mid-call media codec switches
 - ❌ Subsequent offer complexity tracking
 
 **Transcoding Analysis**
@@ -968,7 +979,22 @@ Diagnoses every SIP capture in one directory with an LLM, running `analyze_pcap`
 #### `analyze_pcap_partial_streaming`
 Runs the deterministic quality and MOS analysis, then the LLM diagnosis, on one capture, streaming partial results as they are produced.
 
-The complete list of 18 tools, with their prompts and resources, is in [docs/MCP.md](docs/MCP.md).
+#### `diagnose_media_underlay`
+Correlates SIP/RTP quality, MOS, post-`200 OK` media clipping, and RFC 4733 DTMF digits with same-capture underlay and tunnel detector issues concurrently (no LLM).
+
+**Parameters**: `file_path`, and optional `peers`, `display_filter`, `max_packets`, `since`, `until`
+
+#### `diff_pcaps`
+Compares a known-good baseline capture against a broken target capture concurrently (no LLM) and returns exact deltas in protocols, added/resolved issues, TLS versions/ciphers, TCP MSS, QoS DSCP markings, and VoIP MOS/clipping.
+
+**Parameters**: `baseline_path`, `target_path`, and optional `detectors`, `peers`, `display_filter`, `max_packets`
+
+#### `evaluate_capture_gate`
+Evaluates deterministic CI policy rules (`zero-cleartext`, `no-weak-crypto`, `no-critical-issues`, `mos-min=<float>`, `max-clipping-ms=<float>`) and returns structured violations and pass/fail status (no LLM).
+
+**Parameters**: `file_path`, and optional `policies`, `allow`, `peers`, `display_filter`, `max_packets`
+
+The complete list of 21 tools, with their prompts and resources, is in [docs/MCP.md](docs/MCP.md).
 
 ### Agent guidance: instructions, prompts, resources and a skill
 
@@ -1064,7 +1090,7 @@ sonic --file capture.pcapng --model combined --verbose
 
 ## ⚡ Go vs Python Performance
 
-Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12` against the archived `v3.3.0` dual-runtime reference baseline, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled Go `sonic` and `sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py` (11 MiB static Go binaries; 10.1 MiB vs 155.5 MiB idle MCP RSS, 15.3x less memory). Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, full RSS footprint details, and `10,001`-frame scaling.
+Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12` against the archived `v3.3.0` dual-runtime reference baseline, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled Go `sonic` and `sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py` (11-13 MiB static Go binaries; 10.1 MiB vs 155.5 MiB idle MCP RSS, 15.3x less memory). Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, full RSS footprint details, and `10,001`-frame scaling.
 
 ### 1. Deterministic CLI & Capture Analysis
 
@@ -1100,7 +1126,7 @@ Tested against an in-process localhost OpenAI/Ollama HTTP stub (`sip_minimal.pca
 | Batch sequential | `--batch-dir` (3 captures) | 413.1 ms | 1,148.2 ms | 2.78x |
 | Batch parallel (3 workers) | `--batch-dir --batch-mode parallel` | 140.7 ms | 899.0 ms | 6.39x |
 
-### 3. MCP Stdio Server (`build/sonic-mcp` vs `mcp_server.py`, All 18 Tools)
+### 3. MCP Stdio Server (`build/sonic-mcp` vs `mcp_server.py`, Core Parity Tools)
 
 Cold startup measures process spawn plus `initialize` and `tools/list`; warm rows keep one persistent JSON-RPC stdio session open so both runtimes cache `tshark -G fields` and Python module imports in memory:
 
@@ -1134,12 +1160,23 @@ Cold startup measures process spawn plus `initialize` and `tools/list`; warm row
 - **Concurrency & multi-pass extractors**: `correlate_pcaps` and `merge_pcap_timelines` run capture extractions concurrently across goroutines in Go (**~2.0x faster** for 2 captures), and two-pass/helper modes (`grpc`, `restconf`, `snmp`, `aaa`, `esp`, `--batch-mode parallel`) gain **1.34x to 6.39x** in Go.
 - **Larger captures**: At 10,001 frames (928 KiB) with `tshark -G fields` cached in a warm MCP server, Go completes `analyze_network_pcap` **1.31x** faster (saving ~228 ms in record decoding and detector state machines). On warm repeated LLM calls inside Python MCP, DSPy's in-memory prompt cache short-circuits repeated identical prompts.
 
+### 4. Pure-Go Fast Path vs. `tshark`-Backed & Raw JSON Output (`v4.0.0`)
+
+On L2-L4, QoS, path-MTU, ESP-overhead, and TCP checks (`--fast-path auto` / `always`), S.O.N.I.C. reads PCAP and PCAPNG frames directly in pure Go without launching `tshark` (`~135 ms` subprocess floor avoided), and emits concise structured findings (`0` LLM tokens) rather than dumping raw packet JSON:
+
+| Capture / Input | Detectors | `go-fast` (med) | `tshark`-backed (med) | Fast-Path Speedup | S.O.N.I.C. JSON | Raw `tshark -T json` |
+|---|---|---:|---:|---:|---:|---:|
+| `dp_tcp_health.pcap` | `tcp,path_mtu,qos,conversations` | **4.3 ms** | 586.2 ms | **137.8x** | 35,417 B (~8.9k tok) | 405,164 B (~101k tok) |
+| `dp_qos_rtp.pcap` | `tcp,path_mtu,qos,conversations` | **3.8 ms** | 568.9 ms | **147.9x** | 14,752 B (~3.7k tok) | 1,055,528 B (~264k tok) |
+| `dp_pmtu_black_hole.pcap` | `tcp,path_mtu,reachability` | **4.2 ms** | 578.6 ms | **138.9x** | 16,348 B (~4.1k tok) | 205,760 B (~51k tok) |
+| `2,400`-frame synthetic TCP PCAP | `tcp,path_mtu,qos,conversations` | **6.7 ms** | 579.5 ms | **87.0x** | 7,441 B (~1.9k tok) | 10,597,311 B (~2.65M tok) |
+
 ## 🧪 Testing
 
-S.O.N.I.C. is verified by a **34-package Go `-race` test suite** (`90.2%` to `96.2%` statement coverage), golden JSON snapshot verification, live child-binary MCP stdio/guidance E2E checks, and 4 fuzz targets. No live LLM or cloud key is required; the suite needs only **Go 1.27+** and **tshark** on `PATH`.
+S.O.N.I.C. is verified by a **37-package Go `-race` test suite** (`90.0%` to `96.5%` statement coverage), golden JSON snapshot verification, live child-binary MCP stdio/guidance E2E checks, and 4 fuzz targets. No live LLM or cloud key is required; the suite needs only **Go 1.27+** and **tshark** on `PATH`.
 
 ```bash
-make test             # all 34 Go packages with -race and coverage
+make test             # all 37 Go packages with -race and coverage
 make vet              # go vet across host and cross-compilation targets
 make parity           # Go golden JSON parity tests against testdata/golden/
 make fuzz             # fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
@@ -1148,15 +1185,17 @@ make update-golden    # regenerate golden JSON snapshots via go test -update
 
 | Area | Packages | Coverage (`-race`) |
 |---|---|---:|
-| CLI & MCP Entry Points | `cmd/sonic` (`94.3%`), `cmd/sonic-mcp` (`96.0%`) | `94.3% - 96.0%` |
+| CLI & MCP Entry Points | `cmd/sonic` (`92.7%`), `cmd/sonic-mcp` (`96.0%`) | `92.7% - 96.0%` |
 | LLM & AI Factory Layer | `internal/llm` (`90.8%`), `internal/ai` (`91.7%`) | `90.8% - 91.7%` |
-| MCP Server & Agent Guidance | `internal/mcpserver` (`93.3%`), `internal/guide` (`91.8%`) | `91.8% - 93.3%` |
-| Core Extraction, Report & Safety | `extract` (`90.9%`), `report` (`90.9%`), `redact` (`91.0%`), `wsconfig` (`90.2%`), `tshark` (`91.8%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.2% - 93.6%` |
-| Analyzers (`internal/analyze/*`) | 21 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
+| MCP Server, Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.8%`), `internal/gate` (`96.5%`), `internal/tui` (`90.2%`) | `90.2% - 96.5%` |
+| Core Extraction, Report & Safety | `extract` (`90.0%`), `report` (`90.2%`), `redact` (`94.3%`), `wsconfig` (`90.2%`), `tshark` (`92.9%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.0% - 94.3%` |
+| Analyzers (`internal/analyze/*`) | 22 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `diff`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
 
 **Fixtures and golden snapshots.** `testdata/fixtures/` holds **52** committed deterministic `.pcap` captures (built rarely by the dev-only Scapy scripts archived in `scripts/fixtures/`), and `testdata/golden/` holds the expected JSON baselines verified by `make parity`.
 
-**Real captures.** Optional real-capture tests read `SONIC_GRPC_CAPTURES` and `SONIC_PROTO_PATH` when set.
+**Real captures.** Optional proto dissector enrichment reads `SONIC_PROTO_PATH` when set (`sonic --fetch-grpc-protos`).
+
+**Container builds.** Build a minimal rootless Alpine container bundling static `sonic`, `sonic-mcp`, and headless `tshark` with `make docker` (defined in [Dockerfile](Dockerfile)).
 
 **Continuous integration.** [.github/workflows/ci.yml](.github/workflows/ci.yml) runs `gofmt -l .`, cross-OS `go vet` across 6 targets (`linux`, `darwin`, `windows` x `amd64`/`arm64`), `make test`, `make fuzz`, and `make build release`, while [.github/workflows/release.yml](.github/workflows/release.yml) publishes release archives and `SHA256SUMS` on `v*` tags.
 
@@ -1178,7 +1217,7 @@ cd sonic
 make                    # compile build/sonic and build/sonic-mcp (CGO_ENABLED=0)
 make fmt                # format Go sources with gofmt -w .
 make vet                # run go vet ./...
-make test               # run all 34 Go packages with -race and coverage
+make test               # run all 37 Go packages with -race and coverage
 make fuzz               # run 1s fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
 make parity             # run Go golden JSON parity suites
 make update-golden      # regenerate golden JSON snapshots via go test -update
@@ -1203,6 +1242,6 @@ For support, bug reports, or feature requests, please open an issue on GitHub or
 ---
 
 **Author**: Raymond A Rizzo | Zombat  
-**Version**: 4.0.0 (Pure Go CLI & MCP Runtime, 18 MCP Tools, Network/VPN/gRPC/Decryption)  
+**Version**: 4.0.0 (Pure Go CLI & MCP Runtime, 21 MCP Tools, Fast-Path L2-L4, CI Gates, Diff, HTML/TUI)  
 **Last Updated**: November 17, 2026  
 **Project**: S.O.N.I.C. - SIP Observation and Network Inspection Console

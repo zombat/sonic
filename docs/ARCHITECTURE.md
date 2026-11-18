@@ -4,17 +4,17 @@ This page shows how the Go implementation of S.O.N.I.C. (`cmd/sonic`, `cmd/sonic
 
 ## 1. Component View (`cmd/*` & `internal/*`)
 
-`cmd/sonic` and `cmd/sonic-mcp` are thin composition roots sharing extractors (`internal/extract`), 21 analyzer packages (`internal/analyze/*`), direct-HTTP LLM clients (`internal/llm`), `ArtifactFactory` (`internal/ai`), guidance renderers (`internal/guide`), and secret redaction (`internal/redact`, `internal/wsconfig`).
+`cmd/sonic` and `cmd/sonic-mcp` are thin composition roots sharing extractors (`internal/extract`, including the pure-Go PCAP/PCAPNG `go-fast` reader), 22 analyzer packages (`internal/analyze/*`), CI policy gates (`internal/gate`), direct-HTTP LLM clients (`internal/llm`), `ArtifactFactory` (`internal/ai`), guidance renderers (`internal/guide`), secret redaction/audit (`internal/redact`, `internal/wsconfig`), offline HTML5 export (`internal/report`), and the interactive ANSI TUI (`internal/tui`).
 
 ```mermaid
 flowchart TB
     subgraph Entry["Go Entry Points"]
-        CLI["cmd/sonic<br/>CLI Binary (--version)"]
+        CLI["cmd/sonic<br/>CLI Binary (--version, gate, diff, tui)"]
         MCP["cmd/sonic-mcp<br/>MCP JSON-RPC over stdio (--version)"]
     end
 
     subgraph Guide["Guidance and Registry"]
-        MCPSRV["internal/mcpserver<br/>18 tools, 5 prompts, 7 resources"]
+        MCPSRV["internal/mcpserver<br/>21 tools, 5 prompts, 7 resources"]
         GUIDE["internal/guide<br/>instructions, AST detector meta, --create-skill"]
     end
 
@@ -23,14 +23,14 @@ flowchart TB
         LLM["internal/llm<br/>Provider / Completer over net/http<br/>ollama, anthropic, openai, azure"]
     end
 
-    subgraph Core["Extractors and 21 Analyzers"]
-        EXT["internal/extract<br/>SIP, network, dataplane, http2, http_messages,<br/>tls_secrets, snmp, aaa, esp, auth_info"]
-        ANA["internal/analyze/*<br/>netorch, 20 protocol/VPN/SIP packages"]
-        SEC["internal/wsconfig + internal/redact<br/>/dev/shm tmpfs keys + secret scrubbing"]
+    subgraph Core["Extractors, CI Gate & 22 Analyzers"]
+        EXT["internal/extract<br/>SIP, network, dataplane, pcap_fastpath, http2,<br/>http_messages, tls_secrets, snmp, aaa, esp, auth_info"]
+        ANA["internal/analyze/*<br/>netorch, diff, 20 protocol/VPN/SIP packages"]
+        SEC["internal/wsconfig + internal/redact + internal/gate<br/>/dev/shm tmpfs keys, audit redaction, CI gate"]
     end
 
-    subgraph Report["Reporting and Process Safety"]
-        REP["internal/report<br/>Markdown, JSON, console, stdio fd guard"]
+    subgraph Report["Reporting, TUI and Process Safety"]
+        REP["internal/report + internal/tui<br/>Markdown, HTML5, JSON, TUI, stdio fd guard"]
         TSH[("tshark")]
     end
 
@@ -127,7 +127,7 @@ sequenceDiagram
 
 Every dissector, analyzer, and reporter communicates through explicit domain structs rather than untyped dictionaries:
 - **Normalized Frame Records (`Record`)**: typed pointers and presence flags (`*int`, `*bool`, `netip.Addr`, `TCPHeader`, `UDPHeader`, `IKEHeader`, `ESPHeader`, `NHRPPacket`, `BGPMessage`, `OSPFHeader`, `EIGRPHeader`) ensure zero values never mask absent `tshark` fields.
-- **Deterministic Reports**: `DetectorReport`, `NetworkReport`, `AuditReport`, `GrpcReport`, `HTTPReport`, `SNMPReport`, `AAAReport`, `ESPReport`, `CorrelateReport`, and `TimelineReport` serialize directly to stable golden-tested JSON schemas.
+- **Deterministic Reports**: `DetectorReport`, `NetworkReport`, `AuditReport`, `GrpcReport`, `HTTPReport`, `SNMPReport`, `AAAReport`, `ESPReport`, `CorrelateReport`, `TimelineReport`, `DiffReport`, and `GateReport` serialize directly to stable JSON schemas (`testdata/golden/` for parity fixtures).
 - **AI Artifacts**: `ReportOutput`, `CallDiagnostic`, `AudioQualityDiagnostic`, `CallFlow`, and `PartialStreamingResult` enforce schema invariants inside `ArtifactFactory`.
 
 ## 6. CI & Release Pipelines

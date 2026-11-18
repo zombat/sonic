@@ -135,12 +135,25 @@ Key MCP insights:
 
 ---
 
+## 5. Pure-Go Fast Path vs. `tshark`-Backed & Raw JSON Token Footprint (`v4.0.0`)
+
+On pure L2-L4/QoS/PMTUD/ESP-overhead/TCP detector runs (`--fast-path auto` or `always`), S.O.N.I.C. decodes PCAP/PCAPNG packets directly in Go (`internal/extract/pcap_fastpath.go`), avoiding external `tshark` process startup (`~135 ms` floor). Deterministic analyzers also consume `0` LLM tokens and emit compact JSON verdicts compared against raw `tshark -T json` packet dumps (~`4` bytes/token estimate):
+
+| Capture / Input | Detectors | `go-fast` min / **med** / max (ms) | `tshark`-backed min / **med** / max (ms) | Fast-Path Speedup | S.O.N.I.C. JSON (est. tokens) | Raw `tshark -T json` (est. tokens) |
+|---|---|---:|---:|---:|---:|---:|
+| `dp_tcp_health.pcap` | `tcp,path_mtu,qos,conversations` | 3.9 / **4.3** / 4.9 | 561.0 / **586.2** / 590.3 | **137.83x** | 35,417 B (~8,854 tok) | 405,164 B (~101,291 tok) |
+| `dp_qos_rtp.pcap` | `tcp,path_mtu,qos,conversations` | 3.6 / **3.8** / 4.4 | 550.0 / **568.9** / 583.5 | **147.87x** | 14,752 B (~3,688 tok) | 1,055,528 B (~263,882 tok) |
+| `dp_pmtu_black_hole.pcap` | `tcp,path_mtu,reachability` | 3.4 / **4.2** / 4.6 | 548.1 / **578.6** / 589.3 | **138.86x** | 16,348 B (~4,087 tok) | 205,760 B (~51,440 tok) |
+| Synthetic `2,400`-frame TCP PCAP | `tcp,path_mtu,qos,conversations` | 6.4 / **6.7** / 7.2 | 565.5 / **579.5** / 670.2 | **87.01x** | 7,441 B (~1,860 tok) | 10,597,311 B (~2,649,327 tok) |
+
+---
+
 ## Choosing a Runtime
 
 | Scenario | Recommended Binary / Tag | Reason |
 |---|---|---|
-| Production CLI automation, CI pipelines, cron triage | **Go** (`sonic`) | Zero Python dependencies, 11 MiB static binary, 1.8x to 339x faster CLI runs |
-| Desktop MCP clients (`Claude Desktop`, `Cline`, `NetClaw`) | **Go** (`sonic-mcp`) | 4.4 ms launch, 10.1 MiB idle RAM vs 155.5 MiB, 2x faster multi-capture correlation |
+| Production CLI automation, CI policy gates (`sonic gate`), cron triage | **Go** (`sonic`) | Zero Python dependencies, 13 MiB static binary (`11 MiB` `sonic-mcp`), 1.8x to 339x faster (`go-fast` up to 147.9x) |
+| Local & desktop MCP hosts (stdio JSON-RPC) | **Go** (`sonic-mcp`) | 4.4 ms launch, 10.1 MiB idle RAM vs 155.5 MiB, 21 read-only tools, 2x faster multi-capture correlation |
 | Environments without `tshark` installed | **Pinned `v3.3.0` tag** (`sonic.py`) | Built-in `scapy` packet extraction fallback in the archived Python release |
 | Dev fixture regeneration & golden updates | `scripts/fixtures/` + `make update-golden` | Rare `.pcap` rebuilds via Scapy; CI verifies committed snapshots purely in Go |
 

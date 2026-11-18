@@ -2,17 +2,18 @@
 
 S.O.N.I.C. exposes a Model Context Protocol (MCP) server over stdio JSON-RPC 2.0 via `sonic-mcp` (`cmd/sonic-mcp`, built to `build/sonic-mcp` via `make build`), backed by [internal/mcpserver](../internal/mcpserver), Go analyzers, and direct-HTTP LLM clients.
 
-The server exposes 18 tools, 5 prompts, and 7 resources with embedded schemas in [tools.json](../internal/mcpserver/tools.json). See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the request flow.
+The server exposes 21 tools, 5 prompts, and 7 resources with embedded schemas in [tools.json](../internal/mcpserver/tools.json). See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the request flow.
 
 Every tool is read-only: it reads a capture and writes nothing. Each tool carries annotations stating whether it is idempotent and whether it calls an external LLM.
 
-## Tools (18)
+## Tools (21)
 
 ### SIP and VoIP
 
 | Tool | LLM | What it does |
 |---|:---:|---|
-| `quick_quality_check` | no | Scores SIP/RTP call quality. The first tool to try for "how good were the calls". |
+| `quick_quality_check` | no | Scores SIP/RTP call quality, MOS, post-`200 OK` media clipping delay, and RFC 4733 DTMF events. |
+| `diagnose_media_underlay` | no | Correlates SIP/RTP quality, clipping, and DTMF against IPsec/DMVPN/routing/PMTUD/TCP/QoS faults in one pass. |
 | `analyze_pcap` | yes | Diagnoses SIP calls in a capture with a written explanation plus optional quality and MOS scores. |
 | `analyze_pcap_partial_streaming` | yes | Runs deterministic quality and MOS analysis, then LLM diagnosis, and reports stage timings. |
 | `analyze_batch_pcaps` | yes | Diagnoses every `*.pcap*` capture directly in a directory, sequentially or in parallel (up to 3 workers). |
@@ -29,6 +30,8 @@ Every tool is read-only: it reads a capture and writes nothing. Each tool carrie
 | `analyze_convergence_pcap` | no | Measures failover convergence from one capture and reports what drove recovery. |
 | `analyze_data_plane_pcap` | no | Inspects path MTU and fragmentation, ESP overhead, TCP health, TLS handshakes, and QoS. |
 | `correlate_pcaps` | no | Follows matching packets across two or more captures taken at different network points. |
+| `diff_pcaps` | no | Compares a working baseline capture against a broken capture and emits exact protocol/cipher/MTU/QoS/VoIP deltas. |
+| `evaluate_capture_gate` | no | Evaluates deterministic CI/CD policy rules (`zero-cleartext`, `no-weak-crypto`, `mos-min`, `max-clipping-ms`, `no-critical-issues`). |
 | `merge_pcap_timelines` | no | Merges events from multiple captures into one ordered timeline against failover thresholds. |
 
 ### Protocol Inspection and Decryption
