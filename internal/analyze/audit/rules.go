@@ -28,7 +28,7 @@ var Single = map[string]bool{
 	"vrrp": true, "hsrp": true, "gre": true, "cdp": true, "stp": true,
 	"lldp": true, "lacp": true, "loop": true, "dhcp": true, "dns": true,
 	"ntp": true, "ssh": true, "netconf": true, "tls": true, "http2": true,
-	"snmp": true, "syslog": true, "tacacs": true, "radius": true,
+	"snmp": true, "snmp-v3-privacy": true, "syslog": true, "tacacs": true, "radius": true,
 }
 
 // Hints explains what each audit category represents on a link.

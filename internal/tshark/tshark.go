@@ -103,6 +103,10 @@ type StreamOptions struct {
 	Since         *float64
 	Until         *float64
 	Env           []string
+	// DecodeAs names UDP ports to decode as a protocol, in tshark's -d form
+	// (for example "udp.port==1161,snmp"), for a service that does not use its
+	// standard port.
+	DecodeAs []string
 }
 
 // StreamResult carries extractor field diagnostics and process status.
@@ -174,6 +178,9 @@ func StreamFields(ctx context.Context, opts StreamOptions, fn func(Row) error) (
 		"-r", capturePath,
 		"-T", "fields",
 		"-E", "separator=\t", "-E", "occurrence=a", "-E", "aggregator=|", "-E", "quote=n",
+	}
+	for _, d := range opts.DecodeAs {
+		args = append(args, "-d", d)
 	}
 	for _, key := range keys {
 		args = append(args, "-e", resolved[key])

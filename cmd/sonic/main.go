@@ -48,6 +48,7 @@ type cliOptions struct {
 	tlsSecretsLog  string
 	protoPaths     stringListFlag
 	grpcPorts      string
+	snmpPorts      string
 	httpPorts      string
 	snmpUsers      string
 	aaaSecrets     string
@@ -159,6 +160,7 @@ func runCommandWithDepsIO(ctx context.Context, args []string, stdin io.Reader, s
 	fs.StringVar(&o.tlsSecretsLog, "tls-secrets-log", "", "SSLKEYLOGFILE path for TLS decryption")
 	fs.Var(&o.protoPaths, "proto-path", "directory containing .proto files (repeatable)")
 	fs.StringVar(&o.grpcPorts, "grpc-ports", "", "comma-separated TCP ports to decode as HTTP/2")
+	fs.StringVar(&o.snmpPorts, "snmp-ports", "", "comma-separated UDP ports to decode as SNMP (for a non-standard port such as 1161)")
 	fs.StringVar(&o.httpPorts, "http-ports", "", "comma-separated TCP ports to decode as HTTP")
 	fs.StringVar(&o.snmpUsers, "snmp-users", "", "USM users file path for SNMPv3 decryption")
 	fs.StringVar(&o.aaaSecrets, "aaa-secrets", "", "AAA shared secret file path")
