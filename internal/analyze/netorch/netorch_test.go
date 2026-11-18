@@ -9,7 +9,9 @@ import (
 
 	"github.com/zombat/sonic/internal/analyze/convergence"
 	"github.com/zombat/sonic/internal/analyze/espoverhead"
+	"github.com/zombat/sonic/internal/analyze/sip"
 	"github.com/zombat/sonic/internal/analyze/tlsinspect"
+	"github.com/zombat/sonic/internal/model"
 	"github.com/zombat/sonic/internal/parity"
 )
 
@@ -141,5 +143,56 @@ func TestNetorchValidationAndEdges(t *testing.T) {
 	})
 	if sipRep.Status != "success" || !sipRep.SIP.Present {
 		t.Fatalf("expected SIP present in sip_minimal report: %+v", sipRep.SIP)
+	}
+
+	// Fast-path execution on pure L2-L4 detectors + windowing + invalid FastPath/Since/Until validation.
+	fastRep := AnalyzeNetworkCapture(ctx, filepath.Join("testdata", "fixtures", "dp_tcp_health.pcap"), Options{
+		Detectors: []string{"tcp", "path_mtu", "qos", "reachability", "esp_overhead", "conversations"},
+		FastPath:  "auto",
+	})
+	if fastRep.Status != "success" || fastRep.Capture.Backend != "go-fast" || fastRep.Capture.Packets != 66 {
+		t.Fatalf("expected go-fast backend on L2-L4 detectors, got status=%s backend=%s pkts=%d err=%s",
+			fastRep.Status, fastRep.Capture.Backend, fastRep.Capture.Packets, fastRep.Error)
+	}
+	since, until := 10.0, 2.0
+	if badWin := AnalyzeNetworkCapture(ctx, sample, Options{Since: &since, Until: &until}); badWin.Status != "error" || !strings.Contains(badWin.Error, "until must be") {
+		t.Fatalf("expected since/until validation error, got %+v", badWin)
+	}
+	if badFP := AnalyzeNetworkCapture(ctx, sample, Options{FastPath: "bogus"}); badFP.Status != "error" || !strings.Contains(badFP.Error, "invalid fast_path") {
+		t.Fatalf("expected invalid fast_path error, got %+v", badFP)
+	}
+
+	// Media-to-underlay correlation on missing file and synthetic correlated report.
+	errMU := AnalyzeMediaUnderlay(ctx, missing, UnderlayCorrelationOptions{})
+	if errMU.Status != "error" {
+		t.Fatalf("expected error on missing capture, got %+v", errMU)
+	}
+	okMU := AnalyzeMediaUnderlay(ctx, filepath.Join("testdata", "fixtures", "sip_minimal.pcap"), UnderlayCorrelationOptions{})
+	if okMU.Status != "success" || okMU.VoIP == nil || okMU.Network == nil || !strings.Contains(okMU.Verdict, "VoIP grade") {
+		t.Fatalf("unexpected AnalyzeMediaUnderlay on sip_minimal: %+v", okMU.Verdict)
+	}
+	// Correlate synthetic VoIP clipping+low MOS against underlay ESP/QoS faults.
+	corrLinks := CorrelateMediaAndUnderlay(
+		&sip.QuickQualityReport{
+			Status:          "success",
+			MOSAnalysis:     &sip.MOSAnalysisResult{AverageMOS: 2.9, OverallCategory: sip.MOSFair},
+			MediaClipping:   &sip.MediaClippingSummary{WarningCount: 1, NoMediaCount: 1, MaxDelayMS: 950},
+			QualityAnalysis: &sip.QualityMetrics{Grade: sip.GradePoor, OverallScore: 55},
+		},
+		&NetworkReport{
+			NetworkBody: NetworkBody{
+				Status: "success",
+				Issues: []model.Issue{
+					{Detector: "ipsec", Severity: model.SeverityError, Code: "ESP_STALE_SPI", Frames: []int{5, 6}},
+					{Detector: "qos", Severity: model.SeverityWarning, Code: "DSCP_BLEACHED", Frames: []int{12}},
+				},
+			},
+		},
+	)
+	if len(corrLinks) != 2 || corrLinks[0].UnderlayArea != "ipsec" || !strings.Contains(buildMediaUnderlayVerdict(nil, &NetworkReport{NetworkBody: NetworkBody{OverallStatus: model.StatusOK}}, corrLinks), "Correlated 2 underlay") {
+		t.Fatalf("unexpected CorrelateMediaAndUnderlay: %+v", corrLinks)
+	}
+	if emptyLinks := CorrelateMediaAndUnderlay(nil, nil); len(emptyLinks) != 0 {
+		t.Fatalf("expected zero links for nil reports, got %+v", emptyLinks)
 	}
 }

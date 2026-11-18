@@ -68,6 +68,16 @@ func validateOptions(filePath string, opts Options) ([]string, int, *NetworkRepo
 		r := errNetworkReport("max_packets must be a positive number")
 		return nil, 0, &r
 	}
+	if opts.Since != nil && opts.Until != nil && *opts.Until < *opts.Since {
+		r := errNetworkReport("until must be >= since")
+		return nil, 0, &r
+	}
+	switch opts.FastPath {
+	case "", "auto", "always", "never":
+	default:
+		r := errNetworkReport(fmt.Sprintf("invalid fast_path %q (want auto, always, or never)", opts.FastPath))
+		return nil, 0, &r
+	}
 	maxItems := opts.MaxItems
 	if maxItems <= 0 {
 		maxItems = 25

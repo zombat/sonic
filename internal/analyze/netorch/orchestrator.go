@@ -163,11 +163,24 @@ func analyzeInternal(ctx context.Context, filePath string, opts Options) builtRe
 		return builtReport{report: *invalid}
 	}
 
-	recordsOut, err := extract.OpenNetworkRecords(ctx, tshark.StreamOptions{
-		FilePath:      filePath,
-		DisplayFilter: opts.DisplayFilter,
-		MaxPackets:    opts.MaxPackets,
-	})
+	var recordsOut model.RecordsOutput
+	var err error
+	useFast := opts.FastPath == "always" || (opts.FastPath != "never" && extract.CanUseFastPath(names, opts.DisplayFilter))
+	if useFast {
+		recordsOut, err = extract.OpenFastPathRecords(filePath, extract.FastPathOptions{
+			MaxPackets: opts.MaxPackets,
+			Since:      opts.Since,
+			Until:      opts.Until,
+		})
+	} else {
+		recordsOut, err = extract.OpenNetworkRecords(ctx, tshark.StreamOptions{
+			FilePath:      filePath,
+			DisplayFilter: opts.DisplayFilter,
+			MaxPackets:    opts.MaxPackets,
+			Since:         opts.Since,
+			Until:         opts.Until,
+		})
+	}
 	if err != nil {
 		return builtReport{report: errNetworkReport(err.Error())}
 	}

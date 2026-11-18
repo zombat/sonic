@@ -133,6 +133,8 @@ func collectReport(
 		QualityError:    sipRes.QualityError,
 		MOSAnalysis:     sipRes.MOSAnalysis,
 		MOSError:        sipRes.MOSError,
+		MediaClipping:   sipRes.MediaClipping,
+		DTMFEvents:      sipRes.DTMFEvents,
 		Error:           sipRes.Error,
 		Note:            sipRes.Note,
 	}

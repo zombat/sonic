@@ -192,5 +192,6 @@ func OpenNetworkRecords(ctx context.Context, opts tshark.StreamOptions) (model.R
 		return out, err
 	}
 	AnnotateServicePorts(out.Records)
+	out.Records = FilterRecordWindow(out.Records, opts.Since, opts.Until)
 	return out, nil
 }

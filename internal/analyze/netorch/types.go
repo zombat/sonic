@@ -52,12 +52,15 @@ type DetectorOptions struct {
 	Convergence    *convergence.Options
 }
 
-// Options controls capture filtering, detector selection, and output bounds.
+// Options controls capture filtering, fast-path decoding, time slicing, and detector bounds.
 type Options struct {
 	Detectors     []string
 	Peers         []string
 	DisplayFilter string
 	MaxPackets    *int
+	Since         *float64
+	Until         *float64
+	FastPath      string
 	IncludeSIP    *bool
 	MaxItems      int
 	DetectorOpts  DetectorOptions
@@ -65,13 +68,15 @@ type Options struct {
 
 // SIPSummary reports whether SIP frames were seen and embeds Phase 5 call quality and MOS analysis.
 type SIPSummary struct {
-	Present         bool                   `json:"present"`
-	QualityAnalysis *sip.QualityMetrics    `json:"quality_analysis,omitempty"`
-	QualityError    string                 `json:"quality_error,omitempty"`
-	MOSAnalysis     *sip.MOSAnalysisResult `json:"mos_analysis,omitempty"`
-	MOSError        string                 `json:"mos_error,omitempty"`
-	Error           string                 `json:"error,omitempty"`
-	Note            string                 `json:"note,omitempty"`
+	Present         bool                      `json:"present"`
+	QualityAnalysis *sip.QualityMetrics       `json:"quality_analysis,omitempty"`
+	QualityError    string                    `json:"quality_error,omitempty"`
+	MOSAnalysis     *sip.MOSAnalysisResult    `json:"mos_analysis,omitempty"`
+	MOSError        string                    `json:"mos_error,omitempty"`
+	MediaClipping   *sip.MediaClippingSummary `json:"media_clipping,omitempty"`
+	DTMFEvents      *sip.DTMFEventsSummary    `json:"dtmf_events,omitempty"`
+	Error           string                    `json:"error,omitempty"`
+	Note            string                    `json:"note,omitempty"`
 }
 
 // NetworkBody holds shared fields across NetworkReport and wrapper reports without custom MarshalJSON promotion.
