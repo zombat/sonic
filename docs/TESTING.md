@@ -66,4 +66,4 @@ Optional local tests run when `SONIC_GRPC_CAPTURES` points to real lab captures 
 
 - **[ci.yml](../.github/workflows/ci.yml)** runs on every push to `main` and pull request: installs `tshark`, enforces `gofmt -l .`, runs cross-OS `go vet` across all 6 target platforms (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`), runs `make test` (`-race`) and `make fuzz`, and builds `make build release`.
 - **[release.yml](../.github/workflows/release.yml)** triggers on `v*` tags: runs the full Go gate (`gofmt`, `vet`, `test`, `fuzz`), builds all 6 platform archives + `SHA256SUMS` with `VERSION=${{ github.ref_name }}`, and publishes GitHub Release artifacts.
-- **[codeql.yml](../.github/workflows/codeql.yml)** runs CodeQL security and quality analysis over Go source.
+- **GitHub CodeQL Default Setup** runs automated CodeQL security and quality scanning over Go source on pushes and pull requests.
