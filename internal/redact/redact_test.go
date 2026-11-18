@@ -121,6 +121,45 @@ func TestSecretShapesAndOrdinaryText(t *testing.T) {
 	}
 }
 
+func TestRedactTextWithAuditAndTracker(t *testing.T) {
+	t.Parallel()
+
+	sample := strings.Join([]string{
+		"-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAK=\n-----END RSA PRIVATE KEY-----",
+		"jwt=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.sig123456",
+		"Authorization: Bearer tok_with_digits_1234567890",
+		"Authorization: Basic YWxpY2U6aHVudGVyMg==",
+		"sk-proj-abcdefghijklmnopqrstuvwxyz123456",
+		"password=supersecretpass",
+		"a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:WVNfX19zZW1jdGwgKCkgewkyMjA7fQ==",
+		"literal_known_secret_value",
+	}, "\n")
+
+	var tracker AuditTracker
+	if empty := tracker.Snapshot(); empty.Total != 0 {
+		t.Fatalf("expected empty snapshot, got %+v", empty)
+	}
+	var nilTracker *AuditTracker
+	nilTracker.Add(AuditCounts{Total: 1})
+	if s := nilTracker.Snapshot(); s.Total != 0 {
+		t.Fatalf("expected zero from nil tracker, got %+v", s)
+	}
+
+	out := tracker.Redact(sample, "literal_known_secret_value")
+	for _, secret := range []string{"MIIEowIBAAK", "sig123456", "tok_with_digits_1234567890", "YWxpY2U6aHVudGVyMg==", "abcdefghijklmnopqrstuvwxyz123456", "supersecretpass", "WVNfX19zZW1jdGwg", "literal_known_secret_value"} {
+		if strings.Contains(out, secret) {
+			t.Fatalf("secret %q survived RedactTextWithAudit in %q", secret, out)
+		}
+	}
+	snap := tracker.Snapshot()
+	if snap.KnownSecrets != 1 || snap.PEMBlocks != 1 || snap.JWTs != 1 || snap.AuthHeaders < 1 || snap.ProviderTokens != 1 || snap.Assignments < 1 || snap.SDPKeys < 1 || snap.Total < 7 {
+		t.Fatalf("unexpected audit counts: %+v", snap)
+	}
+	if _, zeroCounts := RedactTextWithAudit(""); zeroCounts.Total != 0 {
+		t.Fatalf("expected zero counts for empty input, got %+v", zeroCounts)
+	}
+}
+
 // FuzzParseDotenv ensures ParseDotenv never panics on arbitrary input.
 func FuzzParseDotenv(f *testing.F) {
 	f.Add("ANTHROPIC_API_KEY='val'\n# comment\nexport OPENAI_API_KEY=abc # c")
