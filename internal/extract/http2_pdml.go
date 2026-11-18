@@ -131,13 +131,18 @@ func IterHTTP2Packets(
 	if displayFilter != "" {
 		flt = fmt.Sprintf("(%s) && http2", displayFilter)
 	}
-	args := []string{"-n", "-r", tshark.SafeCapturePath(filePath)}
+	capturePath, cleanupCapture := tshark.PrepareCapturePath(filePath)
+	defer cleanupCapture()
+
+	args := []string{"-n", "-r", capturePath}
 	args = append(args, decodeAs...)
 	if outOfOrder {
 		args = append(args, "-o", "tcp.reassemble_out_of_order:TRUE")
 	}
 	if keylogFile != "" {
-		args = append(args, "-o", "tls.keylog_file:"+keylogFile)
+		stagedKeylog, cleanupKeylog := tshark.PrepareCapturePath(keylogFile)
+		defer cleanupKeylog()
+		args = append(args, "-o", "tls.keylog_file:"+stagedKeylog)
 	}
 	args = append(args, ProtobufOptions(protoPaths)...)
 	top := "ip ipv6 tcp tls http2"

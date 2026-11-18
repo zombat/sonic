@@ -316,3 +316,55 @@ func TestSecretDirRootAndOrphanEdgeCases(t *testing.T) {
 		sigStopFunc()
 	}
 }
+
+// TestSecretDirRootFallsBackWhenTsharkDeniedOnShm verifies that SecretDirRoot
+// falls back to "" and WithConfig uses os.TempDir when tshark cannot read /dev/shm.
+func TestSecretDirRootFallsBackWhenTsharkDeniedOnShm(t *testing.T) {
+	fakeBinDir := t.TempDir()
+	fakeTshark := filepath.Join(fakeBinDir, "tshark")
+	script := "#!/bin/sh\n" +
+		"case \"${WIRESHARK_CONFIG_DIR:-}\" in\n" +
+		"  " + shmDir + "/*|" + filepath.Dir(fakeBinDir) + "/*)\n" +
+		"    echo \"tshark: Can't open your preferences file \\\"${WIRESHARK_CONFIG_DIR}/preferences\\\": Permission denied.\" >&2\n" +
+		"    exit 0\n" +
+		"    ;;\n" +
+		"esac\n" +
+		"exit 0\n"
+	if err := os.WriteFile(fakeTshark, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+origPath)
+
+	probeTarget := t.TempDir()
+	if tsharkCanReadDir(probeTarget) {
+		t.Fatal("tsharkCanReadDir should return false when fake tshark denies preferences")
+	}
+	// Call a second time to exercise the cache hit path cleanly.
+	if tsharkCanReadDir(probeTarget) {
+		t.Fatal("tsharkCanReadDir cached result should remain false")
+	}
+
+	if secretDirRootFrom(shmDir, mountsDoc) == shmDir {
+		if got := SecretDirRoot(); got != "" {
+			t.Fatalf("SecretDirRoot() = %q, want empty when tshark denies /dev/shm", got)
+		}
+		tmpRoot := filepath.Clean(os.TempDir())
+		err := WithConfig(map[string]string{"tls.debug_file": "off"}, nil, func(dir string) error {
+			rel, relErr := filepath.Rel(tmpRoot, dir)
+			if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				t.Fatalf("expected fallback dir under %s, got %s", tmpRoot, dir)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("WithConfig fallback failed: %v", err)
+		}
+	}
+
+	t.Setenv("PATH", t.TempDir())
+	if !tsharkCanReadDir(probeTarget) {
+		t.Fatal("tsharkCanReadDir should return true when tshark is absent from PATH")
+	}
+}

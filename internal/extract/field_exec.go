@@ -57,8 +57,11 @@ func streamTsharkFields(
 	env []string,
 	onRow func(row map[string]string) error,
 ) (string, error) {
+	capturePath, cleanupCapture := tshark.PrepareCapturePath(filePath)
+	defer cleanupCapture()
+
 	args := make([]string, 0, 16+len(preArgs)+len(fields)*2)
-	args = append(args, "-n", "-r", tshark.SafeCapturePath(filePath))
+	args = append(args, "-n", "-r", capturePath)
 	args = append(args, preArgs...)
 	if filter != "" {
 		args = append(args, "-Y", filter)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -263,4 +264,131 @@ func FuzzParseEKLine(f *testing.F) {
 	f.Fuzz(func(t *testing.T, line string) {
 		_, _ = parseEKLine(line, ekToField)
 	})
+}
+
+// TestPrepareCapturePathStagesWhenTsharkConfinedToTemp verifies that captures
+// outside os.TempDir are transparently staged to os.TempDir and cleaned up
+// when tshark fails with a permission-denied error on workspace paths.
+func TestPrepareCapturePathStagesWhenTsharkConfinedToTemp(t *testing.T) {
+	realTshark, err := exec.LookPath(Binary())
+	if err != nil {
+		t.Fatalf("locate %s: %v", Binary(), err)
+	}
+	tmpRoot, err := filepath.Abs(os.TempDir())
+	if err != nil {
+		t.Fatalf("abs TempDir: %v", err)
+	}
+	tmpRoot = strings.TrimRight(tmpRoot, string(filepath.Separator))
+
+	fakeBinDir := t.TempDir()
+	traceFile := filepath.Join(t.TempDir(), "staged-paths.log")
+	wrapper := "#!/bin/sh\n" +
+		"prev=\"\"\n" +
+		"rpath=\"\"\n" +
+		"for arg in \"$@\"; do\n" +
+		"  if [ \"$prev\" = \"-r\" ]; then\n" +
+		"    rpath=\"$arg\"\n" +
+		"    break\n" +
+		"  fi\n" +
+		"  prev=\"$arg\"\n" +
+		"done\n" +
+		"if [ -n \"$rpath\" ]; then\n" +
+		"  case \"$rpath\" in\n" +
+		"    '" + tmpRoot + "'/*)\n" +
+		"      printf '%s\\n' \"$rpath\" >> '" + traceFile + "'\n" +
+		"      ;;\n" +
+		"    *)\n" +
+		"      printf 'tshark: You don'\\''t have permission to read the file \"%s\".\\n' \"$rpath\" >&2\n" +
+		"      exit 3\n" +
+		"      ;;\n" +
+		"  esac\n" +
+		"fi\n" +
+		"exec '" + realTshark + "' \"$@\"\n"
+
+	fakeTshark := filepath.Join(fakeBinDir, Binary())
+	if err := os.WriteFile(fakeTshark, []byte(wrapper), 0o755); err != nil {
+		t.Fatalf("write fake tshark: %v", err)
+	}
+
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", fakeBinDir+string(os.PathListSeparator)+origPath)
+
+	sipFix := filepath.Join("..", "..", "testdata", "fixtures", "sip_minimal.pcap")
+	ctx := context.Background()
+
+	fieldRows := 0
+	if _, err := StreamFields(ctx, StreamOptions{FilePath: sipFix}, func(Row) error {
+		fieldRows++
+		return nil
+	}); err != nil {
+		t.Fatalf("StreamFields with confined tshark failed: %v", err)
+	}
+	if fieldRows == 0 {
+		t.Fatal("StreamFields produced 0 rows through staged capture")
+	}
+
+	ekRows := 0
+	if _, err := StreamEKFields(ctx, CustomStreamOptions{
+		FilePath: sipFix,
+		Fields:   []string{"frame.number"},
+	}, func(Row) error {
+		ekRows++
+		return nil
+	}); err != nil {
+		t.Fatalf("StreamEKFields with confined tshark failed: %v", err)
+	}
+	if ekRows == 0 {
+		t.Fatal("StreamEKFields produced 0 rows through staged capture")
+	}
+
+	traceBytes, err := os.ReadFile(traceFile)
+	if err != nil {
+		t.Fatalf("read trace log: %v", err)
+	}
+	lines := strings.Fields(strings.TrimSpace(string(traceBytes)))
+	if len(lines) < 2 {
+		t.Fatalf("expected >= 2 staged invocations, got %d (%q)", len(lines), string(traceBytes))
+	}
+	for _, p := range lines {
+		if !strings.HasPrefix(p, tmpRoot+string(filepath.Separator)) {
+			t.Fatalf("staged path %q not inside %s", p, tmpRoot)
+		}
+		if _, statErr := os.Stat(p); !os.IsNotExist(statErr) {
+			t.Fatalf("staged capture %q was not cleaned up (stat err=%v)", p, statErr)
+		}
+	}
+
+	// Cover edge inputs: blank, missing, directory, already under os.TempDir, and missing PATH binary.
+	p, clean := PrepareCapturePath("   ")
+	clean()
+	if p != "   " {
+		t.Fatalf("unexpected PrepareCapturePath for blank: %q", p)
+	}
+	p, clean = PrepareCapturePath("/nonexistent/nope.pcap")
+	clean()
+	if p != "/nonexistent/nope.pcap" {
+		t.Fatalf("unexpected PrepareCapturePath for missing file: %q", p)
+	}
+	tmpDir := t.TempDir()
+	p, clean = PrepareCapturePath(tmpDir)
+	clean()
+	if p != tmpDir {
+		t.Fatalf("unexpected PrepareCapturePath for dir: %q", p)
+	}
+	inTmp := filepath.Join(tmpDir, "local.pcap")
+	if err := os.WriteFile(inTmp, []byte("pcap"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	p, clean = PrepareCapturePath(inTmp)
+	clean()
+	if p != inTmp {
+		t.Fatalf("expected tmp file %q to pass through unchanged, got %q", inTmp, p)
+	}
+
+	t.Setenv("PATH", t.TempDir())
+	p, clean = PrepareCapturePath(sipFix)
+	clean()
+	if p != sipFix {
+		t.Fatalf("expected original path %q when tshark absent from PATH, got %q", sipFix, p)
+	}
 }

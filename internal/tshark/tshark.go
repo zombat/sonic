@@ -165,10 +165,13 @@ func StreamFields(ctx context.Context, opts StreamOptions, fn func(Row) error) (
 	}
 	res.MissingFields = missing
 
+	capturePath, cleanupCapture := PrepareCapturePath(opts.FilePath)
+	defer cleanupCapture()
+
 	// Pass ip.defragment:FALSE so IPv4 fragments stay separate rows per frame.
 	args := []string{
 		"-n", "-o", "ip.defragment:FALSE",
-		"-r", SafeCapturePath(opts.FilePath),
+		"-r", capturePath,
 		"-T", "fields",
 		"-E", "separator=\t", "-E", "occurrence=a", "-E", "aggregator=|", "-E", "quote=n",
 	}

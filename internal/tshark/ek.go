@@ -61,6 +61,9 @@ func StreamEKFields(ctx context.Context, opts CustomStreamOptions, fn func(Row) 
 	}
 	res.VersionMajor = VersionMajor(ctx, binary)
 
+	capturePath, cleanupCapture := PrepareCapturePath(opts.FilePath)
+	defer cleanupCapture()
+
 	args := make([]string, 0, 14+len(opts.Fields)*2+len(opts.DecodeAs)*2)
 	args = append(args, "-n", "-o", "ip.defragment:FALSE")
 	for _, spec := range opts.DecodeAs {
@@ -68,7 +71,7 @@ func StreamEKFields(ctx context.Context, opts CustomStreamOptions, fn func(Row) 
 			args = append(args, "-d", spec)
 		}
 	}
-	args = append(args, "-r", SafeCapturePath(opts.FilePath), "-T", "ek")
+	args = append(args, "-r", capturePath, "-T", "ek")
 	for _, f := range opts.Fields {
 		args = append(args, "-e", f)
 	}

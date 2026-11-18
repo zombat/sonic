@@ -4,8 +4,10 @@
 package wsconfig
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -13,17 +15,20 @@ import (
 
 const (
 	// DirPrefix is the prefix for temporary Wireshark configuration directories.
-	DirPrefix = "sonic-ws-"
-	shmDir    = "/dev/shm"
-	mountsDoc = "/proc/self/mounts"
+	DirPrefix    = "sonic-ws-"
+	shmDir       = "/dev/shm"
+	mountsDoc    = "/proc/self/mounts"
+	tsharkBinary = "tshark"
 )
 
 var (
-	liveMu      sync.Mutex
-	liveDirs    = make(map[string]struct{})
-	warnOnce    sync.Once
-	signalOnce  sync.Once
-	sigStopFunc func()
+	liveMu        sync.Mutex
+	liveDirs      = make(map[string]struct{})
+	shmProbeMu    sync.Mutex
+	shmProbeCache = make(map[string]bool)
+	warnOnce      sync.Once
+	signalOnce    sync.Once
+	sigStopFunc   func()
 )
 
 // Dir represents a temporary WIRESHARK_CONFIG_DIR that holds sensitive
@@ -65,9 +70,56 @@ func Env(dirPath string) []string {
 }
 
 // SecretDirRoot returns "/dev/shm" when it is a writable memory-backed
-// filesystem (tmpfs or ramfs), or "" when callers must fall back to os.TempDir.
+// filesystem (tmpfs or ramfs) readable by tshark, or "" when callers must fall
+// back to os.TempDir.
 func SecretDirRoot() string {
-	return secretDirRootFrom(shmDir, mountsDoc)
+	root := secretDirRootFrom(shmDir, mountsDoc)
+	if root != "" && !tsharkCanReadDir(root) {
+		return ""
+	}
+	return root
+}
+
+// tsharkCanReadDir verifies whether tshark can open a preferences file inside
+// targetDir, caching the verdict per (tshark executable path, targetDir).
+func tsharkCanReadDir(targetDir string) bool {
+	tsharkBin, err := exec.LookPath(tsharkBinary)
+	if err != nil {
+		return true
+	}
+	key := tsharkBin + "\x00" + targetDir
+	shmProbeMu.Lock()
+	cached, ok := shmProbeCache[key]
+	shmProbeMu.Unlock()
+	if ok {
+		return cached
+	}
+
+	probeDir, err := os.MkdirTemp(targetDir, DirPrefix+"probe-")
+	if err != nil {
+		return false
+	}
+	defer func() {
+		_ = os.RemoveAll(probeDir)
+	}()
+	if err := writeSecretFile(probeDir, "preferences", ""); err != nil {
+		return false
+	}
+
+	var stderr bytes.Buffer
+	cmd := exec.Command(tsharkBin, "-G", "folders")
+	cmd.Env = Env(probeDir)
+	cmd.Stderr = &stderr
+	_ = cmd.Run()
+
+	errText := stderr.String()
+	readable := !strings.Contains(errText, "Permission denied") &&
+		!strings.Contains(errText, "Can't open your preferences file")
+
+	shmProbeMu.Lock()
+	shmProbeCache[key] = readable
+	shmProbeMu.Unlock()
+	return readable
 }
 
 // secretDirRootFrom inspects targetDir and mountsPath to determine whether
