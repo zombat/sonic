@@ -1,0 +1,10 @@
+.git
+.github
+build
+testdata
+scripts
+samples
+venv
+*.md
+*.pcap
+*.pcapng

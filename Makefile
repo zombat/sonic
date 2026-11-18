@@ -19,7 +19,7 @@ PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 win
 
 .DEFAULT_GOAL := build
 
-.PHONY: all build install uninstall release clean fmt vet test fuzz parity update-golden help
+.PHONY: all build install uninstall release docker clean fmt vet test fuzz parity update-golden help
 
 all: build
 
@@ -27,6 +27,9 @@ build:
 	@mkdir -p "$(BUILD_DIR)"
 	CGO_ENABLED=0 $(GOENV) go build $(GO_FLAGS) -o "$(BUILD_DIR)/sonic" ./cmd/sonic
 	CGO_ENABLED=0 $(GOENV) go build $(GO_FLAGS) -o "$(BUILD_DIR)/sonic-mcp" ./cmd/sonic-mcp
+
+docker:
+	docker build --build-arg VERSION="$(VERSION)" --build-arg COMMIT="$(COMMIT)" -t "sonic:$(VERSION)" .
 
 install: build
 	install -d "$(PREFIX)"
@@ -88,4 +91,5 @@ help:
 	@printf "  fuzz           Run 1s fuzz smoke tests on SSE, NDJSON, JSON recovery, and ArtifactFactory\n"
 	@printf "  parity         Run Go golden JSON parity tests against testdata/golden/\n"
 	@printf "  update-golden  Regenerate golden JSON snapshots via go test -update\n"
+	@printf "  docker         Build minimal rootless container image bundling sonic, sonic-mcp, and headless tshark\n"
 	@printf "  clean          Remove build/ artifacts\n"
