@@ -6,8 +6,8 @@ S.O.N.I.C. is verified by a pure-Go `-race` unit, integration, golden-snapshot, 
 
 | Check | Scope / Result | Command |
 |---|---|---|
-| Go packages (`cmd/*`, `internal/*`) | **37 passed**, `90.0%` to `96.5%` statement coverage (`-race`) | `make test` |
-| Go fuzzers (SSE, NDJSON, JSON recovery, `ArtifactFactory`) | **4 fuzz targets passed** (`1s` smoke runs) | `make fuzz` |
+| Go packages (`cmd/*`, `internal/*`) | **37 passed**, `90.1%` to `96.5%` statement coverage (`-race`) | `make test` |
+| Go fuzzers (LLM/AI, TLS/SSH/IKE, wire PCAP/PCAPNG, EK, SIP/SDP, policies, report/TUI) | **20 fuzz targets passed** (`1s` smoke runs) | `make fuzz` |
 | Golden snapshot checks (`extract`, `audit`, `cmd/sonic`, `mcpserver`, analyzers) | **All passed** against `testdata/golden/` (`-race`) | `make parity` |
 | Child-binary CLI & MCP stdio E2E tests | Real compiled `sonic`, `sonic-mcp`, and `tests/stub_llm_mcp_server.go` subprocesses over OS pipes | Included in `make test` |
 | Cross-platform `go vet` & archive builds | `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64` | `make release` |
@@ -26,7 +26,7 @@ make release
 make parity
 make update-golden
 
-# Go fuzz smoke tests on untrusted parsers and ArtifactFactory
+# Go fuzz smoke tests across all 20 parser and sanitization targets
 make fuzz
 ```
 
@@ -43,9 +43,9 @@ Note on memory limits: the Makefile sets `GOMAXPROCS=4 GOMEMLIMIT=2400MiB` and `
 | Area | Packages | Coverage Range (`-race`) |
 |---|---|---:|
 | CLI & MCP Entry Points | `cmd/sonic` (`92.7%`), `cmd/sonic-mcp` (`96.0%`) | `92.7% - 96.0%` |
-| LLM & AI Factory Layer | `internal/llm` (`90.8%`), `internal/ai` (`91.7%`) | `90.8% - 91.7%` |
-| MCP, Policy Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.8%`), `internal/gate` (`96.5%`), `internal/tui` (`90.2%`) | `90.2% - 96.5%` |
-| Core & Safety Infrastructure | `extract` (`90.0%`), `report` (`90.2%`), `redact` (`94.3%`), `wsconfig` (`90.2%`), `tshark` (`92.9%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.0% - 94.3%` |
+| LLM & AI Factory Layer | `internal/llm` (`91.1%`), `internal/ai` (`91.7%`) | `91.1% - 91.7%` |
+| MCP, Policy Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.0%`), `internal/gate` (`96.5%`), `internal/tui` (`90.6%`) | `90.6% - 96.5%` |
+| Core & Safety Infrastructure | `extract` (`90.2%`), `report` (`90.7%`), `redact` (`94.3%`), `wsconfig` (`90.1%`), `tshark` (`93.3%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.1% - 94.3%` |
 | Analyzers (`internal/analyze/*`) | 22 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `diff`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
 
 ## Synthetic Fixtures and Golden Snapshots

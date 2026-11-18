@@ -1173,22 +1173,22 @@ On L2-L4, QoS, path-MTU, ESP-overhead, and TCP checks (`--fast-path auto` / `alw
 
 ## 🧪 Testing
 
-S.O.N.I.C. is verified by a **37-package Go `-race` test suite** (`90.0%` to `96.5%` statement coverage), golden JSON snapshot verification, live child-binary MCP stdio/guidance E2E checks, and 4 fuzz targets. No live LLM or cloud key is required; the suite needs only **Go 1.27+** and **tshark** on `PATH`.
+S.O.N.I.C. is verified by a **37-package Go `-race` test suite** (`90.1%` to `96.5%` statement coverage), golden JSON snapshot verification, live child-binary MCP stdio/guidance E2E checks, and 20 fuzz targets. No live LLM or cloud key is required; the suite needs only **Go 1.27+** and **tshark** on `PATH`.
 
 ```bash
 make test             # all 37 Go packages with -race and coverage
 make vet              # go vet across host and cross-compilation targets
 make parity           # Go golden JSON parity tests against testdata/golden/
-make fuzz             # fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
+make fuzz             # run 1s fuzz smoke tests across all 20 fuzz targets
 make update-golden    # regenerate golden JSON snapshots via go test -update
 ```
 
 | Area | Packages | Coverage (`-race`) |
 |---|---|---:|
 | CLI & MCP Entry Points | `cmd/sonic` (`92.7%`), `cmd/sonic-mcp` (`96.0%`) | `92.7% - 96.0%` |
-| LLM & AI Factory Layer | `internal/llm` (`90.8%`), `internal/ai` (`91.7%`) | `90.8% - 91.7%` |
-| MCP Server, Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.8%`), `internal/gate` (`96.5%`), `internal/tui` (`90.2%`) | `90.2% - 96.5%` |
-| Core Extraction, Report & Safety | `extract` (`90.0%`), `report` (`90.2%`), `redact` (`94.3%`), `wsconfig` (`90.2%`), `tshark` (`92.9%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.0% - 94.3%` |
+| LLM & AI Factory Layer | `internal/llm` (`91.1%`), `internal/ai` (`91.7%`) | `91.1% - 91.7%` |
+| MCP Server, Gate & TUI | `internal/mcpserver` (`93.7%`), `internal/guide` (`91.0%`), `internal/gate` (`96.5%`), `internal/tui` (`90.6%`) | `90.6% - 96.5%` |
+| Core Extraction, Report & Safety | `extract` (`90.2%`), `report` (`90.7%`), `redact` (`94.3%`), `wsconfig` (`90.1%`), `tshark` (`93.3%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.1% - 94.3%` |
 | Analyzers (`internal/analyze/*`) | 22 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `diff`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
 
 **Fixtures and golden snapshots.** `testdata/fixtures/` holds **52** committed deterministic `.pcap` captures (built rarely by the dev-only Scapy scripts archived in `scripts/fixtures/`), and `testdata/golden/` holds the expected JSON baselines verified by `make parity`.
@@ -1218,7 +1218,7 @@ make                    # compile build/sonic and build/sonic-mcp (CGO_ENABLED=0
 make fmt                # format Go sources with gofmt -w .
 make vet                # run go vet ./...
 make test               # run all 37 Go packages with -race and coverage
-make fuzz               # run 1s fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
+make fuzz               # run 1s fuzz smoke tests across all 20 fuzz targets
 make parity             # run Go golden JSON parity suites
 make update-golden      # regenerate golden JSON snapshots via go test -update
 make clean              # remove build/ artifacts

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Completed (`v3.3.0` dual-runtime baseline through `v4.0.0` pure Go cutover).** All 37 Go packages (`cmd/sonic`, `cmd/sonic-mcp`, and `internal/*`) pass `-race` tests at `90.0%` to `96.5%` statement coverage with 4 fuzz targets, golden JSON snapshot verification (`testdata/golden/`), live child-binary stdio E2E tests, and automated cross-compiled release archives across `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, and `windows/arm64`. Legacy Python runtime modules were retired after tagging `v3.3.0`.
+**Completed (`v3.3.0` dual-runtime baseline through `v4.0.0` pure Go cutover).** All 37 Go packages (`cmd/sonic`, `cmd/sonic-mcp`, and `internal/*`) pass `-race` tests at `90.1%` to `96.5%` statement coverage with 20 fuzz targets, golden JSON snapshot verification (`testdata/golden/`), live child-binary stdio E2E tests, and automated cross-compiled release archives across `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, and `windows/arm64`. Legacy Python runtime modules were retired after tagging `v3.3.0`.
 
 ## Principles
 

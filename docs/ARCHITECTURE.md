@@ -141,7 +141,7 @@ flowchart LR
 
     subgraph CI["ci.yml (Ubuntu + tshark)"]
         C1["gofmt + 6-target cross go vet"] --> C2["make test (-race + cover)"]
-        C2 --> C3["make fuzz (4 fuzz targets)"]
+        C2 --> C3["make fuzz (20 fuzz targets)"]
         C3 --> C4["make build release"]
     end
 
