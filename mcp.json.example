@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "sonic-voip-analyzer": {
-      "command": "python3",
-      "args": ["/absolute/path/to/sonic/mcp_server.py"],
+      "command": "/absolute/path/to/sonic/build/sonic-mcp",
+      "args": [],
       "env": {
         "SONIC_LLM_PROVIDER": "ollama"
       }
@@ -11,14 +11,14 @@
 }
 
 // Optional: Use Anthropic with the key kept in a dotenv file.
-// The client config and the assistant only ever see the file's PATH; SONIC reads
+// The client config and the assistant only ever see the file's PATH; S.O.N.I.C. reads
 // ANTHROPIC_API_KEY from it and redacts the value from every result and log.
-// (Equivalent: "args": ["/absolute/path/to/sonic/mcp_server.py", "--env-file", "/home/you/secrets/anthropic.env"])
+// (Equivalent: "args": ["--env-file", "/home/you/secrets/anthropic.env"])
 // {
 //   "mcpServers": {
 //     "sonic-voip-analyzer": {
-//       "command": "python3",
-//       "args": ["/absolute/path/to/sonic/mcp_server.py"],
+//       "command": "/absolute/path/to/sonic/build/sonic-mcp",
+//       "args": [],
 //       "env": {
 //         "SONIC_LLM_PROVIDER": "anthropic",
 //         "SONIC_ENV_FILE": "/home/you/secrets/anthropic.env"
@@ -32,24 +32,11 @@
 // {
 //   "mcpServers": {
 //     "sonic-voip-analyzer": {
-//       "command": "python3",
-//       "args": ["/absolute/path/to/sonic/mcp_server.py"],
-//       "env": {
-//         "SONIC_LLM_PROVIDER": "anthropic",
-//         "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
-//       }
-//     }
-//   }
-// }
-
-// Optional: Run the compiled Go MCP server binary built with "make build":
-// {
-//   "mcpServers": {
-//     "sonic-voip-analyzer": {
 //       "command": "/absolute/path/to/sonic/build/sonic-mcp",
 //       "args": [],
 //       "env": {
-//         "SONIC_LLM_PROVIDER": "ollama"
+//         "SONIC_LLM_PROVIDER": "anthropic",
+//         "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
 //       }
 //     }
 //   }

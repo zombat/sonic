@@ -8,11 +8,11 @@ S.O.N.I.C. is designed to integrate seamlessly with agentic systems like NetClaw
 
 The key to these integrations is the Model Context Protocol (MCP) server built into S.O.N.I.C.
 
-**MCP Server (`build/sonic-mcp` or `mcp_server.py`)**: S.O.N.I.C. exposes a standard MCP server over stdio JSON-RPC using either the compiled dependency-free Go binary (`make build`) or the Python FastMCP server (`mcp_server.py`).
+**MCP Server (`sonic-mcp`)**: S.O.N.I.C. exposes a dependency-free MCP server over stdio JSON-RPC (`build/sonic-mcp` via `make build`, or `go install github.com/zombat/sonic/cmd/sonic-mcp@latest`).
 
 **Agentic Orchestration**: Because it acts as an MCP tool, platforms like NetClaw (or its open-source equivalent, OpenClaw) can register S.O.N.I.C. as a tool. When your network automation agents need to analyze a pcap file or troubleshoot a SIP trunk, they can natively call any of S.O.N.I.C.'s 18 MCP tools (`analyze_pcap`, `quick_quality_check`, `analyze_network_pcap`, `analyze_grpc_pcap`, `analyze_esp_pcap`, and more).
 
-**Multiple LLM Providers**: S.O.N.I.C. doesn't lock you into one ecosystem. You can use local Ollama (for air-gapped or secure environments where you don't want SIP auth headers leaving your network), Anthropic, OpenAI, or Azure via direct HTTP clients in Go or DSPy in Python.
+**Multiple LLM Providers**: S.O.N.I.C. doesn't lock you into one ecosystem. You can use local Ollama (for air-gapped or secure environments where you don't want SIP auth headers leaving your network), Anthropic, OpenAI, or Azure via direct HTTP clients (`internal/llm`).
 
 ---
 
@@ -35,18 +35,15 @@ The key to these integrations is the Model Context Protocol (MCP) server built i
 The S.O.N.I.C. repository needs to live on a machine, container, or jump host that the NetClaw agent has execution access to, along with the pcaps you want to analyze.
 
 ```bash
-# On the NetClaw execution node (Go static build):
+# On the NetClaw execution node (or download a prebuilt release tarball):
 git clone https://github.com/zombat/sonic.git /opt/sonic
 cd /opt/sonic
-make build    # creates build/sonic and build/sonic-mcp (tshark required at runtime)
-
-# Or using the Python reference environment:
-pip install -r requirements.txt
+make install    # installs sonic and sonic-mcp (tshark required at runtime)
 ```
 
 ### Step 2: Register the MCP Server in NetClaw
 
-NetClaw needs to know where the S.O.N.I.C. binary or script lives and how to communicate over standard stdio JSON-RPC. Add S.O.N.I.C. to NetClaw's MCP configuration file (prefer `SONIC_ENV_FILE` or `--env-file` so API keys never appear in client config):
+NetClaw needs to know where the S.O.N.I.C. binary lives and how to communicate over standard stdio JSON-RPC. Add S.O.N.I.C. to NetClaw's MCP configuration file (prefer `SONIC_ENV_FILE` or `--env-file` so API keys never appear in client config):
 
 ```json
 {
@@ -63,7 +60,7 @@ NetClaw needs to know where the S.O.N.I.C. binary or script lives and how to com
 }
 ```
 
-> **Note:** For strict data privacy (so pcaps never leave the network), set `SONIC_LLM_PROVIDER` to `ollama` and remove the env file. To run the Python server instead, set `"command": "python3"` and `"args": ["/opt/sonic/mcp_server.py"]`.
+> **Note:** For strict data privacy (so pcaps never leave the network), set `SONIC_LLM_PROVIDER` to `ollama` and remove the env file.
 
 ### Step 3: Assign the Tools to a NetClaw Agent
 
@@ -102,7 +99,7 @@ Once integrated, the workflow becomes conversational and automated. NetClaw acts
 
 > *"I analyzed `/mnt/captures/chicago_sip_issue.pcapng`. The issue is one-way audio caused by a NAT traversal failure. S.O.N.I.C. detected that the SIP INVITE specified RTP media on `192.168.1.50:10004`, but we only received inbound RTP from the remote peer. The local PBX never sent outbound RTP. I recommend checking the firewall rules on the Chicago branch router to ensure UDP port 10004 is allowed outbound."*
 
-By registering `build/sonic-mcp` (or `mcp_server.py`) as an MCP server, NetClaw inherits all of S.O.N.I.C.'s packet parsing, deterministic checks, and redaction out of the box.
+By registering `sonic-mcp` as an MCP server, NetClaw inherits all of S.O.N.I.C.'s packet parsing, deterministic checks, and redaction out of the box.
 
 ---
 
@@ -114,9 +111,7 @@ S.O.N.I.C. writes one Agent Skill, `sonic`, that any skills-aware client can use
 
 ```bash
 # From your project root (where Claude Code is running):
-/path/to/sonic/build/sonic --create-skill
-# Or with Python:
-python3 /path/to/sonic/sonic.py --create-skill
+sonic --create-skill
 ```
 
 This writes `.claude/skills/sonic/` in the current directory: a short `SKILL.md` (which tool or command answers which question) and `reference/` files the agent reads only when it needs them (`mcp-tools`, `network-detectors`, `sip-rtp`, `cli`, `grpc`, and `interpreting-results`). Pass a directory to write it elsewhere, for example `--create-skill ~/.claude/skills/sonic`. `./build/sonic-mcp --create-skill` writes the same skill.

@@ -1,6 +1,6 @@
-# S.O.N.I.C. Performance Benchmark: Go vs Python
+# S.O.N.I.C. Performance Benchmark: Go vs Python (`v3.3.0` Reference Baseline)
 
-This document compares execution speed, scaling behavior, binary size, and memory usage between the compiled Go implementation (`cmd/sonic`, `cmd/sonic-mcp`) and the Python reference implementation (`sonic.py`, `mcp_server.py`) across all S.O.N.I.C. CLI and MCP use cases.
+This document compares execution speed, scaling behavior, binary size, and memory usage between the compiled Go runtime (`cmd/sonic`, `cmd/sonic-mcp`) and the archived Python reference implementation (`sonic.py`, `mcp_server.py` on release tag `v3.3.0`) across all S.O.N.I.C. CLI and MCP use cases. Starting in `v4.0.0`, S.O.N.I.C. ships Go binaries only (`tshark` required at runtime; `v3.3.0` remains tagged for anyone needing Python/`scapy`).
 
 ## Executive Summary
 
@@ -43,7 +43,7 @@ Measured via `ls -lh`, `file`, `/usr/bin/time -v` (peak resident set size across
 
 ## 1. CLI Startup & Deterministic Capture Modes
 
-Every command ran with identical flags and temporary `--save_file` paths using repository fixtures under `tests/fixtures/` (plus one synthetic `2,403`-frame mixed SIP/RTP/TCP/ICMP capture, `313 KiB`, for CLI scaling).
+Every command ran with identical flags and temporary `--save_file` paths using repository fixtures under `testdata/fixtures/` (`tests/fixtures/` on `v3.3.0`, plus one synthetic `2,403`-frame mixed SIP/RTP/TCP/ICMP capture, `313 KiB`, for CLI scaling).
 
 | Use Case | Fixture / Input | Runs | Go min / **med** / max (ms) | Python min / **med** / max (ms) | Speedup |
 |---|---|---:|---:|---:|---:|
@@ -98,7 +98,7 @@ Measured against a zero-delay local HTTP stub (`0 ms` model inference) on `sip_m
 
 Notes on LLM behavior:
 - With a live remote API or local GPU Ollama model, model token-generation latency (typically `1 s` to `30 s+`) dominates total runtime in both Go and Python.
-- Python's `--stream` path for `openai` and `anthropic` imports optional third-party pip packages (`openai`, `anthropic`) that are not installed by default in [requirements.txt](requirements.txt), falling back on `ollama`; Go implements SSE and NDJSON streaming directly on Go stdlib `net/http` for every provider.
+- Python's `--stream` path for `openai` and `anthropic` imports optional third-party pip packages (`openai`, `anthropic`) that are not installed by default in `requirements.txt` (`v3.3.0`), falling back on `ollama`; Go implements SSE and NDJSON streaming directly on Go stdlib `net/http` for every provider.
 
 ---
 
@@ -137,29 +137,27 @@ Key MCP insights:
 
 ## Choosing a Runtime
 
-| Scenario | Recommended Runtime | Reason |
+| Scenario | Recommended Binary / Tag | Reason |
 |---|---|---|
-| Production CLI automation, CI pipelines, cron triage | **Go** (`./build/sonic`) | Zero Python dependencies, 11 MiB static binary, 1.8x to 339x faster CLI runs |
-| Desktop MCP clients (`Claude Desktop`, `Cline`, `NetClaw`) | **Go** (`./build/sonic-mcp`) | 4.4 ms launch, 10.1 MiB idle RAM vs 155.5 MiB, 2x faster multi-capture correlation |
-| Environments without `tshark` installed | **Python** (`sonic.py`) | Built-in `scapy` packet extraction fallback when Wireshark CLI is unavailable |
-| Fixture generation & golden reference updates | **Python** (`make golden`) | Scapy-based deterministic capture generators under `tests/fixtures/` |
+| Production CLI automation, CI pipelines, cron triage | **Go** (`sonic`) | Zero Python dependencies, 11 MiB static binary, 1.8x to 339x faster CLI runs |
+| Desktop MCP clients (`Claude Desktop`, `Cline`, `NetClaw`) | **Go** (`sonic-mcp`) | 4.4 ms launch, 10.1 MiB idle RAM vs 155.5 MiB, 2x faster multi-capture correlation |
+| Environments without `tshark` installed | **Pinned `v3.3.0` tag** (`sonic.py`) | Built-in `scapy` packet extraction fallback in the archived Python release |
+| Dev fixture regeneration & golden updates | `scripts/fixtures/` + `make update-golden` | Rare `.pcap` rebuilds via Scapy; CI verifies committed snapshots purely in Go |
 
 ---
 
 ## Reproducing Benchmarks Locally
 
-Build static Go binaries and verify Go/Python functional parity first:
+Build static Go binaries and verify tests first:
 
 ```bash
 make build
 make test
 make parity
-make mcp-parity
 ```
 
-To measure single CLI latency directly with `/usr/bin/time` or shell timing:
+To measure single CLI latency directly with `/usr/bin/time` or shell timing (against `v4.0.0+` fixtures under `testdata/fixtures/`):
 
 ```bash
-time ./build/sonic --file tests/fixtures/convergence_dpd.pcap --network-only --save_file /tmp/go.md
-time python3 sonic.py --file tests/fixtures/convergence_dpd.pcap --network-only --save_file /tmp/py.md
+time ./build/sonic --file testdata/fixtures/convergence_dpd.pcap --network-only --save_file /tmp/go.md
 ```

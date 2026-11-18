@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-17
+
+### Breaking Changes
+- **Pure Go Runtime Cutover:** Retired the legacy Python CLI/MCP runtime (`sonic.py`, `mcp_server.py`, `analyzers/`, `ai/`, `extractors/`, `handlers/`, `models/`, `utils/`, `llm_config.py`, `requirements*.txt`, and Python test suites). Users who require the archived Python runtime or Scapy offline fallback can check out release tag `v3.3.0`.
+- **Single-Runtime Fixtures & Golden Snapshots (`Option B`):** Moved the `52` synthetic `.pcap` captures to `testdata/fixtures/` and archived the `8` Scapy fixture generator scripts into `scripts/fixtures/` for rare offline updates. Added `-update` flag (`make update-golden`) to `internal/parity` so Go tests maintain golden snapshots without Python.
+
+### Added
+- **Version Injection & Release Packaging (`cmd/sonic`, `cmd/sonic-mcp`, `tools/pack_release.go`, `Makefile`):** Wired `-ldflags` `main.version` and `main.commit` into `--version` on both binaries and `serverInfo.version` during MCP `initialize`. Added pure-Go cross-platform archive packaging across 6 targets (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`) outputting `.tar.gz`/`.zip` bundles with `LICENSE`, `README.md`, and `SHA256SUMS`.
+- **Release Workflow & Go-Only CI (`.github/workflows/release.yml`, `ci.yml`, `codeql.yml`):** Added automated `v*` tag releases publishing artifacts via `softprops/action-gh-release`, streamlined `ci.yml` to run `gofmt`, 6-platform `go vet`, `make test`, `make fuzz`, and `make build release`, and switched CodeQL to `languages: go`.
+- **Native Go E2E Coverage (`cmd/sonic/cli_e2e_test.go`, `internal/mcpserver/stdio_e2e_test.go`):** Ported live child-binary CLI `--create-skill`/`--version`/flag checks, stdout JSON-RPC purity checks, stubbed streaming MCP verification, prompts/resources inspection, and tool-guide schema checks directly into Go.
+
+## [3.3.0] - 2026-11-17
+
+Pinned final dual-runtime baseline with full 1:1 Go and Python parity across CLI modes, extractors, 21 analyzers, direct-HTTP LLM clients, 18 MCP tools, and empirical performance benchmarks (`benchmark.md`).
+
 ### Go Migration (Phases 0-8)
 - **Native Go CLI and MCP Server (`cmd/sonic`, `cmd/sonic-mcp`):** Single dependency-free binaries sharing extracted logic under `internal/` with zero Python or external LLM SDK dependencies (`tshark` only).
 - **Extractors and 21 Analyzers (`internal/extract`, `internal/analyze/*`, `internal/tshark`, `internal/model`):** Complete golden-parity ports of SIP/RTP call quality and MOS scoring, IPsec/IKE/ESP, GRE/NHRP/DMVPN Phase 3, BGP/OSPF/EIGRP routing and convergence, reachability, path MTU, ESP overhead, TCP health, TLS inspection, QoS, cleartext audit, gRPC/gNMI/gNOI, RESTCONF/REST, SNMPv1/v2c/v3, TACACS+/RADIUS AAA, ESP decryption, multi-capture correlation, and timeline merging.

@@ -249,12 +249,12 @@ metrics = AuthenticationMetrics(
 json_data = metrics.model_dump_json()
 ```
 
-## Files Changed
+## Legacy Phase 1 Files (`v3.3.0`, Superseded by Go `internal/` in `v4.0.0`)
 
-- [extractors/tshark.py](extractors/tshark.py) - Auth header extraction
-- [extractors/auth_info.py](extractors/auth_info.py) - Full implementation (544 lines)
-- [models/schemas.py](models/schemas.py) - AuthenticationMetrics schema
-- [analyzers/orchestrator.py](analyzers/orchestrator.py) - Pipeline integration
+- `extractors/tshark.py` - Auth header extraction (now in `internal/tshark/`)
+- `extractors/auth_info.py` - Digest auth parsing (now in `internal/extract/`)
+- `models/schemas.py` - AuthenticationMetrics schema (now in `internal/model/`)
+- `analyzers/orchestrator.py` - Pipeline integration (now in `internal/analyze/sip/` and `internal/ai/`)
 
 ## Implementation Documentation
 

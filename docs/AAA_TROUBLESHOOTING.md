@@ -9,9 +9,9 @@ and RADIUS dissectors through `tshark`, is deterministic (no LLM), and never wri
 recovered credential anywhere.
 
 ```bash
-python3 sonic.py --file aaa.pcap --aaa                           # versions and metadata, no key
-python3 sonic.py --file aaa.pcap --aaa --aaa-secrets keys.txt       # de-obfuscate with the shared key
-python3 sonic.py --file aaa.pcap --aaa --aaa-secrets keys.txt --json
+sonic --file aaa.pcap --aaa                           # versions and metadata, no key
+sonic --file aaa.pcap --aaa --aaa-secrets keys.txt       # de-obfuscate with the shared key
+sonic --file aaa.pcap --aaa --aaa-secrets keys.txt --json
 ```
 
 Over MCP the tool is `analyze_aaa_pcap`. The summary goes to `--save_file`, or to
@@ -99,10 +99,10 @@ Message-Authenticator is reported as `unchecked`.
 ## Tests
 
 ```bash
-python3 -m unittest -q test_aaa
+go test -race ./internal/analyze/aaainspect/...
 ```
 
-The synthetic fixtures (`tests/fixtures/generate_aaa_fixtures.py`, names start with `aaa_`) are
+The synthetic fixtures (`scripts/fixtures/generate_aaa_fixtures.py`, written to `testdata/fixtures/`, names start with `aaa_`) are
 built with scapy: a RADIUS Access-Accept/Reject and Accounting flow with an encrypted
 User-Password, valid authenticators, Message-Authenticators valid, absent and altered, and TACACS+ authentication, authorization and accounting
 sessions plus a FAIL and one sent with the unencrypted flag. The keys and passwords are synthetic

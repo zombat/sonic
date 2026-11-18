@@ -8,9 +8,9 @@ others did not, rebuilds the decrypted packets into a temporary capture, and run
 network detectors over that inner traffic. Deterministic (no LLM); no SA key is ever written out.
 
 ```bash
-python3 sonic.py --file tunnel.pcap --esp-decrypt --esp-sa sa.txt            # decrypt, analyze the inner traffic
-python3 sonic.py --file tunnel.pcap --esp-decrypt --esp-sa xfrm.txt --json   # an `ip -s xfrm state` dump works as is
-python3 sonic.py --file tunnel.pcap --esp-decrypt --esp-sa sa.txt --detectors tcp,reachability
+sonic --file tunnel.pcap --esp-decrypt --esp-sa sa.txt            # decrypt, analyze the inner traffic
+sonic --file tunnel.pcap --esp-decrypt --esp-sa xfrm.txt --json   # an `ip -s xfrm state` dump works as is
+sonic --file tunnel.pcap --esp-decrypt --esp-sa sa.txt --detectors tcp,reachability
 ```
 
 Over MCP the tool is `analyze_esp_pcap` (`sa_file` is a path on the server). The report goes to
@@ -122,10 +122,10 @@ that SA silently out.
 ## 🧪 Tests
 
 ```bash
-python3 -m unittest -q test_esp
+go test -race ./internal/analyze/espdecrypt/...
 ```
 
-`tests/fixtures/esp_tunnel.pcap` is built by `tests/fixtures/generate_esp_fixtures.py` with scapy's
+`testdata/fixtures/esp_tunnel.pcap` is built by `scripts/fixtures/generate_esp_fixtures.py` with scapy's
 IPsec support, deterministically (fixed IVs): AES-CBC with HMAC-SHA1-96 and with HMAC-SHA256-128,
 AES-GCM in both directions, a transport-mode SA and a NAT-T SA, over inner ICMP and TCP. The tests
 write the keys (synthetic placeholders) to an SA file and an `ip -s xfrm state` dump, check every

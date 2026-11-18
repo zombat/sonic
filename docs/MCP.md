@@ -1,11 +1,8 @@
 # S.O.N.I.C. MCP Server Reference
 
-S.O.N.I.C. exposes a Model Context Protocol (MCP) server over stdio JSON-RPC 2.0 using two compatible implementations:
+S.O.N.I.C. exposes a Model Context Protocol (MCP) server over stdio JSON-RPC 2.0 via `sonic-mcp` (`cmd/sonic-mcp`, built to `build/sonic-mcp` via `make build`), backed by [internal/mcpserver](../internal/mcpserver), Go analyzers, and direct-HTTP LLM clients.
 
-- **Go native binary (`cmd/sonic-mcp`, built to `build/sonic-mcp` via `make build`)**: dependency-free stdio server in [internal/mcpserver](../internal/mcpserver) backed by Go analyzers and direct HTTP LLM clients.
-- **Python reference server (`mcp_server.py`)**: FastMCP server driving the Python orchestrators.
-
-Both servers expose the exact same 18 tools, 5 prompts, 7 resources, schemas, and redaction guarantees (tool metadata is synced via [tools/gen_mcp_tools.py](../tools/gen_mcp_tools.py) into [tools.json](../internal/mcpserver/tools.json)). See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the request flow.
+The server exposes 18 tools, 5 prompts, and 7 resources with embedded schemas in [tools.json](../internal/mcpserver/tools.json). See [docs/ARCHITECTURE.md](ARCHITECTURE.md) for the request flow.
 
 Every tool is read-only: it reads a capture and writes nothing. Each tool carries annotations stating whether it is idempotent and whether it calls an external LLM.
 
@@ -74,15 +71,15 @@ At `initialize`, the server returns compact guidance under 2 KB covering capture
 
 ## Output and Safety
 
-- Every tool returns valid JSON redacted before leaving the server (`internal/redact` in Go, `redact_result` in Python).
-- `stdout` carries strictly newline-delimited JSON-RPC frames. Go reserves file descriptor 1 via [stdio_unix.go](../internal/report/stdio_unix.go) / [stdio_windows.go](../internal/report/stdio_windows.go), and Python uses `utils/protocol_stdout.py`.
-- Key files (`--env-file`, `--tls-secrets-log`, `--snmp-users`, `--aaa-secrets`, `--esp-sa`) are read by path or written into private temporary directories and never echoed back.
+- Every tool returns valid JSON redacted before leaving the server ([internal/redact](../internal/redact)).
+- `stdout` carries strictly newline-delimited JSON-RPC frames (`internal/report` reserves file descriptor 1 via [stdio_unix.go](../internal/report/stdio_unix.go) / [stdio_windows.go](../internal/report/stdio_windows.go)).
+- Key files (`--env-file`, `--tls-secrets-log`, `--snmp-users`, `--aaa-secrets`, `--esp-sa`) are read by path or written into private temporary directories (`0700`/`0600` on `/dev/shm` tmpfs on Linux) and never echoed back.
+- `initialize` reports `serverInfo.version` compiled from `-ldflags` (`main.version` / `main.commit`), matching `sonic-mcp --version`.
 
 ## Generated Agent Skill
 
-Run `./build/sonic --create-skill [DIR]` or `./build/sonic-mcp --create-skill [DIR]` (or `python3 sonic.py --create-skill [DIR]`) to write `.claude/skills/sonic/` containing `SKILL.md` and `reference/*.md`. Generated files carry a marker so reruns update cleanly without overwriting user-authored files.
+Run `sonic --create-skill [DIR]` or `sonic-mcp --create-skill [DIR]` to write `.claude/skills/sonic/` containing `SKILL.md` and `reference/*.md`. Generated files carry a marker so reruns update cleanly without overwriting user-authored files.
 
 ## Tests
 
-- **Go MCP unit and stdio parity tests:** [internal/mcpserver/server_test.go](../internal/mcpserver/server_test.go) and [cmd/sonic-mcp/main_test.go](../cmd/sonic-mcp/main_test.go) (`make test` and `make parity`).
-- **Cross-runtime Python MCP tests (`make mcp-parity`):** Runs `test_mcp_stdio.py`, `test_mcp_guidance.py`, and `test_network_mcp.py -k TestMcpStdioHandshake` against the compiled Go binaries (`build/sonic`, `build/sonic-mcp`, and `tests/stub_llm_mcp_server.go`) as well as the Python servers. See [docs/TESTING.md](TESTING.md).
+- **Go MCP unit, golden, and live child-binary stdio tests:** [internal/mcpserver/server_test.go](../internal/mcpserver/server_test.go), [internal/mcpserver/stdio_e2e_test.go](../internal/mcpserver/stdio_e2e_test.go), [internal/guide/guide_test.go](../internal/guide/guide_test.go), and [cmd/sonic-mcp/main_test.go](../cmd/sonic-mcp/main_test.go) (`make test` and `make parity`), plus [tests/stub_llm_mcp_server.go](../tests/stub_llm_mcp_server.go) for offline streaming E2E verification. See [docs/TESTING.md](TESTING.md).

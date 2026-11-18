@@ -5,12 +5,12 @@
 S.O.N.I.C. reads gRPC from a packet capture and says why a client and a server did not get along: which RPCs ran, what each one returned (`grpc-status` by name and `grpc-message`), what HTTP/2 did underneath (resets, GOAWAY, flow control, keepalive pings, limits), what the TLS handshake shows without keys, and whether a credential crossed the network in cleartext gRPC metadata. It is deterministic (no LLM) and uses Wireshark's own HTTP/2, HPACK, gRPC, TLS and protobuf dissectors through `tshark`, so the hard parts (TCP reassembly, TLS decryption from a key log, HPACK header decompression with its Huffman coding and dynamic table) are Wireshark's.
 
 ```bash
-python3 sonic.py --file gnmi.pcap --grpc                                    # summary, report in gnmi.pcap.grpc.md
-python3 sonic.py --file gnmi.pcap --grpc --json                             # the full report as JSON on stdout
-python3 sonic.py --file srl.pcapng --grpc --tls-secrets-log /tmp/keys.log   # decrypt TLS with the client's key log
-python3 sonic.py --file srl-with-secrets.pcapng --grpc                      # the same, secrets inside the pcapng
-python3 sonic.py --file gnmi.pcap --grpc --grpc-ports 7777                  # also decode tcp/7777 as HTTP/2
-python3 sonic.py --fetch-grpc-protos                                        # .proto files for Wireshark (optional)
+sonic --file gnmi.pcap --grpc                                    # summary, report in gnmi.pcap.grpc.md
+sonic --file gnmi.pcap --grpc --json                             # the full report as JSON on stdout
+sonic --file srl.pcapng --grpc --tls-secrets-log /tmp/keys.log   # decrypt TLS with the client's key log
+sonic --file srl-with-secrets.pcapng --grpc                      # the same, secrets inside the pcapng
+sonic --file gnmi.pcap --grpc --grpc-ports 7777                  # also decode tcp/7777 as HTTP/2
+sonic --fetch-grpc-protos                                        # .proto files for Wireshark (optional)
 ```
 
 Over MCP the tool is `analyze_grpc_pcap` (prompt `troubleshoot_grpc`); the cleartext audit (`audit_cleartext_pcap`) uses the same decoding to name cleartext HTTP/2 as gRPC and to flag credentials in its metadata. Its default allowlist (`encrypted`) passes TLS-wrapped gRPC only when the ServerHello chose a suite that encrypts: a NULL or RFC 9150 integrity-only suite (`TLS_SHA256_SHA256`) fails it as cleartext, and a session captured without its handshake passes only as encrypted, unverified.
@@ -136,7 +136,7 @@ Without any .proto file S.O.N.I.C. decodes, from the gNMI field numbers:
 
 A requested encoding is checked against the Capabilities answer on the same connection, so a refused Get says "the request asked for JSON_IETF; Capabilities on this connection lists only PROTO".
 
-With .proto files, Wireshark's protobuf dissector names every message type (`wireshark_protobuf`: `gnmi.GetRequest`, `gnoi.system.TimeResponse`, ...) and S.O.N.I.C. reads a few of its enum fields. **S.O.N.I.C. does not ship the files.** They are Apache-2.0 (openconfig/gnmi, openconfig/gnoi) and BSD-3-Clause (the protobuf well-known types), S.O.N.I.C. is MIT, and keeping them out keeps its licensing single. `python3 sonic.py --fetch-grpc-protos [DIR]` downloads them on request from GitHub at pinned commits, checks each file's SHA-256, and writes them with their licenses into `~/.cache/sonic/grpc-protos` (or DIR):
+With .proto files, Wireshark's protobuf dissector names every message type (`wireshark_protobuf`: `gnmi.GetRequest`, `gnoi.system.TimeResponse`, ...) and S.O.N.I.C. reads a few of its enum fields. **S.O.N.I.C. does not ship the files.** They are Apache-2.0 (openconfig/gnmi, openconfig/gnoi) and BSD-3-Clause (the protobuf well-known types), S.O.N.I.C. is MIT, and keeping them out keeps its licensing single. `sonic --fetch-grpc-protos [DIR]` downloads them on request from GitHub at pinned commits, checks each file's SHA-256, and writes them with their licenses into `~/.cache/sonic/grpc-protos` (or DIR):
 
 | Source | Pin | Files |
 |---|---|---|
@@ -165,14 +165,11 @@ An analysis uses `proto_paths` / `--proto-path`, else `SONIC_PROTO_PATH`, else t
 
 ## 🧪 Tests
 
-`test_grpc.py` has 41 tests and `test_tls_audit.py` has 29 that cover this path. The full reference, with per-file counts, is in [TESTING.md](TESTING.md). The TLS decryption sequence is in [ARCHITECTURE.md](ARCHITECTURE.md#2-sequence-grpc-and-tls-decryption).
+The Go suites in `internal/analyze/grpc` and `internal/analyze/audit` cover gRPC analysis, TLS key-log decryption, and cleartext policy checks. The full testing reference is in [TESTING.md](TESTING.md). The TLS decryption sequence is in [ARCHITECTURE.md](ARCHITECTURE.md#2-sequence-grpc-and-tls-decryption).
 
 ```bash
-python3 -m unittest -q test_grpc
-SONIC_GRPC_CAPTURES=/path/to/captures python3 -m unittest -q test_grpc      # also the real captures (gnmi-plaintext.pcap,
-                                                                            # netconf-restconf-ssh.pcap, gnmi-tls-srlinux.pcap with
-                                                                            # gnmi-tls-srlinux.keylog)
-SONIC_PROTO_PATH=~/.cache/sonic/grpc-protos python3 -m unittest -q test_grpc # also Wireshark's protobuf view
+go test -race ./internal/analyze/grpc/... ./internal/analyze/audit/...
+SONIC_PROTO_PATH=~/.cache/sonic/grpc-protos sonic --file gnmi.pcap --grpc   # include Wireshark's protobuf view
 ```
 
-The synthetic fixtures (`tests/fixtures/generate_grpc_fixtures.py`, names start with `grpc_`) cover what no real capture on hand shows: RST_STREAM, GOAWAY, a flow-control stall, limits exceeded, TLS alerts. The key log path is tested on TLS 1.3 sessions the test builds with Python's `ssl` module (real TLS, never committed): one session with its key log, the same with the key log embedded in a pcapng by editcap, and two sessions with the key log of one, for coverage. The real TLS gNMI capture of SR Linux and its key log (`TestRealTlsCapture`) prove decryption end to end: the calls expected, the credential values and the key log's secrets are read from the capture with tshark at test time, never written in the test, and the assertions are that every call is named with its status and timing and that no value or secret appears in the report, the CLI output or the markdown file.
+The synthetic fixtures (`scripts/fixtures/generate_grpc_fixtures.py`, written to `testdata/fixtures/`, names start with `grpc_`) cover RST_STREAM, GOAWAY, flow-control stalls, limits exceeded, and TLS alerts.

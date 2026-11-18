@@ -1,22 +1,22 @@
-# Go Refactor Plan for S.O.N.I.C.
+# Go Migration Plan & Completion Record for S.O.N.I.C.
 
 ## Status
 
-**Completed on branch `feat/go-migration` (Phases 0 through 8).** Both native Go binaries (`cmd/sonic` and `cmd/sonic-mcp`) pass `-race` tests (`90.2%` to `96.2%` coverage across all 34 packages), golden parity checks, cross-runtime MCP integration parity, fuzz targets, and static cross-compilation across `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, and `windows/amd64`.
+**Completed (`v3.3.0` dual-runtime baseline through `v4.0.0` pure Go cutover).** All 34 Go packages (`cmd/sonic`, `cmd/sonic-mcp`, and `internal/*`) pass `-race` tests at `90.2%` to `96.2%` statement coverage with 4 fuzz targets, golden JSON snapshot verification (`testdata/golden/`), live child-binary stdio E2E tests, and automated cross-compiled release archives across `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, and `windows/arm64`. Legacy Python runtime modules were retired after tagging `v3.3.0`.
 
 ## Principles
 
-1. **Strangler pattern.** Python keeps working as the golden oracle and fallback while Go packages reach 100% JSON parity.
-2. **Python is the oracle.** Synthetic `.pcap` fixtures in `tests/fixtures/` (`52` files from `8` generators) and normalized outputs in `testdata/golden/` verify Go-vs-Python parity.
-3. **`tshark` stays the dissector.** Go shells out to `tshark` and streams `-T fields` TSV rows (or PDML/JSON where needed). Scapy is used only by test fixture generators.
-4. **Follow workspace house rules.** Adhere to [house-rules.md](../.agents/rules/house-rules.md) and [trifecta-triad.md](../.agents/rules/trifecta-triad.md): `gofmt`, ~300-line file cap, Google-style doc comments, custom domain types (`netip.Addr`, typed `iota` enums, pointer/presence fields for optional `tshark` values), `-race` tests at >= 90% coverage, fuzzing on untrusted inputs, tmpfs secret hygiene, zero `any`/`interface{}` in core code, zero em-dashes, and zero AI attribution.
+1. **Zero external Go dependencies.** All extractors, analyzers, MCP JSON-RPC transport, direct-HTTP LLM clients (`internal/llm`), archive packagers (`tools/pack_release.go`), and cryptographic checks use Go standard library packages only.
+2. **Committed synthetic fixtures & golden snapshots.** `52` synthetic `.pcap` fixtures live in `testdata/fixtures/` (with dev-only Scapy scripts preserved in `scripts/fixtures/`), and golden JSON snapshots in `testdata/golden/` verify determinism with `make update-golden` (`go test -update`) for controlled updates.
+3. **`tshark` is the sole external runtime dependency.** Go streams `tshark` TSV, PDML, and JSON outputs without loading entire captures into memory.
+4. **Follow workspace house rules.** Adhere to [house-rules.md](../.agents/rules/house-rules.md) and [trifecta-triad.md](../.agents/rules/trifecta-triad.md): `gofmt`, ~300-line file cap, Google-style doc comments, custom domain types (`netip.Addr`, typed `iota` enums, pointer/presence fields for optional `tshark` values), `-race` tests at >= 90% coverage, fuzzing on untrusted inputs, tmpfs secret hygiene, zero em-dashes, and zero AI attribution.
 
 ## Implemented Layout (`34` Go Packages)
 
 ```text
 cmd/
-  sonic/              Thin CLI composition root (standard/streaming/partial/batch LLM, deterministic network & protocol modes, --create-skill, --fetch-grpc-protos)
-  sonic-mcp/          Dependency-free MCP stdio JSON-RPC server (18 tools, 5 prompts, 7 resources, --env-file, --create-skill)
+  sonic/              Thin CLI composition root (--version, LLM standard/streaming/partial/batch, deterministic modes, --create-skill, --fetch-grpc-protos)
+  sonic-mcp/          Dependency-free MCP stdio JSON-RPC server (18 tools, 5 prompts, 7 resources, --version, --env-file, --create-skill)
 internal/
   tshark/             Process runner, -G fields resolution, TSV streaming, Wireshark 3.x/4.x scaling
   wsconfig/           Ephemeral /dev/shm tmpfs Wireshark config dir (0700/0600, signal cleanup, Unix + Windows build tags)
@@ -27,28 +27,22 @@ internal/
   llm/                Direct-HTTP Provider/Completer clients (ollama, anthropic, openai, azure) with SSE/NDJSON streaming, TLS 1.2+, and HTTP 400 drop retries
   ai/                 Artifact & ResponseAdapter interfaces, ArtifactFactory, SIP diagnostic adapters, codec enrichment, batch & partial streaming orchestration
   guide/              Embedded AST detector metadata, MCP instructions, prompts, resources, and --create-skill generator
-  mcpserver/          Embedded tools.json registry, JSON-RPC 2.0 server, deterministic and LLM handlers
+  mcpserver/          Embedded tools.json registry, JSON-RPC 2.0 server, deterministic/LLM handlers, and child-binary stdio E2E checks
   report/             Markdown/JSON/console formatters, SIP auth diagrams, and cross-platform protocol stdout reservation (dup2/dup3/Windows)
-  parity/             Golden JSON comparator
+  parity/             Golden JSON comparator and -update writer
 tools/
-  gen_golden.py       Golden baseline generator
-  gen_mcp_tools.py    Syncs internal/mcpserver/tools.json from mcp_server.py schemas
   gen_guide_meta.go   Extracts detector docstrings and MakeIssue codes via Go AST into detector_meta.json
+  pack_release.go     Bundles cross-compiled release binaries + LICENSE + README.md into .tar.gz / .zip archives + SHA256SUMS
+scripts/
+  fixtures/           Dev-only deterministic Scapy capture generators (8 scripts)
 testdata/
-  golden/             Normalized Python oracle outputs
+  fixtures/           52 committed synthetic .pcap captures
+  golden/             Normalized JSON baseline snapshots
 ```
 
 ## Phase History
 
-- **Phase 0 (Baseline):** Built `tools/gen_golden.py` and generated `testdata/golden/` snapshots (`make golden`, `make parity`).
-- **Phase 1 (Foundation):** Built `internal/{parity,wsconfig,redact,model,tshark,extract}` and `sonic dump` with full record parity.
-- **Phase 2 (Leaf Detectors):** Ported `tlsinspect`, `audit`, `reach`, `qos`, `pathmtu`, `espoverhead`, and `tcphealth`.
-- **Phase 3 (Protocol-State & Decryption):** Ported `ipsec`, `grenhrp`, `dmvpn`, `routing`, `convergence`, `grpc`, `httpinspect`, `snmpinspect`, `aaainspect`, and `espdecrypt`.
-- **Phase 4 (Multi-Capture & Orchestration):** Ported `correlate`, `timeline`, and `netorch`.
-- **Phase 5 (SIP & RTP Quality):** Ported SIP auth extraction, call tracking, overlap dialing, RTP MOS E-model, and `quick_quality_check` scoring (`internal/analyze/sip`).
-- **Phase 6 (MCP Server & Guidance):**
-  - Stage 6A: Built `internal/report` and `cmd/sonic` deterministic modes.
-  - Stage 6B (`338fd15`): Built `internal/mcpserver` and `cmd/sonic-mcp`.
-  - Stage 6C (`c619015`): Built `tools/gen_guide_meta.go`, `internal/guide`, MCP prompts/resources, and `--create-skill`.
-- **Phase 7 (Direct-HTTP LLM Engine, `5ec2a81`):** Selected **Option B** (zero external LLM SDKs). Implemented `Provider` and `Completer` in `internal/llm`, `Artifact`, `ResponseAdapter`, and `ArtifactFactory` in `internal/ai`, wired all 18 MCP tools into `internal/mcpserver` + `cmd/sonic-mcp`, and wired full SIP LLM/stream/partial/batch CLI modes into `cmd/sonic` plus `tests/stub_llm_mcp_server.go`.
-- **Phase 8 (Cutover, Packaging & CI, `414c3bd`, `a723e69`):** Split OS-specific descriptor duplication (`dup2`/`dup3`/Windows) in `internal/report` and PID/signal teardown in `internal/wsconfig`, added `make release` (`linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64` static binaries + `SHA256SUMS`), `make mcp-parity`, `make fuzz`, and the `go` CI job in `.github/workflows/ci.yml`. Python entry points remain intact alongside Go during the cutover period.
+- **Phases 0-6:** Built golden baseline suite, core Go extraction/safety packages (`parity`, `wsconfig`, `redact`, `model`, `tshark`, `extract`), 21 analyzer packages, `internal/report`, `internal/mcpserver`, `internal/guide`, and thin CLI/MCP entry points (`338fd15`, `c619015`).
+- **Phase 7 (`5ec2a81`):** Implemented direct-HTTP `Provider`/`Completer` (`internal/llm`) and `ArtifactFactory` (`internal/ai`), wiring all 18 MCP tools and CLI streaming/partial/batch LLM modes.
+- **Phase 8 & `v3.3.0` (`414c3bd`, `a723e69`, `f689d4a`, `6e6d28a`):** Completed cross-platform fd/tmpfs isolation, full Python/Go 1:1 parity, empirical benchmarking (`benchmark.md`), and tagged `v3.3.0` as the final dual-runtime baseline.
+- **`v4.0.0` (Go-Only Release):** Retired Python runtime/tests, moved fixtures to `testdata/fixtures/` + dev-only `scripts/fixtures/`, ported stdio/guidance/CLI E2E suites into Go, added `-update` golden snapshots (`make update-golden`), injected `-X main.version` / `-X main.commit`, and added automated `.tar.gz`/`.zip` `release.yml` workflows across 6 platforms.

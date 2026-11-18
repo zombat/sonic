@@ -2,10 +2,9 @@
 
 [![CI](https://github.com/zombat/sonic/actions/workflows/ci.yml/badge.svg)](https://github.com/zombat/sonic/actions/workflows/ci.yml)
 [![Go 1.27+](https://img.shields.io/badge/go-1.27+-00ADD8.svg)](https://go.dev/dl/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a dual-runtime (native zero-dependency Go CLI/MCP binaries + Python reference runtime) packet capture inspection engine and 18-tool MCP server. Originally built for AI-assisted VoIP/SIP/RTP call quality and MOS troubleshooting, it also provides deterministic (`No LLM`) inspection of IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes, gRPC/gNMI/gNOI, zero-cleartext audits, multi-capture correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), alongside optional local or cloud LLM VoIP diagnostics.
+**S.O.N.I.C. (SIP Observation and Network Inspection Console)** is a dependency-free Go packet capture inspection engine and 18-tool MCP server (`sonic` and `sonic-mcp`). Originally built for AI-assisted VoIP/SIP/RTP call quality and MOS troubleshooting, it provides deterministic (`No LLM`) inspection of IPsec/IKE/GRE/DMVPN Phase 3 overlays, BGP/OSPF/EIGRP routing and convergence, TCP/TLS/PMTUD/QoS data planes, gRPC/gNMI/gNOI, zero-cleartext audits, multi-capture correlation, and key-backed decryption (`RESTCONF`, `SNMPv3`, `TACACS+/RADIUS`, `ESP`), alongside optional local or cloud LLM VoIP diagnostics. (Anyone needing the retired Python runtime or pure-Python `scapy` fallback can use the pinned `v3.3.0` release tag.)
 
 ### Quick Navigation
 - [Prerequisites & Go Build](#-prerequisites)
@@ -30,8 +29,7 @@ What began in 2019 as a simple shell script to automate my manual troubleshootin
 To bridge that gap, I launched a 2025 weekend project integrating Claude (LLM) to analyze the structured data. Instead of me manually interpreting the results, the AI began processing SIP flows, RTP metrics, and codec negotiations to generate natural-language diagnostics. That successful weekend proof-of-concept quickly scaled through Phase 2 and Phase 3, transforming a personal script into a full-scale production tool.
 
 **Today, S.O.N.I.C. provides:**
-- Native dependency-free Go CLI (`build/sonic`) and MCP stdio server (`build/sonic-mcp`) binaries built for Linux, macOS, and Windows (direct HTTP LLM clients, `tshark` only at runtime)
-- Full Python reference implementation (`sonic.py`, `mcp_server.py`) kept for golden oracle parity
+- Native dependency-free Go CLI (`sonic`) and MCP stdio server (`sonic-mcp`) binaries built with `CGO_ENABLED=0` for Linux, macOS, and Windows (direct HTTP LLM clients, `tshark` only at runtime)
 - Deterministic network, VPN, routing, data-plane, gRPC/gNMI, RESTCONF, SNMPv3, AAA, ESP decryption, and SIP/RTP quality scoring alongside optional LLM diagnosis
 - Secret-redacting credential handling (`SONIC_ENV_FILE`, `--env-file`, `/dev/shm` tmpfs Wireshark dirs)
 
@@ -50,14 +48,14 @@ This isn't a generic SIP parser. It's the systematic approach I developed throug
 - **Codec Quality Assessment**: Bandwidth usage, quality profiles, and compatibility checks
 
 ### 📊 Advanced Diagnostics
-- **Multi-Format Support**: pcap, pcapng file analysis with `tshark` (plus pure Python `scapy` fallback in `sonic.py`)
+- **Multi-Format Support**: `pcap` and `pcapng` capture inspection powered by `tshark`
 - **Real-Time Quality Assessment**: Industry-standard thresholds for call quality
-- **Visual Indicators**: Rich console output with emojis and progress tracking
+- **Visual Indicators**: Rich console output and Markdown reports
 
 ### 🔧 Robust Architecture
-- **Primary Extraction**: `tshark` (Wireshark CLI) for structured streaming record and JSON extraction
-- **Fallback Support (Python reference `sonic.py` only)**: Pure Python `scapy` extraction when `tshark` is unavailable; compiled Go binaries require `tshark` on `PATH`
-- **Error Recovery**: Comprehensive format conversion and parsing strategies
+- **Streaming Dissection**: `tshark` (Wireshark CLI) for memory-bounded TSV, PDML, and JSON extraction
+- **Zero External Go Dependencies**: Direct `net/http` SSE/NDJSON LLM clients (`internal/llm`) and typed schemas (`internal/model`, `internal/ai`) with zero SDK bloat
+- **Error Recovery**: Multi-strategy LLM JSON recovery (`ArtifactFactory`) and protocol-level diagnostics
 
 ### 🛰️ Network and VPN Detectors (No LLM)
 - **Zero-cleartext audit**: every frame of a transport link against an allowlist, pass or fail, so one leaked GRE, BGP, OSPF or ICMP packet fails a runbook gate
@@ -87,37 +85,42 @@ brew install wireshark
 # Download and install Wireshark from https://www.wireshark.org/
 ```
 
-### Go Native Build (Recommended)
+### Install S.O.N.I.C.
 
-S.O.N.I.C. compiles cleanly with Go `1.27+` (`CGO_ENABLED=0` supported, zero external Go modules required). Prebuilt binaries require only `tshark` on `PATH` and support the exact same CLI flags as `python3 sonic.py`.
+Prebuilt static binaries require only `tshark` on `PATH` (`CGO_ENABLED=0`, zero runtime or SDK dependencies).
+
+**Option 1: Prebuilt Release Archive (GitHub Releases)**
+
+Download the archive for your OS and architecture (`linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`, `windows/arm64`) and verify `SHA256SUMS`:
 
 ```bash
-# Using the Makefile (builds build/sonic and build/sonic-mcp)
-make build
+# Example (Linux amd64): download, verify checksum, and install to ~/.local/bin
+curl -LO https://github.com/zombat/sonic/releases/latest/download/sonic-linux-amd64.tar.gz
+# Or inspect release assets for your exact tag/architecture at:
+# https://github.com/zombat/sonic/releases
+tar -xzf sonic-*-linux-amd64.tar.gz
+install -m 0755 sonic-*-linux-amd64/sonic sonic-*-linux-amd64/sonic-mcp ~/.local/bin/
+sonic --version
+```
 
-# Install binaries to ~/.local/bin (override with PREFIX=/usr/local/bin)
+**Option 2: Go Install (`Go 1.27+`)**
+
+```bash
+go install github.com/zombat/sonic/cmd/sonic@latest
+go install github.com/zombat/sonic/cmd/sonic-mcp@latest
+```
+
+**Option 3: Build from Source (`Makefile`)**
+
+```bash
+# Compile static build/sonic and build/sonic-mcp with version metadata
+make
+
+# Install sonic and sonic-mcp to ~/.local/bin (override with PREFIX=/usr/local/bin)
 make install
 
-# Cross-compile stripped static release binaries (Linux amd64/arm64, macOS amd64/arm64, Windows amd64)
+# Cross-compile release archives (.tar.gz / .zip) + SHA256SUMS for all 6 platforms
 make release
-
-# Direct go build without Make
-mkdir -p build
-go build -trimpath -ldflags="-s -w" -o build/sonic ./cmd/sonic
-go build -trimpath -ldflags="-s -w" -o build/sonic-mcp ./cmd/sonic-mcp
-```
-
-Cross-compile manually for another OS or architecture:
-
-```bash
-CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -o sonic-linux-amd64 ./cmd/sonic
-CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -o sonic-darwin-arm64 ./cmd/sonic
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o sonic-windows-amd64.exe ./cmd/sonic
-```
-
-### Python Dependencies (Reference / Fixture Generators)
-```bash
-pip install -r requirements.txt
 ```
 
 ### AI Backend (Ollama - Recommended)
@@ -136,15 +139,12 @@ ollama pull mistral:7b       # Best available local model for detailed insights
 
 ## 🏁 Quick Start
 
-Every CLI example below works identically with the compiled Go binary (`./build/sonic`, or `sonic` after `make install`) or the Python reference script (`python3 sonic.py`).
+Once installed via `make install` or `go install`, run `sonic` directly (or `./build/sonic` after `make`).
 
 ### Quality-Only Analysis (No API Keys Required)
 ```bash
 # Run quality metrics without LLM analysis - completely offline
-# Go
-./build/sonic --file capture.pcapng --quality-only --save_file my_capture_report.md
-# Python
-python3 sonic.py --file capture.pcapng --quality-only --save_file my_capture_report.md
+sonic --file capture.pcapng --quality-only --save_file my_capture_report.md
 
 # Includes: Call quality scoring, MOS analysis, network metrics, call tracking
 # NO API keys or LLM required!
@@ -153,26 +153,20 @@ python3 sonic.py --file capture.pcapng --quality-only --save_file my_capture_rep
 ### Network / VPN Analysis (No LLM)
 ```bash
 # Run every non-SIP detector that applies (IPsec, GRE/NHRP, BGP/OSPF/EIGRP, ICMP/ARP)
-./build/sonic --file wan-link.pcap --network-only
-python3 sonic.py --file wan-link.pcap --network-only
+sonic --file wan-link.pcap --network-only
 
 # VPN detectors only, judging traffic between the hub and spoke WAN addresses, JSON on stdout
-./build/sonic --file wan-link.pcap --network-only --detectors ipsec,gre_nhrp \
-    --peers 192.0.2.1,198.51.100.2 --json
-python3 sonic.py --file wan-link.pcap --network-only --detectors ipsec,gre_nhrp \
+sonic --file wan-link.pcap --network-only --detectors ipsec,gre_nhrp \
     --peers 192.0.2.1,198.51.100.2 --json
 
 # Write the report as JSON instead of markdown
-./build/sonic --file wan-link.pcap --network-only --save_file wan-report.json
-python3 sonic.py --file wan-link.pcap --network-only --save_file wan-report.json
+sonic --file wan-link.pcap --network-only --save_file wan-report.json
 
 # Gate a link: pass only IPsec and SSH/TLS whose handshake shows real encryption (the default allowlist)
-./build/sonic --file mgmt.pcap --network-only --detectors cleartext_audit
-python3 sonic.py --file mgmt.pcap --network-only --detectors cleartext_audit
+sonic --file mgmt.pcap --network-only --detectors cleartext_audit
 
 # The tunnel question: pass only IPsec (the default before this release), Cisco keepalives and CDP allowed
-./build/sonic --file wan-link.pcap --network-only --detectors cleartext_audit --allow crypto,l2-control
-python3 sonic.py --file wan-link.pcap --network-only --detectors cleartext_audit --allow crypto,l2-control
+sonic --file wan-link.pcap --network-only --detectors cleartext_audit --allow crypto,l2-control
 ```
 
 The report goes to `--save_file`, or to `<capture>.network.md` when none is given. A path ending in `.json` writes the full JSON report.
@@ -180,22 +174,18 @@ The report goes to `--save_file`, or to `<capture>.network.md` when none is give
 ### gRPC / gNMI / gNOI Troubleshooting (No LLM, needs tshark)
 ```bash
 # Every RPC's status, HTTP/2 trouble, TLS findings and credentials in cleartext metadata
-./build/sonic --file gnmi.pcap --grpc
-python3 sonic.py --file gnmi.pcap --grpc
+sonic --file gnmi.pcap --grpc
 
 # TLS-wrapped gNMI (for example SR Linux on 57400): decrypt with the key log the client wrote
 gnmic -a 192.0.2.10:57400 --tls-ca ca.pem -u admin --log-tls-secret capabilities   # while capturing
-./build/sonic --file srl.pcapng --grpc --tls-secrets-log 192.0.2.10:57400.tlssecret.log --json
-python3 sonic.py --file srl.pcapng --grpc --tls-secrets-log 192.0.2.10:57400.tlssecret.log --json
+sonic --file srl.pcapng --grpc --tls-secrets-log 192.0.2.10:57400.tlssecret.log --json
 
 # Or carry the key log inside the capture (a pcapng Decryption Secrets Block): no separate file needed
 editcap --inject-secrets tls,192.0.2.10:57400.tlssecret.log srl.pcap srl-with-secrets.pcapng
-./build/sonic --file srl-with-secrets.pcapng --grpc
-python3 sonic.py --file srl-with-secrets.pcapng --grpc
+sonic --file srl-with-secrets.pcapng --grpc
 
 # Optional: .proto files so Wireshark's protobuf dissector names every message (downloaded once, pinned)
-./build/sonic --fetch-grpc-protos
-python3 sonic.py --fetch-grpc-protos
+sonic --fetch-grpc-protos
 ```
 
 The report goes to `--save_file`, or to `<capture>.grpc.md`. See [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOTING.md).
@@ -203,20 +193,16 @@ The report goes to `--save_file`, or to `<capture>.grpc.md`. See [docs/GRPC_TROU
 ### Decrypt with your own keys (No LLM, needs tshark)
 ```bash
 # RESTCONF/REST: each request's method, path, status, timing, Content-Type and RESTCONF errors; TLS with a key log
-./build/sonic --file restconf.pcap --restconf --tls-secrets-log keys.log
-python3 sonic.py --file restconf.pcap --restconf --tls-secrets-log keys.log
+sonic --file restconf.pcap --restconf --tls-secrets-log keys.log
 
 # SNMP: every version and v3 security level named, communities flagged; SNMPv3 decrypted with a USM users file
-./build/sonic --file snmp.pcap --snmp --snmp-users snmp-users.txt
-python3 sonic.py --file snmp.pcap --snmp --snmp-users snmp-users.txt
+sonic --file snmp.pcap --snmp --snmp-users snmp-users.txt
 
 # TACACS+ and RADIUS: the AAA exchange, de-obfuscated with the shared key (recovered passwords masked)
-./build/sonic --file aaa.pcap --aaa --aaa-secrets aaa-keys.txt
-python3 sonic.py --file aaa.pcap --aaa --aaa-secrets aaa-keys.txt
+sonic --file aaa.pcap --aaa --aaa-secrets aaa-keys.txt
 
 # IPsec ESP: decrypt with SA keys (an SA file or `ip -s xfrm state` output) and analyze the inner traffic
-./build/sonic --file tunnel.pcap --esp-decrypt --esp-sa xfrm-state.txt
-python3 sonic.py --file tunnel.pcap --esp-decrypt --esp-sa xfrm-state.txt
+sonic --file tunnel.pcap --esp-decrypt --esp-sa xfrm-state.txt
 ```
 
 Each writes `<capture>.restconf.md`, `.snmp.md`, `.aaa.md` or `.esp.md` (or `--save_file`; `--json` prints JSON). See the Decryption section below.
@@ -224,20 +210,16 @@ Each writes `<capture>.restconf.md`, `.snmp.md`, `.aaa.md` or `.esp.md` (or `--s
 ### Basic LLM Analysis (Local Ollama)
 ```bash
 # Analyze with local mistral:7b (best available)
-./build/sonic --file capture.pcapng --model detailed --save_file my_capture_report.md
-python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_report.md
+sonic --file capture.pcapng --model detailed --save_file my_capture_report.md
 
 # Fast analysis with qwen2.5:0.5b
-./build/sonic --file capture.pcapng --model fast --save_file my_capture_report.md
-python3 sonic.py --file capture.pcapng --model fast --save_file my_capture_report.md
+sonic --file capture.pcapng --model fast --save_file my_capture_report.md
 
 # Combined analysis (fast + detailed)
-./build/sonic --file capture.pcapng --model combined --save_file my_capture_report.md
-python3 sonic.py --file capture.pcapng --model combined --save_file my_capture_report.md
+sonic --file capture.pcapng --model combined --save_file my_capture_report.md
 
 # Stream tokens in real time (or emit deterministic quality/MOS first with --partial)
-./build/sonic --file capture.pcapng --provider ollama --stream --partial
-python3 sonic.py --file capture.pcapng --provider ollama --stream --partial
+sonic --file capture.pcapng --provider ollama --stream --partial
 ```
 
 **Note**: `--save_file` defaults to `TEST_CAPTURE.md` when not provided. Use any filename you like for real captures (e.g. `--save_file my_capture_report.md`). `TEST_CAPTURE.md` in the repository is a sanitized sample report generated from a sample capture that is not shipped with the repository.
@@ -249,7 +231,7 @@ S.O.N.I.C. integrates seamlessly with agentic platforms via its built-in MCP ser
 **Supported platforms:**
 - [NetClaw](https://github.com/automateyournetwork/netclaw) / [OpenClaw](https://github.com/automateyournetwork/openclaw): register S.O.N.I.C. as a VoIP triage tool in your agent's toolset
 - **Claude Desktop / Cline**: MCP client config, analyze captures through natural language
-- **Claude Code / skills-based clients**: write the S.O.N.I.C. Agent Skill with `./build/sonic --create-skill` (or `python3 sonic.py --create-skill`)
+- **Claude Code / skills-based clients**: write the S.O.N.I.C. Agent Skill with `sonic --create-skill`
 
 **Integration Guide**: See [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) for:
 - How the MCP server integration works
@@ -273,29 +255,22 @@ NetClaw suggests next actions: Check QoS, apply codec change, create CR
 ### Batch Processing
 ```bash
 # Analyze multiple files in a directory using native parallel batch mode
-# Go (--file optional for batch mode)
-./build/sonic --batch-dir /path/to/pcap/files --batch-mode parallel --batch-workers 3
-# Python (requires a --file flag on CLI)
-python3 sonic.py --file /path/to/pcap/files/call1.pcap --batch-dir /path/to/pcap/files --batch-mode parallel --batch-workers 3
+sonic --batch-dir /path/to/pcap/files --batch-mode parallel --batch-workers 3
 
 # Or save individual Markdown reports across captures
 for file in /path/to/pcap/files/*.pcap*; do
-  ./build/sonic --file "$file" --model combined --save_file "${file%.pcap*}_report.md"
-  # Python alternative:
-  # python3 sonic.py --file "$file" --model combined --save_file "${file%.pcap*}_report.md"
+  sonic --file "$file" --model combined --save_file "${file%.pcap*}_report.md"
 done
 
 # Analyze one capture (the repository ships no capture files; use your own)
-./build/sonic --file capture.pcapng --model combined --save_file TEST_CAPTURE.md
-python3 sonic.py --file capture.pcapng --model combined --save_file TEST_CAPTURE.md
+sonic --file capture.pcapng --model combined --save_file TEST_CAPTURE.md
 ```
 
 ## 📖 Usage Examples
 
 ### 1. Combined Analysis (Recommended)
 ```bash
-./build/sonic --file "capture.pcapng" --model combined
-python3 sonic.py --file "capture.pcapng" --model combined
+sonic --file "capture.pcapng" --model combined
 ```
 
 **Output:**
@@ -454,7 +429,7 @@ S.O.N.I.C. also reads captures that are not VoIP. The network detectors decode t
 
 One call runs every detector that applies. The report lists the protocols it found (`protocols_present`), which detectors ran (`detectors_run`), every issue, and one `timeline` of events in time order. When SIP is present, the existing SIP quality scoring (the same path as `quick_quality_check`) runs unchanged and is attached under `sip`.
 
-Extraction follows the SIP path: tshark first, scapy when tshark is missing (in Python). Both Python backends produce the same records and the tests hold them to identical reports; compiled Go binaries always extract through tshark. tshark is read as a stream, so memory stays flat on large captures.
+Extraction follows the SIP path through `tshark`, reading frames as a stream so memory stays flat on large captures.
 
 ### IPsec / VPN (`ipsec`)
 - **IKE negotiation per IKE SA**: IKEv2 IKE_SA_INIT and IKE_AUTH, IKEv1 Main, Aggressive and Quick Mode. The outcome is one of `established`, `failed` (with the NOTIFY name, for example `NO_PROPOSAL_CHOSEN`), `no_response` (requests retransmitted with no reply), `auth_no_response`, `auth_likely_failed`, `authenticated_no_esp`, `sa_init_only`.
@@ -507,14 +482,14 @@ Extraction follows the SIP path: tshark first, scapy when tshark is missing (in 
 
 ### TLS (`tls`)
 - Found by content on any TCP port; the first bytes of each direction are reassembled, so a ClientHello split across segments is read. ClientHello: SNI, offered versions, cipher suites, ALPN, groups, key shares, Encrypted Client Hello offered (GREASE dropped). ServerHello: chosen version, suite, key share, HelloRetryRequest. Cleartext alerts (`handshake_failure`, `protocol_version`, ...).
-- TLS 1.2 and older send the certificate in cleartext: the leaf's subject, issuer, DNS names and validity at capture time are read (with the `cryptography` package). TLS 1.3 encrypts the certificate and the server's ALPN choice; the report says they are not visible.
+- TLS 1.2 and older send the certificate in cleartext: the leaf's subject, issuer, DNS names and validity at capture time are read with Go `crypto/x509`. TLS 1.3 encrypts the certificate and the server's ALPN choice; the report says they are not visible.
 - A baseline passed as a parameter, for example `{"versions": ["TLS1.3"]}` or `{"min_version": "TLS1.2", "cipher_suites": [...], "require_sni": true, "require_forward_secrecy": true}`. Without one, versions below TLS 1.2 and weak chosen suites (RC4, 3DES, NULL, EXPORT) are still flagged.
 
 ### QoS (`qos`)
 - DSCP per flow on the outer header, ECN congestion-experienced marks.
 - GRE: inner DSCP against outer DSCP packet by packet (copied, rewritten, or marked inside and 0 outside).
 - ESP: the outer DSCP per SA. One capture cannot see the inner header; several markings on one SA show DSCP is copied per packet. Compare an inside and an outside capture with `correlate_pcaps` to see a rewrite directly.
-- RTP streams found by header shape on any UDP port: loss, duplicates, reordering, RFC 3550 jitter, the DSCP they carry (voice not marked EF is flagged), and a MOS estimate from the existing E-model in `analyzers/rtp_mos_analysis.py`. Latency needs two capture points.
+- RTP streams found by header shape on any UDP port: loss, duplicates, reordering, RFC 3550 jitter, the DSCP they carry (voice not marked EF is flagged), and a MOS estimate from the E-model in [internal/analyze/sip](internal/analyze/sip). Latency needs two capture points.
 
 ### Several captures: correlation (`correlate_pcaps`) and a merged timeline (`merge_pcap_timelines`)
 - `correlate_pcaps` takes two or more captures with a label each (inside/outside of a NAT router, WAN1/WAN2) and matches the same packet across them by fields NAT leaves alone: ESP SPI and sequence, TCP sequence and acknowledgement numbers with a payload hash, UDP payload hash, ICMP echo sequence with IP identification. It reports NAT translations (`at_inside 10.0.0.10:40000`, `at_outside 203.0.113.5:61000`), per conversation where each direction was seen and a verdict (`reply_lost`: "the SYN-ACK was last seen at outside and never reached inside", `partial_loss`, `asymmetric`: "out through wan1, back through wan2", `seen_only_at`: a probe that crossed one device but not the next while other traffic between the same addresses did, `not_on_other_paths`, `ok`), transit time and TTL decrement between capture points, and DSCP rewritten between them. Captures are merged by timestamp and streamed: a packet waits at most `window_s` for its copy and at most `max_packets_held` packets wait at once. A capture point that was not recording at the time is not counted as having missed a packet.
@@ -559,13 +534,14 @@ Details, codes and limits: [docs/GRPC_TROUBLESHOOTING.md](docs/GRPC_TROUBLESHOOT
 - Every data plane section carries its own `limits` list.
 
 ### Test fixtures
-`tests/fixtures/generate_fixtures.py` builds small synthetic captures (each a few KB) with fixed addresses and timestamps, so a rerun produces identical files: IKEv2 with ESP and a rekey, the same plus cleartext ICMP, NO_PROPOSAL_CHOSEN, IKE retransmitted without reply, IKEv1, NAT-T, GRE with NHRP registrations and a Phase 3 redirect, routing over GRE, a BGP session with a hold timer expiry, OSPF hello mismatch and failover, EIGRP mismatches, ICMP loss with ARP, and a minimal SIP call; plus, for the control plane detectors, IKEv2 proposals with a DH retry and DPD, four IKEv2 failure shapes, a stale SPI, one leaked packet of each kind on an encrypted link, broken and encrypted Phase 3 sequences, BGP failover with MSS options, a DPD-driven failover, and OSPF stuck in EXSTART and EXCHANGE. `test_control_plane.py` runs them on both backends (test names say `synthetic`) and checks the Pleiades lab captures when they exist on the machine.
+`testdata/fixtures/` holds **52** committed synthetic `.pcap` captures with fixed addresses and timestamps generated deterministically by **8** developer-only scripts in `scripts/fixtures/` (`generate_fixtures.py`, `generate_grpc_fixtures.py`, `generate_restconf_fixtures.py`, `generate_aaa_fixtures.py`, `generate_esp_fixtures.py`, `generate_snmp_fixtures.py`, `generate_dataplane_fixtures.py`, and `generate_tls_audit_fixtures.py`):
 
-`tests/fixtures/generate_grpc_fixtures.py` builds the gRPC fixtures (names start with `grpc_`): HTTP/2 trouble on gNMI (statuses, resets, a flow-control stall, limits exceeded, credentials), connection trouble (GOAWAY too_many_pings and graceful, a TCP reset, an unanswered preface, a mid-connection capture), TLS 1.2 with an `unknown_ca` alert and no IP SAN, TLS 1.3 with a HelloRetryRequest, and SSH, TLS, telnet and cleartext gRPC sessions for the audit. `test_grpc.py` also builds a TLS 1.3 gNMI session with its key log at test time with Python's `ssl` module, and checks two real captures (plaintext gNMI to Stratum; NETCONF, RESTCONF and SSH to a Catalyst 8000V) when `SONIC_GRPC_CAPTURES` points at them.
+- Control plane, IPsec, GRE/NHRP, Phase 3 DMVPN, BGP/OSPF/EIGRP, convergence, and SIP (`generate_fixtures.py`): IKEv2 with ESP and rekey, cleartext leaks, NO_PROPOSAL_CHOSEN, retransmits, IKEv1, NAT-T, GRE/NHRP/DMVPN, routing over GRE, BGP MSS and hold expiry, OSPF EXSTART/EXCHANGE and failover, EIGRP mismatches, ICMP loss, and `sip_minimal.pcap`.
+- gRPC and HTTP/2 (`generate_grpc_fixtures.py`): gNMI statuses/resets/stalls/limits/credentials, connection trouble (`GOAWAY`, TCP reset, unanswered preface), TLS 1.2 alert/no-IP-SAN, and TLS 1.3 `HelloRetryRequest`.
+- Decryption and TLS audit (`generate_restconf_fixtures.py`, `generate_aaa_fixtures.py`, `generate_esp_fixtures.py`, `generate_snmp_fixtures.py`, `generate_tls_audit_fixtures.py`): RESTCONF HTTP/1.1 & h2c, RADIUS/TACACS+, 5-SA ESP tunnels, SNMP v1/v2c (plus `--v3` optional Docker `net-snmp` capture into `~/.cache/sonic/snmp-captures`), and weak/unencrypted SSH/TLS cases.
+- Data plane (`generate_dataplane_fixtures.py`): Fragmentation Needed, PMTUD black hole vs loss, complete/incomplete/overlapping fragments, ESP size curves, TCP health outcomes, TLS handshakes, QoS/RTP DSCP, and multi-capture inside/outside NAT and asymmetric WAN sets.
 
-`tests/fixtures/generate_restconf_fixtures.py`, `generate_aaa_fixtures.py` and `generate_esp_fixtures.py` build the decryption fixtures the same way (names start with `restconf_`, `aaa_` and `esp_`): cleartext RESTCONF over HTTP/1.1 and h2c, RADIUS and TACACS+ with throwaway keys, and an ESP tunnel with five SAs (AES-CBC with HMAC-SHA1 and HMAC-SHA256, AES-GCM, transport mode, NAT-T). RESTCONF over TLS 1.3 with its key log is built at test time with Python's `ssl` module, as the gRPC tests do. `generate_snmp_fixtures.py` builds the v1/v2c fixture, and with `--v3` captures real SNMPv3 from net-snmp 5.9.4 in a pinned, unprivileged container (every algorithm net-snmp offers, wrong passphrases, an unknown user) into `~/.cache/sonic/snmp-captures`, never committed; `test_snmp.py` skips those tests when the capture is absent.
-
-`tests/fixtures/generate_dataplane_fixtures.py` builds the data plane fixtures the same way (names start with `dp_`): Fragmentation Needed, a PMTUD black hole (ICMP and TCP) beside plain loss, complete, incomplete and overlapping fragments, ESP sizes for AES-GCM, AES-CBC/SHA1 and NAT-T with an ESP packet fragmented after encryption, seven TCP connection outcomes, four TLS handshakes (1.3, 1.2 split over two segments with an expired certificate, 1.0 with RC4, a fatal alert), RTP with and without EF plus GRE marking copied and lost, and two multi-capture sets (inside/outside of a NAT router; a LAN with WAN1 out and WAN2 back). `test_dataplane_detectors.py` runs every detector on both backends, the correlation and timeline tools, and the same code over real lab captures when they are present.
+Every Go test suite runs directly against committed binary fixtures in `testdata/fixtures/` and golden JSON snapshots in `testdata/golden/`.
 
 ## 🔓 Decryption with your own keys
 
@@ -586,21 +562,21 @@ S.O.N.I.C. decrypts what a capture holds encrypted when the operator has the key
 
 ## 🏗️ Architecture
 
-S.O.N.I.C. ships dual parity implementations: compiled static Go binaries (`cmd/sonic` and `cmd/sonic-mcp`) and the Python reference entry points (`sonic.py` and `mcp_server.py`). Both call extractors over `tshark`, deterministic analyzers (including 21 Go analyzer packages under `internal/analyze/`), reporting formatters (`internal/report`), and direct-HTTP LLM clients (`internal/llm` + `ArtifactFactory` in `internal/ai`) with zero external LLM SDK dependencies in Go.
+S.O.N.I.C. compiles into static dependency-free Go binaries (`cmd/sonic` and `cmd/sonic-mcp`) sharing extractors over `tshark`, 21 analyzer packages under `internal/analyze/`, reporting formatters (`internal/report`), credential scrubbing (`internal/redact`, `internal/wsconfig`), and direct-HTTP LLM clients (`internal/llm` + `ArtifactFactory` in `internal/ai`) with zero external Go modules.
 
 ```mermaid
 flowchart LR
-    CLI["cmd/sonic / sonic.py CLI"] --> ORCH
-    MCP["cmd/sonic-mcp / mcp_server.py MCP"] --> ORCH
-    subgraph ORCH["Orchestrators & Analyzers"]
+    CLI["cmd/sonic CLI"] --> ORCH
+    MCP["cmd/sonic-mcp MCP stdio"] --> ORCH
+    subgraph ORCH["Orchestrators & 21 Analyzer Packages"]
         direction TB
         O1["SIP + ArtifactFactory + LLM"]
         O2["Network, VPN, Data Plane & Correlation"]
         O3["gRPC, RESTCONF, SNMP, AAA, ESP"]
     end
-    ORCH --> EX["Extractors & /dev/shm wsconfig"]
-    O1 -. optional .-> AI["Direct HTTP (Go internal/llm)<br/>ollama, anthropic, openai, azure"]
-    ORCH --> RP["Reports & Redaction<br/>Markdown, JSON, console"]
+    ORCH --> EX["internal/extract & /dev/shm wsconfig"]
+    O1 -. optional .-> AI["Direct HTTP (internal/llm)<br/>ollama, anthropic, openai, azure"]
+    ORCH --> RP["internal/report & internal/redact<br/>Markdown, JSON, console"]
     EX --> TS[("tshark")]
 ```
 
@@ -719,7 +695,7 @@ S.O.N.I.C. supports multiple LLM providers for analysis. **Local Ollama is recom
 | **Azure** (optional) | GPT models via Azure | Varies | Azure OpenAI setup |
 | **None** (quality-only) | N/A - no LLM | Free | Use --quality-only flag |
 
-Defaults above match `ProviderModels` in [internal/llm/config.go](internal/llm/config.go) and `LLMConfig.PROVIDER_MODELS` in [llm_config.py](llm_config.py); pass `--model-name NAME` to override any model identifier.
+Defaults above match `ProviderModels` in [internal/llm/config.go](internal/llm/config.go); pass `--model-name NAME` to override any model identifier.
 
 ### Configuration Methods
 
@@ -727,20 +703,17 @@ Defaults above match `ProviderModels` in [internal/llm/config.go](internal/llm/c
 ```bash
 # Install Ollama and pull models (see above)
 # Run with default local provider
-./build/sonic --file capture.pcapng --model detailed --save_file my_capture_report.md
-python3 sonic.py --file capture.pcapng --model detailed --save_file my_capture_report.md
+sonic --file capture.pcapng --model detailed --save_file my_capture_report.md
 ```
 
 ### Advanced Options
 
 ```bash
 # Run the analysis on one model of your choosing (one pass; not with --model all)
-./build/sonic --file capture.pcapng --provider ollama --model-name "llama3:8b"
-python3 sonic.py --file capture.pcapng --provider ollama --model-name "llama3:8b"
+sonic --file capture.pcapng --provider ollama --model-name "llama3:8b"
 
 # The provider's most capable model (anthropic: claude-opus-5-5)
-./build/sonic --file capture.pcapng --provider anthropic --model deep
-python3 sonic.py --file capture.pcapng --provider anthropic --model deep
+sonic --file capture.pcapng --provider anthropic --model deep
 ```
 
 ### API keys: environment or a passthrough env file
@@ -748,25 +721,21 @@ python3 sonic.py --file capture.pcapng --provider anthropic --model deep
 S.O.N.I.C. looks for `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY`, `AZURE_OPENAI_KEY`) in this order:
 
 1. the process environment;
-2. a dotenv file named by `--env-file PATH` (on `sonic` / `sonic.py` and `sonic-mcp` / `mcp_server.py`) or, without the flag, by `SONIC_ENV_FILE`.
+2. a dotenv file named by `--env-file PATH` (on `sonic` and `sonic-mcp`) or, without the flag, by `SONIC_ENV_FILE`.
 
 ```bash
 # Keep the key in a file you control; S.O.N.I.C. reads only the key names above from it
-SONIC_ENV_FILE=~/secrets/anthropic.env ./build/sonic --file capture.pcapng --provider anthropic --model fast
-./build/sonic --env-file ~/secrets/anthropic.env --file capture.pcapng --provider anthropic
-
-# Python equivalents:
-SONIC_ENV_FILE=~/secrets/anthropic.env python3 sonic.py --file capture.pcapng --provider anthropic --model fast
-python3 sonic.py --env-file ~/secrets/anthropic.env --file capture.pcapng --provider anthropic
+SONIC_ENV_FILE=~/secrets/anthropic.env sonic --file capture.pcapng --provider anthropic --model fast
+sonic --env-file ~/secrets/anthropic.env --file capture.pcapng --provider anthropic
 ```
 
 The file is parsed as data (`KEY=VALUE`, optional `export`, single or double quotes, `#` comments), never through a shell, and a value is never copied into the environment, so child processes such as tshark do not inherit it. This keeps the key out of an AI assistant's context: the assistant (or an MCP client config) only ever handles the file's path.
 
-A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. The same paths also mask secrets S.O.N.I.C. was never given, by shape: provider API keys (`sk-ant-`, `sk-`, `sk-proj-`, Stripe `sk_live_`, Google `AIza`), AWS access key ids (`AKIA`, `ASIA`), GitHub tokens (`ghp_`, `gho_`, `github_pat_`, ...), Slack tokens (`xoxb-`, `xoxp-`, `xoxa-`, `xoxs-`), JWTs, PEM private key blocks, the credential of an `Authorization` Basic or Bearer value (the scheme stays), the value of `password=`, `secret=`, `token=`, `key=` style assignments (and `password:`, `secret:`, `passphrase:`), and SDP media keys (`a=crypto` `inline:` SRTP keys, `a=key-mgmt` payloads, `k=` keys). The shapes are narrow on purpose, so OIDs, MAC addresses, hashes, SPIs and nonces in a report are left alone; a secret with none of these shapes that S.O.N.I.C. was not given is not masked. One pattern set (`internal/redact` in Go and `SECRET_SHAPES` in `utils/credentials.py`) serves every path, so a saved report, the console and a log line agree. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). There is no option that takes a key: one typed on the command line lands in shell history and the process list, so put it in the environment or in the file `--env-file` or `SONIC_ENV_FILE` names.
+A key never appears in anything S.O.N.I.C. prints, writes or returns: it is redacted by value from CLI output, log records, saved reports, every MCP tool result and the prompt sent to the LLM. The same paths also mask secrets S.O.N.I.C. was never given, by shape: provider API keys (`sk-ant-`, `sk-`, `sk-proj-`, Stripe `sk_live_`, Google `AIza`), AWS access key ids (`AKIA`, `ASIA`), GitHub tokens (`ghp_`, `gho_`, `github_pat_`, ...), Slack tokens (`xoxb-`, `xoxp-`, `xoxa-`, `xoxs-`), JWTs, PEM private key blocks, the credential of an `Authorization` Basic or Bearer value (the scheme stays), the value of `password=`, `secret=`, `token=`, `key=` style assignments (and `password:`, `secret:`, `passphrase:`), and SDP media keys (`a=crypto` `inline:` SRTP keys, `a=key-mgmt` payloads, `k=` keys). The shapes are narrow on purpose, so OIDs, MAC addresses, hashes, SPIs and nonces in a report are left alone; a secret with none of these shapes that S.O.N.I.C. was not given is not masked. One central redactor ([internal/redact](internal/redact)) serves every path, so a saved report, the console and a log line agree. `list_llm_providers` reports only whether each key is configured and where it came from (`environment` or the env file's path). There is no option that takes a key: one typed on the command line lands in shell history and the process list, so put it in the environment or in the file `--env-file` or `SONIC_ENV_FILE` names.
 
 ### What is sent to the LLM
 
-Only the VoIP analysis (`--model`, `analyze_pcap`, `analyze_batch_pcaps`, `analyze_pcap_partial_streaming`) sends anything to an LLM; the network, gRPC, RESTCONF, SNMP, AAA and ESP tools and `--quality-only` send nothing. What the VoIP analysis sends is the SIP summary built from the capture (`internal/extract/sip` / `extractors/tshark.py`, or scapy fallback in Python when tshark is absent), with codec context added: per SIP message the frame number and time, IP addresses and ports, Call-ID, method, status, request URI, From and To addresses, User-Agent, Contact, CSeq, Expires, the SDP media lines and owner, and the authentication headers; per RTP stream its addresses, ports, SSRC, payload type and packet count. With a cloud provider (Anthropic, OpenAI, Azure) that leaves your machine.
+Only the VoIP analysis (`--model`, `analyze_pcap`, `analyze_batch_pcaps`, `analyze_pcap_partial_streaming`) sends anything to an LLM; the network, gRPC, RESTCONF, SNMP, AAA and ESP tools and `--quality-only` send nothing. What the VoIP analysis sends is the SIP summary built from the capture (`internal/extract`), with codec context added: per SIP message the frame number and time, IP addresses and ports, Call-ID, method, status, request URI, From and To addresses, User-Agent, Contact, CSeq, Expires, the SDP media lines and owner, and the authentication headers; per RTP stream its addresses, ports, SSRC, payload type and packet count. With a cloud provider (Anthropic, OpenAI, Azure) that leaves your machine.
 
 SIP credentials are masked before anything reaches the LLM or a report. In `Authorization` and `Proxy-Authorization` the Digest `response=` (and `auts=`) value becomes `[MASKED]`, and a Basic or Bearer credential (or anything after an unknown scheme) is masked, while the username, realm, nonce, uri, algorithm, qop, nc and cnonce stay visible for troubleshooting. A digest response is a hash, but one that guessed passwords can be tested against offline, so it never leaves the machine. `WWW-Authenticate` and `Proxy-Authenticate` challenges carry no credential and are sent as they are. SDP media keys are masked the same way: an SRTP master key in `a=crypto:... inline:` (the crypto suite, lifetime and MKI stay), an `a=key-mgmt` payload such as MIKEY (the protocol name stays) and a `k=clear:`/`k=base64:` key, so whoever holds the prompt or a report cannot decrypt the call's media. Every prompt also goes through the key redaction above. Addresses, phone numbers and user names in the SIP messages are sent: use local Ollama when they must not leave the machine.
 
@@ -778,14 +747,14 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
 
 - **Claude Desktop** - Anthropic's desktop application
 - **Cline** - VSCode AI coding and analysis assistant
-- **Claude Code / skills-based clients** - Write the S.O.N.I.C. Agent Skill with `./build/sonic --create-skill` or `python3 sonic.py --create-skill` (see Agent guidance below)
+- **Claude Code / skills-based clients** - Write the S.O.N.I.C. Agent Skill with `sonic --create-skill` (see Agent guidance below)
 - **Any MCP-compatible client** - Custom integrations
 
 ### Quick Setup for Claude Desktop
 
-1. **Build the Go MCP Server Binary** (recommended, zero Python runtime dependencies) **or** install Python deps (`pip install -r requirements.txt`):
+1. **Install `sonic-mcp`** via GitHub Releases, `go install github.com/zombat/sonic/cmd/sonic-mcp@latest`, or from source:
    ```bash
-   make build    # creates build/sonic and build/sonic-mcp
+   make install    # installs sonic and sonic-mcp into ~/.local/bin
    ```
 
 2. **Configure Claude Desktop**:
@@ -795,27 +764,13 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
    - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
    
-   Add the S.O.N.I.C. server using the Go binary (`build/sonic-mcp`):
+   Add the S.O.N.I.C. MCP server (`sonic-mcp`):
    ```json
    {
      "mcpServers": {
        "sonic": {
-         "command": "/absolute/path/to/sonic/build/sonic-mcp",
+         "command": "/absolute/path/to/sonic-mcp",
          "args": [],
-         "env": {
-           "SONIC_LLM_PROVIDER": "ollama"
-         }
-       }
-     }
-   }
-   ```
-   Or using the Python reference server (`mcp_server.py`):
-   ```json
-   {
-     "mcpServers": {
-       "sonic": {
-         "command": "python3",
-         "args": ["/absolute/path/to/sonic/mcp_server.py"],
          "env": {
            "SONIC_LLM_PROVIDER": "ollama"
          }
@@ -835,7 +790,7 @@ S.O.N.I.C. provides a Model Context Protocol (MCP) server for seamless integrati
 
    `SONIC_LLM_PROVIDER` is the provider every LLM tool (`analyze_pcap`, `analyze_pcap_partial_streaming`, `analyze_batch_pcaps`) uses when a call does not pass `provider`; without it the default is `ollama`.
    
-   Replace `/absolute/path/to/sonic/...` with your actual repository path.
+   Replace `/absolute/path/to/sonic-mcp` with your actual installed binary path (for example `~/.local/bin/sonic-mcp`).
 
 3. **Restart Claude Desktop**
 
@@ -1027,10 +982,9 @@ The server teaches the agent that connects to it, so the agent does not need thi
 For skills-based clients such as Claude Code, write the same guidance as an Agent Skill:
 
 ```bash
-./build/sonic --create-skill                    # writes .claude/skills/sonic in the current directory
-./build/sonic --create-skill ~/.claude/skills/sonic
-./build/sonic-mcp --create-skill DIR            # the same skill, from the MCP server's entry point
-# Python reference equivalents: python3 sonic.py --create-skill / python3 mcp_server.py --create-skill DIR
+sonic --create-skill                    # writes .claude/skills/sonic in the current directory
+sonic --create-skill ~/.claude/skills/sonic
+sonic-mcp --create-skill DIR            # the same skill, from the MCP server's entry point
 ```
 
 The skill uses progressive disclosure: `SKILL.md` holds the overview, the table of which tool or command answers which question, and links; `reference/` holds one file per area, loaded only when needed. The tool parameters, detectors and their issue codes, CLI options and LLM providers are read from the code when the skill is written, so it matches the installed version. Run the command again after an upgrade: it replaces only files it wrote (each carries a `written by sonic --create-skill` marker), refuses to touch a `SKILL.md` or reference file it did not write, writes each file atomically, and leaves unchanged files alone.
@@ -1040,7 +994,7 @@ The skill uses progressive disclosure: `SKILL.md` holds the overview, the table 
 1. Install the Cline extension in VSCode
 2. Open Cline settings
 3. Add MCP server:
-   - Command: `/absolute/path/to/sonic/build/sonic-mcp` (or `python3` with args `/path/to/sonic/mcp_server.py`)
+   - Command: `/absolute/path/to/sonic-mcp`
    - Environment variables as needed
 4. Restart VSCode
 
@@ -1048,33 +1002,31 @@ The skill uses progressive disclosure: `SKILL.md` holds the overview, the table 
 
 Run the server standalone to verify it starts:
 ```bash
-./build/sonic-mcp    # or: python3 mcp_server.py
+sonic-mcp --version
+sonic-mcp
 ```
 
 The server will start and wait for MCP client connections.
 
 ## 📄 Output Formats
 
-S.O.N.I.C. supports identical output formats from both `./build/sonic` (Go) and `python3 sonic.py` (Python):
+S.O.N.I.C. supports multiple output formats from `sonic`:
 
 ### Full Diagnostic Report (Default)
 ```bash
-./build/sonic --file capture.pcapng --save_file report.md
-python3 sonic.py --file capture.pcapng --save_file report.md
+sonic --file capture.pcapng --save_file report.md
 ```
 Outputs: Diagnostic summary, call analysis, endpoint analysis, quality metrics, MOS analysis, auth security posture
 
 ### Quality Metrics Only (No LLM)
 ```bash
-./build/sonic --file capture.pcapng --quality-only --save_file report.md
-python3 sonic.py --file capture.pcapng --quality-only --save_file report.md
+sonic --file capture.pcapng --quality-only --save_file report.md
 ```
 Outputs: Call quality score, MOS grades, network metrics (jitter, packet loss), auth security posture (if REGISTER present)
 
 ### Console Output
 ```bash
-./build/sonic --file capture.pcapng --model combined
-python3 sonic.py --file capture.pcapng --model combined
+sonic --file capture.pcapng --model combined
 ```
 Displays formatted analysis directly to terminal (use `--json` for machine-readable JSON on stdout)
 
@@ -1084,8 +1036,8 @@ Displays formatted analysis directly to terminal (use `--json` for machine-reada
 
 **"No SIP data found in capture"**
 - Verify the capture contains SIP traffic on port 5060
-- Check that tshark is properly installed
-- Try `python3 sonic.py` with scapy fallback if `tshark` cannot be installed on that host
+- Check that `tshark` is properly installed and on `PATH`
+- If deploying on a host where `tshark` cannot be installed, check out the archived Python/Scapy release tag `v3.3.0`
 
 **"AI model not found"**
 - Ensure Ollama is running: `ollama serve`
@@ -1104,19 +1056,15 @@ Displays formatted analysis directly to terminal (use `--json` for machine-reada
 **"`/dev/shm` tmpfs warning on macOS or containers"**
 - When `/dev/shm` is absent, key tables (`snmp_users`, `esp_sa`, AAA preferences) fall back to standard OS temporary directories (`0700` dir, `0600` file, removed on exit) and print a single warning on `stderr`
 
-**"Streaming fails with missing Python SDK"**
-- Running `python3 sonic.py --stream` with `--provider openai` or `anthropic` requires `pip install openai` or `pip install anthropic` (commented out in [requirements.txt](requirements.txt)); compiled `./build/sonic --stream` works natively across all providers with zero external SDKs
-
 ### Debug Mode
 ```bash
 # Enable verbose output for troubleshooting
-./build/sonic --file capture.pcapng --model combined --verbose
-python3 sonic.py --file capture.pcapng --model combined --verbose
+sonic --file capture.pcapng --model combined --verbose
 ```
 
 ## ⚡ Go vs Python Performance
 
-Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12`, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled `./build/sonic` and `./build/sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py` (11 MiB static Go binaries; 10.1 MiB vs 155.5 MiB idle MCP RSS, 15.3x less memory). Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, full RSS footprint details, and `10,001`-frame scaling.
+Measured on Linux x86_64 WSL2 (`go1.27.3`, `Python 3.10.12` against the archived `v3.3.0` dual-runtime reference baseline, `TShark 3.6.2`, `GOMAXPROCS=4`), comparing compiled Go `sonic` and `sonic-mcp` against `python3 sonic.py` and `python3 mcp_server.py` (11 MiB static Go binaries; 10.1 MiB vs 155.5 MiB idle MCP RSS, 15.3x less memory). Values are medians over 5 runs for deterministic CLI and warm MCP tools, and medians over 3 runs for scaled captures, mocked-HTTP LLM runs, and cold MCP startup. See [benchmark.md](benchmark.md) for min/median/max latency spread, full RSS footprint details, and `10,001`-frame scaling.
 
 ### 1. Deterministic CLI & Capture Analysis
 
@@ -1188,41 +1136,29 @@ Cold startup measures process spawn plus `initialize` and `tools/list`; warm row
 
 ## 🧪 Testing
 
-S.O.N.I.C. is verified by both a **34-package Go `-race` test suite** (`90.2%` to `96.2%` statement coverage, plus 4 fuzz targets and cross-runtime MCP parity) and a **372-test Python suite across 16 files** (`351 passed, 21 skipped` on the last full local run; optional skips need local private captures or `.proto` files). No live LLM or cloud key is required; both suites only need **tshark** on `PATH`.
+S.O.N.I.C. is verified by a **34-package Go `-race` test suite** (`90.2%` to `96.2%` statement coverage), golden JSON snapshot verification, live child-binary MCP stdio/guidance E2E checks, and 4 fuzz targets. No live LLM or cloud key is required; the suite needs only **Go 1.27+** and **tshark** on `PATH`.
 
 ```bash
-make test                                  # all 34 Go packages with -race and coverage
-make parity                                # Go vs Python golden JSON parity suites
-make mcp-parity                            # Python MCP integration suites against Go binaries
-make fuzz                                  # Go fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
-python3 -m pytest -q                       # full Python reference suite (372 tests)
+make test             # all 34 Go packages with -race and coverage
+make vet              # go vet across host and cross-compilation targets
+make parity           # Go golden JSON parity tests against testdata/golden/
+make fuzz             # fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
+make update-golden    # regenerate golden JSON snapshots via go test -update
 ```
 
-| File | Tests | Covers |
-|---|---:|---|
-| `test_network_detectors.py` | 46 | Network and VPN detectors and the orchestrator, both backends |
-| `test_control_plane.py` | 44 | IPsec, GRE/NHRP, DMVPN, routing, reachability, convergence, cleartext audit |
-| `test_dataplane_detectors.py` | 41 | Path MTU, ESP, TCP, TLS handshakes, QoS, correlation, timeline |
-| `test_grpc.py` | 41 | gNMI decoding, HTTP/2 framing, TLS key log and pcapng secrets, scrubbing |
-| `test_tls_audit.py` | 29 | TLS handshake and encryption findings, both backends |
-| `test_aaa.py` | 25 | TACACS+ and RADIUS inspection, Authenticator validation, credential masking |
-| `test_mcp_guidance.py` | 25 | MCP instructions, generated skill, provider resolution (`SONIC_CLI_BINARY` / `SONIC_MCP_BINARY`) |
-| `test_credentials.py` | 22 | Env-file parsing, key loading, redaction |
-| `test_esp.py` | 20 | IPsec ESP SA decryption and inner traffic inspection |
-| `test_snmp.py` | 19 | SNMP version naming and SNMPv3 authPriv decryption |
-| `test_restconf.py` | 17 | RESTCONF/REST HTTP/1.1 & HTTP/2 troubleshooting and TLS decryption |
-| `test_phase3_reporting.py` | 15 | SIP authentication reports and sequence diagrams |
-| `test_network_mcp.py` | 13 | Network tools directly and over MCP stdio handshake (`SONIC_MCP_BINARY`) |
-| `test_sip_credentials.py` | 10 | SIP digest, Basic, and SDP key scrubbing |
-| `test_auth_diagnostics.py` | 3 | SIP authentication diagnostics |
-| `test_mcp_stdio.py` | 2 | stdout carries only JSON-RPC (`SONIC_MCP_BINARY` / `SONIC_MCP_STUB_BINARY`) |
-| **Total** | **372** | |
+| Area | Packages | Coverage (`-race`) |
+|---|---|---:|
+| CLI & MCP Entry Points | `cmd/sonic` (`94.3%`), `cmd/sonic-mcp` (`96.0%`) | `94.3% - 96.0%` |
+| LLM & AI Factory Layer | `internal/llm` (`90.8%`), `internal/ai` (`91.7%`) | `90.8% - 91.7%` |
+| MCP Server & Agent Guidance | `internal/mcpserver` (`93.3%`), `internal/guide` (`91.8%`) | `91.8% - 93.3%` |
+| Core Extraction, Report & Safety | `extract` (`90.9%`), `report` (`90.9%`), `redact` (`91.0%`), `wsconfig` (`90.2%`), `tshark` (`91.8%`), `model` (`93.6%`), `parity` (`91.2%`) | `90.2% - 93.6%` |
+| Analyzers (`internal/analyze/*`) | 21 analyzer packages (`aaainspect`, `audit`, `convergence`, `correlate`, `dmvpn`, `espdecrypt`, `espoverhead`, `grenhrp`, `grpc`, `httpinspect`, `ipsec`, `netorch`, `pathmtu`, `qos`, `reach`, `routing`, `sip`, `snmpinspect`, `tcphealth`, `timeline`, `tlsinspect`) | `90.3% - 96.2%` |
 
-**Fixtures.** The **52** test captures in `tests/fixtures/` are built by **8** deterministic generators (`tests/fixtures/generate_*.py`). Rebuild them with `for g in tests/fixtures/generate_*.py; do python3 "$g"; done`. The output is byte-identical on every run, and CI checks that.
+**Fixtures and golden snapshots.** `testdata/fixtures/` holds **52** committed deterministic `.pcap` captures (built rarely by the dev-only Scapy scripts archived in `scripts/fixtures/`), and `testdata/golden/` holds the expected JSON baselines verified by `make parity`.
 
-**Real captures.** Some tests use captures that are not in the repository. They are skipped unless `SONIC_GRPC_CAPTURES` points at a directory of them. `SONIC_PROTO_PATH` enables the protobuf view test.
+**Real captures.** Optional real-capture tests read `SONIC_GRPC_CAPTURES` and `SONIC_PROTO_PATH` when set.
 
-**Continuous integration.** `.github/workflows/ci.yml` runs the Go gate (`gofmt`, cross-OS `go vet` for Linux/macOS/Windows, `make build release`, and 34-package `-race` tests) alongside Python 3.10 to 3.13 pytest runs with tshark installed, fixture reproducibility checks, CodeQL, dependency audits, and non-blocking Python formatting checks.
+**Continuous integration.** [.github/workflows/ci.yml](.github/workflows/ci.yml) runs `gofmt -l .`, cross-OS `go vet` across 6 targets (`linux`, `darwin`, `windows` x `amd64`/`arm64`), `make test`, `make fuzz`, and `make build release`, while [.github/workflows/release.yml](.github/workflows/release.yml) publishes release archives and `SHA256SUMS` on `v*` tags.
 
 See [docs/TESTING.md](docs/TESTING.md) for the full reference.
 
@@ -1239,24 +1175,16 @@ See [docs/TESTING.md](docs/TESTING.md) for the full reference.
 git clone https://github.com/zombat/sonic.git
 cd sonic
 
-# Go toolchain (builds & tests ./cmd/sonic and ./cmd/sonic-mcp; see Prerequisites for build/install/release)
 make                    # compile build/sonic and build/sonic-mcp (CGO_ENABLED=0)
 make fmt                # format Go sources with gofmt -w .
 make vet                # run go vet ./...
 make test               # run all 34 Go packages with -race and coverage
 make fuzz               # run 1s fuzz smoke tests (SSE, NDJSON, JSON recovery, ArtifactFactory)
-make parity             # run Go vs Python golden JSON parity suites
-make mcp-parity         # verify Go binaries against Python MCP stdio/guidance suites
-make golden             # regenerate Python golden JSON fixtures
+make parity             # run Go golden JSON parity suites
+make update-golden      # regenerate golden JSON snapshots via go test -update
 make clean              # remove build/ artifacts
 make help               # print all Makefile targets
-
-# Python reference suite & fixture generators
-pip install -r requirements-dev.txt   # runtime requirements plus pytest-cov
-python3 -m pytest -q                  # needs tshark on the PATH
 ```
-
-Lint (non-blocking in CI until the existing code passes): `python3 -m black --check *.py analyzers ai extractors handlers models utils tests` and `python3 -m flake8 .`. flake8 settings are in `.flake8`.
 
 ## 📝 License
 
@@ -1264,10 +1192,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Wireshark](https://www.wireshark.org/) for the powerful tshark CLI
-- [DSPy](https://github.com/stanfordnlp/dspy) for the AI framework
+- [Wireshark](https://www.wireshark.org/) for the powerful `tshark` CLI
+- [Go standard library](https://pkg.go.dev/std) for zero-dependency HTTP/TLS/crypto/JSON/archive tooling
 - [Ollama](https://ollama.com/) for local AI model hosting
-- [Scapy](https://scapy.net/) for Python packet manipulation
 
 ## 📧 Support
 
@@ -1276,6 +1203,6 @@ For support, bug reports, or feature requests, please open an issue on GitHub or
 ---
 
 **Author**: Raymond A Rizzo | Zombat  
-**Version**: 3.2+ (Native Go CLI/MCP Runtime, 18 MCP Tools, Network/VPN/gRPC/Decryption)  
+**Version**: 4.0.0 (Pure Go CLI & MCP Runtime, 18 MCP Tools, Network/VPN/gRPC/Decryption)  
 **Last Updated**: November 17, 2026  
 **Project**: S.O.N.I.C. - SIP Observation and Network Inspection Console
