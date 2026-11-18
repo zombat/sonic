@@ -28,6 +28,9 @@ jobs:
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+          sudo aa-complain /usr/bin/tshark /usr/bin/dumpcap /etc/apparmor.d/*tshark* /etc/apparmor.d/*wireshark* /etc/apparmor.d/*tcpdump* 2>/dev/null || true
+          sudo apparmor_parser -R /etc/apparmor.d/*tshark* /etc/apparmor.d/*wireshark* /etc/apparmor.d/*tcpdump* 2>/dev/null || true
+          chmod a+rx "$HOME" "$GITHUB_WORKSPACE" 2>/dev/null || true
           tshark --version | head -1
 
       - name: Check formatting, vet, and cross-platform builds
