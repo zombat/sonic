@@ -70,8 +70,24 @@ test:
 fuzz:
 	$(GOENV) go test -run=^$$ -fuzz=FuzzSSEEvents -fuzztime=1s ./internal/llm
 	$(GOENV) go test -run=^$$ -fuzz=FuzzNDJSON -fuzztime=1s ./internal/llm
+	$(GOENV) go test -run=^$$ -fuzz=FuzzValidateBaseURL -fuzztime=1s ./internal/llm
 	$(GOENV) go test -run=^$$ -fuzz=FuzzExtractBalancedJSON -fuzztime=1s ./internal/ai
 	$(GOENV) go test -run=^$$ -fuzz=FuzzArtifactFactoryBuild -fuzztime=1s ./internal/ai
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseAllowlist -fuzztime=1s ./internal/analyze/audit
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseKexInit -fuzztime=1s ./internal/analyze/audit
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseClientHello -fuzztime=1s ./internal/analyze/tlsinspect
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseServerHello -fuzztime=1s ./internal/analyze/tlsinspect
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseCertificate -fuzztime=1s ./internal/analyze/tlsinspect
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseIKE -fuzztime=1s ./internal/extract
+	$(GOENV) go test -run=^$$ -fuzz=FuzzFastPathPCAP -fuzztime=1s ./internal/extract
+	$(GOENV) go test -run=^$$ -fuzz=FuzzDecodeFastPacket -fuzztime=1s ./internal/extract
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseSIPAndSDP -fuzztime=1s ./internal/extract
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseDotenv -fuzztime=1s ./internal/redact
+	$(GOENV) go test -run=^$$ -fuzz=FuzzMaskSecretShapes -fuzztime=1s ./internal/redact
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseEKLine -fuzztime=1s ./internal/tshark
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParsePolicies -fuzztime=1s ./internal/gate
+	$(GOENV) go test -run=^$$ -fuzz=FuzzParseReportDigest -fuzztime=1s ./internal/report
+	$(GOENV) go test -run=^$$ -fuzz=FuzzSanitizeTerminalText -fuzztime=1s ./internal/tui
 
 parity:
 	$(GOENV) go test -race -p 1 -count=1 -run 'Golden' ./...
@@ -88,7 +104,7 @@ help:
 	@printf "  vet            Run go vet ./...\n"
 	@printf "  fmt            Format all Go files with gofmt -w .\n"
 	@printf "  test           Run all Go packages with -race and coverage\n"
-	@printf "  fuzz           Run 1s fuzz smoke tests on SSE, NDJSON, JSON recovery, and ArtifactFactory\n"
+	@printf "  fuzz           Run 1s fuzz smoke tests across all 20 fuzz targets\n"
 	@printf "  parity         Run Go golden JSON parity tests against testdata/golden/\n"
 	@printf "  update-golden  Regenerate golden JSON snapshots via go test -update\n"
 	@printf "  docker         Build minimal rootless container image bundling sonic, sonic-mcp, and headless tshark\n"

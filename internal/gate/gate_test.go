@@ -123,3 +123,19 @@ func TestGateEvaluationFormatsAndThresholds(t *testing.T) {
 			mosFail.Passed, mosOK.Passed, clipFail.Passed, clipOK.Passed, weakSIP.Passed)
 	}
 }
+
+func FuzzParsePolicies(f *testing.F) {
+	for _, seed := range []string{
+		"zero-cleartext,no-weak-crypto,mos-min=3.8,max-clipping-ms=500,no-critical-issues",
+		"mos-min=-1",
+		"max-clipping-ms=nan",
+		"unknown-rule",
+		"",
+		",,,",
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, spec string) {
+		_, _ = ParsePolicies([]string{spec})
+	})
+}

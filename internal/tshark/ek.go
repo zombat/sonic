@@ -105,17 +105,12 @@ func StreamEKFields(ctx context.Context, opts CustomStreamOptions, fn func(Row) 
 	produced := 0
 	var cbErr error
 	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" {
+		row, ok := parseEKLine(sc.Text(), ekToField)
+		if !ok {
 			continue
 		}
-		var env ekLineEnvelope
-		if json.Unmarshal([]byte(line), &env) != nil || len(env.Layers) == 0 {
-			continue
-		}
-		values := decodeEKLayers(env.Layers, ekToField)
 		produced++
-		if err := fn(NewRow(values)); err != nil {
+		if err := fn(row); err != nil {
 			cbErr = err
 			if cmd.Process != nil {
 				_ = cmd.Process.Kill()
@@ -143,6 +138,18 @@ func StreamEKFields(ctx context.Context, opts CustomStreamOptions, fn func(Row) 
 		return res, fmt.Errorf("tshark failed: %w", waitErr)
 	}
 	return res, nil
+}
+
+func parseEKLine(line string, ekToField map[string]string) (Row, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return Row{}, false
+	}
+	var env ekLineEnvelope
+	if json.Unmarshal([]byte(trimmed), &env) != nil || len(env.Layers) == 0 {
+		return Row{}, false
+	}
+	return NewRow(decodeEKLayers(env.Layers, ekToField)), true
 }
 
 func decodeEKLayers(rawLayers map[string]json.RawMessage, ekToField map[string]string) map[string][]string {

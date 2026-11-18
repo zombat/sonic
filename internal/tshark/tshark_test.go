@@ -244,3 +244,23 @@ func TestStreamEKFieldsAndDecodeEdgeCases(t *testing.T) {
 		t.Fatalf("EKFieldKey unexpected: %s", EKFieldKey("sip.Call-ID"))
 	}
 }
+
+func FuzzParseEKLine(f *testing.F) {
+	ekToField := map[string]string{
+		"frame_number":   "frame.number",
+		"sip_Call-ID":    "sip.Call-ID",
+		"sdp_media_attr": "sdp.media_attr",
+	}
+	for _, seed := range []string{
+		`{"timestamp":"1700000000","layers":{"frame_number":["1"],"sip_Call-ID":"abc@1.2.3.4","sdp_media_attr":["rtpmap:101 telephone-event/8000","crypto:1 AES_CM_128_HMAC_SHA1_80 inline:topsecret"]}}`,
+		`{"layers":{"flag":true,"count":42,"nullf":null}}`,
+		`{"index":{"_index":"packets"}}`,
+		`{invalid`,
+		``,
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, line string) {
+		_, _ = parseEKLine(line, ekToField)
+	})
+}

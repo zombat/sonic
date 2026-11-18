@@ -57,3 +57,19 @@ func TestOfflineHTMLReportRenderingAndXSSRedactionSafety(t *testing.T) {
 		t.Fatal("expected error on invalid JSON")
 	}
 }
+
+func FuzzParseReportDigest(f *testing.F) {
+	for _, seed := range []string{
+		`{"status":"success","file":"cap.pcap","verdict":"ok","protocols_present":["sip"],"issues":[{"severity":"warning","detector":"sip","code":"X","message":"msg","frames":[1]}],"timeline":[{"t":1.25,"protocol":"sip","event":"INVITE"}]}`,
+		`{"status":"error","error":"failed","timeline":[{"t":"bad"}]}`,
+		`{}`,
+		`[]`,
+		`{`,
+	} {
+		f.Add([]byte(seed))
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		_, _ = ParseReportDigest("Title", data, nil)
+		_, _ = RenderHTMLReport("Title", data, nil)
+	})
+}

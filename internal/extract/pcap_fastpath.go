@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"slices"
 
@@ -22,11 +21,6 @@ type FastPathOptions struct {
 	MaxPackets *int
 	Since      *float64
 	Until      *float64
-}
-
-type pcapngInterface struct {
-	linkType uint32
-	tsUnit   float64
 }
 
 // CanUseFastPath reports whether the requested detectors and display filter can
@@ -90,26 +84,58 @@ func OpenFastPathRecords(filePath string, opts FastPathOptions) (model.RecordsOu
 	defer f.Close()
 
 	br := bufio.NewReaderSize(f, 64*1024)
-	var magicBuf [4]byte
-	if _, err := io.ReadFull(br, magicBuf[:]); err != nil {
-		return out, fmt.Errorf("read capture magic: %w", err)
+	if err := readFastPathReader(br, opts, &out); err != nil {
+		return out, err
 	}
+	return out, nil
+}
+
+// readFastPathReader decodes a PCAP or PCAPNG byte stream from r into out.
+func readFastPathReader(r io.Reader, opts FastPathOptions, out *model.RecordsOutput) error {
+	var magicBuf [4]byte
+	if _, err := io.ReadFull(r, magicBuf[:]); err != nil {
+		return fmt.Errorf("read capture magic: %w", err)
+	}
+	var err error
 	switch binary.LittleEndian.Uint32(magicBuf[:]) {
 	case 0xa1b2c3d4, 0xd4c3b2a1, 0xa1b23c4d, 0x4d3cb2a1:
-		err = readFastPCAP(br, magicBuf, opts, &out.Records)
+		err = readFastPCAP(r, magicBuf, opts, &out.Records)
 	case 0x0a0d0d0a:
-		err = readFastPCAPNG(br, magicBuf, opts, &out.Records)
+		err = readFastPCAPNG(r, magicBuf, opts, &out.Records)
 	default:
-		return out, fmt.Errorf("unsupported capture magic: 0x%x", magicBuf)
+		return fmt.Errorf("unsupported capture magic: 0x%x", magicBuf)
 	}
 	if err != nil {
-		return out, err
+		return err
 	}
 	AnnotateServicePorts(out.Records)
 	if opts.MaxPackets != nil && *opts.MaxPackets > 0 && len(out.Records) > *opts.MaxPackets {
 		out.Records = out.Records[:*opts.MaxPackets]
 	}
-	return out, nil
+	return nil
+}
+
+// readExactBounded avoids upfront multi-MiB allocations on truncated frame lengths.
+func readExactBounded(r io.Reader, n int) ([]byte, error) {
+	if n <= 65536 {
+		buf := make([]byte, n)
+		if _, err := io.ReadFull(r, buf); err != nil {
+			return nil, err
+		}
+		return buf, nil
+	}
+	buf := make([]byte, 0, 65536)
+	var chunk [65536]byte
+	rem := n
+	for rem > 0 {
+		take := min(rem, len(chunk))
+		if _, err := io.ReadFull(r, chunk[:take]); err != nil {
+			return nil, err
+		}
+		buf = append(buf, chunk[:take]...)
+		rem -= take
+	}
+	return buf, nil
 }
 
 func readFastPCAP(r io.Reader, first4 [4]byte, opts FastPathOptions, out *[]model.Record) error {
@@ -146,8 +172,8 @@ func readFastPCAP(r io.Reader, first4 [4]byte, opts FastPathOptions, out *[]mode
 		if inclLen < 0 || inclLen > maxCapturedFrameBytes {
 			return fmt.Errorf("invalid pcap frame length %d", inclLen)
 		}
-		frame := make([]byte, inclLen)
-		if _, err := io.ReadFull(r, frame); err != nil {
+		frame, err := readExactBounded(r, inclLen)
+		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 				break
 			}
@@ -168,111 +194,6 @@ func readFastPCAP(r io.Reader, first4 [4]byte, opts FastPathOptions, out *[]mode
 		}
 	}
 	return nil
-}
-
-func readFastPCAPNG(r io.Reader, first4 [4]byte, opts FastPathOptions, out *[]model.Record) error {
-	var shbHeader [24]byte
-	if _, err := io.ReadFull(r, shbHeader[:]); err != nil {
-		return fmt.Errorf("read pcapng shb: %w", err)
-	}
-	var order binary.ByteOrder = binary.LittleEndian
-	if binary.LittleEndian.Uint32(shbHeader[4:8]) != 0x1a2b3c4d {
-		if binary.BigEndian.Uint32(shbHeader[4:8]) != 0x1a2b3c4d {
-			return errors.New("invalid pcapng byte-order magic")
-		}
-		order = binary.BigEndian
-	}
-	shbLen := order.Uint32(shbHeader[0:4])
-	if shbLen < 28 || shbLen > maxCapturedFrameBytes {
-		return fmt.Errorf("invalid pcapng shb length %d", shbLen)
-	}
-	if _, err := io.CopyN(io.Discard, r, int64(shbLen-28)); err != nil {
-		return err
-	}
-
-	ifaces := []pcapngInterface{}
-	var hdr [8]byte
-	frameNum := 0
-	for {
-		if _, err := io.ReadFull(r, hdr[:]); err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return err
-		}
-		bType := order.Uint32(hdr[0:4])
-		bLen := order.Uint32(hdr[4:8])
-		if bLen < 12 || bLen > maxCapturedFrameBytes+128 {
-			return fmt.Errorf("invalid pcapng block length %d", bLen)
-		}
-		bodyLen := int(bLen) - 8
-		body := make([]byte, bodyLen)
-		if _, err := io.ReadFull(r, body); err != nil {
-			return err
-		}
-		switch bType {
-		case 0x0a0d0d0a:
-			ifaces = ifaces[:0]
-		case 0x00000001:
-			if len(body) >= 12 {
-				lt := uint32(order.Uint16(body[0:2]))
-				ifaces = append(ifaces, pcapngInterface{linkType: lt, tsUnit: parseIDBTSResol(body[8:len(body)-4], order)})
-			}
-		case 0x00000006:
-			if len(body) >= 24 {
-				ifID := int(order.Uint32(body[0:4]))
-				tsHigh := uint64(order.Uint32(body[4:8]))
-				tsLow := uint64(order.Uint32(body[8:12]))
-				capLen := int(order.Uint32(body[12:16]))
-				origLen := int(order.Uint32(body[16:20]))
-				if capLen >= 0 && 20+capLen <= len(body)-4 && ifID < len(ifaces) {
-					frameNum++
-					epoch := float64((tsHigh<<32)|tsLow) * ifaces[ifID].tsUnit
-					if inEpochWindow(epoch, opts.Since, opts.Until) {
-						*out = append(*out, decodeFastFrame(frameNum, epoch, origLen, body[20:20+capLen], ifaces[ifID].linkType))
-					}
-				}
-			}
-		case 0x00000003:
-			if len(body) >= 8 && len(ifaces) > 0 {
-				origLen := int(order.Uint32(body[0:4]))
-				frame := body[4 : len(body)-4]
-				frameNum++
-				if inEpochWindow(0, opts.Since, opts.Until) {
-					*out = append(*out, decodeFastFrame(frameNum, 0, origLen, frame, ifaces[0].linkType))
-				}
-			}
-		}
-		if opts.MaxPackets != nil && *opts.MaxPackets > 0 && len(*out) >= *opts.MaxPackets {
-			break
-		}
-	}
-	return nil
-}
-
-func parseIDBTSResol(opts []byte, order binary.ByteOrder) float64 {
-	pos := 0
-	for pos+4 <= len(opts) {
-		code := order.Uint16(opts[pos : pos+2])
-		vlen := int(order.Uint16(opts[pos+2 : pos+4]))
-		pos += 4
-		if code == 0 {
-			break
-		}
-		if pos+vlen > len(opts) {
-			break
-		}
-		if code == 9 && vlen >= 1 {
-			b := opts[pos]
-			if (b & 0x80) != 0 {
-				return math.Pow(2, -float64(b&0x7f))
-			}
-			return math.Pow(10, -float64(b))
-		}
-		pad := (vlen + 3) &^ 3
-		pos += pad
-	}
-	return 1e-6
 }
 
 func inEpochWindow(epoch float64, since, until *float64) bool {
