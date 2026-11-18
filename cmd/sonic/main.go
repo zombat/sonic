@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/zombat/sonic/internal/analyze/audit"
 	"github.com/zombat/sonic/internal/extract"
 	"github.com/zombat/sonic/internal/guide"
 	"github.com/zombat/sonic/internal/mcpserver"
@@ -24,29 +22,37 @@ import (
 var version, commit = "dev", "none"
 
 type cliOptions struct {
-	file          string
-	saveFile      string
-	networkOnly   bool
-	detectorsCSV  string
-	peersCSV      string
-	allowCSV      string
-	displayFilter string
-	maxPackets    int
-	asJSON        bool
-	grpcMode      bool
-	restconfMode  bool
-	snmpMode      bool
-	aaaMode       bool
-	espDecrypt    bool
-	qualityOnly   bool
-	tlsSecretsLog string
-	protoPaths    stringListFlag
-	grpcPorts     string
-	httpPorts     string
-	snmpUsers     string
-	aaaSecrets    string
-	espSA         string
-	envFile       string
+	file           string
+	saveFile       string
+	htmlPath       string
+	networkOnly    bool
+	correlateMedia bool
+	tuiMode        bool
+	redactAudit    bool
+	diffPair       string
+	detectorsCSV   string
+	peersCSV       string
+	allowCSV       string
+	displayFilter  string
+	maxPackets     int
+	sinceStr       string
+	untilStr       string
+	fastPath       string
+	asJSON         bool
+	grpcMode       bool
+	restconfMode   bool
+	snmpMode       bool
+	aaaMode        bool
+	espDecrypt     bool
+	qualityOnly    bool
+	tlsSecretsLog  string
+	protoPaths     stringListFlag
+	grpcPorts      string
+	httpPorts      string
+	snmpUsers      string
+	aaaSecrets     string
+	espSA          string
+	envFile        string
 }
 
 type stringListFlag []string
@@ -63,14 +69,27 @@ func (s *stringListFlag) Set(val string) error {
 }
 
 func main() {
-	os.Exit(run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(runWithIO(context.Background(), os.Args[1:], os.Stdin, os.Stdout, os.Stderr, defaultLLMRuntimeDeps()))
 }
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	if len(args) > 0 && args[0] == "dump" {
-		return runDump(ctx, args[1:], stdout, stderr)
+	return runWithIO(ctx, args, strings.NewReader("q"), stdout, stderr, defaultLLMRuntimeDeps())
+}
+
+func runWithIO(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, deps llmRuntimeDeps) int {
+	if len(args) > 0 {
+		switch args[0] {
+		case "dump":
+			return runDump(ctx, args[1:], stdout, stderr)
+		case "gate":
+			return runGateSubcommand(ctx, args[1:], stdout, stderr)
+		case "diff":
+			return runDiffSubcommand(ctx, args[1:], stdin, stdout, stderr)
+		case "tui":
+			return runTUISubcommand(ctx, args[1:], stdin, stdout, stderr)
+		}
 	}
-	return runCommand(ctx, args, stdout, stderr)
+	return runCommandWithDepsIO(ctx, args, stdin, stdout, stderr, deps)
 }
 
 func runDump(ctx context.Context, args []string, stdout, stderr io.Writer) int {
@@ -100,10 +119,14 @@ func runDump(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 }
 
 func runCommand(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	return runCommandWithDeps(ctx, args, stdout, stderr, defaultLLMRuntimeDeps())
+	return runCommandWithDepsIO(ctx, args, strings.NewReader("q"), stdout, stderr, defaultLLMRuntimeDeps())
 }
 
 func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Writer, deps llmRuntimeDeps) int {
+	return runCommandWithDepsIO(ctx, args, strings.NewReader("q"), stdout, stderr, deps)
+}
+
+func runCommandWithDepsIO(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, deps llmRuntimeDeps) int {
 	skillDir, createSkill, cleanArgs := guide.ExtractCreateSkillFlag(args)
 	protoDir, fetchProtos, cleanArgs := extractFetchProtosFlag(cleanArgs)
 	var o cliOptions
@@ -111,13 +134,21 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 	fs := flag.NewFlagSet("sonic", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&o.file, "file", "", "pcap/pcapng file path")
-	fs.StringVar(&o.saveFile, "save_file", "", "path to save markdown or JSON report")
+	fs.StringVar(&o.saveFile, "save_file", "", "path to save markdown, JSON, or HTML report")
+	fs.StringVar(&o.htmlPath, "html", "", "write self-contained offline HTML5 report to FILE")
 	netOnlyFlag := fs.Bool("network-only", false, "run deterministic network detectors")
+	fs.BoolVar(&o.correlateMedia, "correlate-media", false, "correlate SIP/RTP quality, clipping, and DTMF with underlay faults")
+	fs.BoolVar(&o.tuiMode, "tui", false, "open interactive ANSI terminal report viewer")
+	fs.BoolVar(&o.redactAudit, "redact-audit", false, "include per-category redaction counts in JSON/HTML/stderr output")
+	fs.StringVar(&o.diffPair, "diff", "", "compare baseline and target captures (BASE,TARGET)")
 	detectorsSet := fs.String("detectors", "cleartext_audit", "comma-separated detector list")
 	fs.StringVar(&o.peersCSV, "peers", "", "comma-separated VPN peer IPs")
 	fs.StringVar(&o.allowCSV, "allow", "", "comma-separated allowlist tokens for cleartext_audit")
 	fs.StringVar(&o.displayFilter, "display-filter", "", "wireshark display filter")
 	fs.IntVar(&o.maxPackets, "max-packets", 0, "maximum frames to read")
+	fs.StringVar(&o.sinceStr, "since", "", "filter packets at or after Unix epoch seconds")
+	fs.StringVar(&o.untilStr, "until", "", "filter packets at or before Unix epoch seconds")
+	fs.StringVar(&o.fastPath, "fast-path", "auto", "pure-Go L2-L4 decoder mode: auto, always, or never")
 	fs.BoolVar(&o.asJSON, "json", false, "emit machine-readable JSON")
 	fs.BoolVar(&o.grpcMode, "grpc", false, "run gRPC/gNMI/gNOI inspection")
 	fs.BoolVar(&o.restconfMode, "restconf", false, "run RESTCONF/REST HTTP inspection")
@@ -168,6 +199,9 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 	if lo.batchDir != "" {
 		return runBatchLLM(ctx, o, lo, creds, deps, stdout, stderr)
 	}
+	if o.diffPair != "" {
+		return runDiffPairFlag(ctx, o, stdin, stdout, stderr)
+	}
 	if o.file == "" {
 		fmt.Fprintln(stderr, "missing required --file flag")
 		return 2
@@ -182,76 +216,35 @@ func runCommandWithDeps(ctx context.Context, args []string, stdout, stderr io.Wr
 		return runSIPAnalysisLLM(ctx, o, lo, creds, deps, stdout, stderr)
 	}
 
-	detectorsExplicit := false
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name == "detectors" {
-			detectorsExplicit = true
-		}
-	})
-
+	detectorsExplicit := hasVisitedFlag(fs, "detectors")
 	switch {
 	case o.grpcMode:
-		return runGRPC(ctx, o, stdout, stderr)
+		return runGRPC(ctx, o, stdin, stdout, stderr)
 	case o.restconfMode:
-		return runHTTP(ctx, o, stdout, stderr)
+		return runHTTP(ctx, o, stdin, stdout, stderr)
 	case o.snmpMode:
-		return runSNMP(ctx, o, stdout, stderr)
+		return runSNMP(ctx, o, stdin, stdout, stderr)
 	case o.aaaMode:
-		return runAAA(ctx, o, stdout, stderr)
+		return runAAA(ctx, o, stdin, stdout, stderr)
 	case o.espDecrypt:
 		var espDetectors []string
 		if detectorsExplicit {
 			espDetectors = splitCSV(o.detectorsCSV)
 		}
-		return runESP(ctx, o, espDetectors, stdout, stderr)
+		return runESP(ctx, o, espDetectors, stdin, stdout, stderr)
+	case o.correlateMedia:
+		return runCorrelateMedia(ctx, o, stdin, stdout, stderr)
 	case o.qualityOnly:
-		return runQualityOnly(ctx, o, stdout, stderr)
-	case o.networkOnly:
+		return runQualityOnly(ctx, o, stdin, stdout, stderr)
+	case o.networkOnly || o.tuiMode:
 		var reqDetectors []string
 		if detectorsExplicit {
 			reqDetectors = splitCSV(o.detectorsCSV)
 		}
-		return runNetwork(ctx, o, reqDetectors, stdout, stderr)
+		return runNetwork(ctx, o, reqDetectors, stdin, stdout, stderr)
 	default:
-		return runAudit(ctx, o, stdout, stderr)
+		return runAudit(ctx, o, stdin, stdout, stderr)
 	}
-}
-
-func runAudit(ctx context.Context, o cliOptions, stdout, stderr io.Writer) int {
-	detectors := splitCSV(o.detectorsCSV)
-	if len(detectors) == 0 {
-		detectors = []string{"cleartext_audit"}
-	}
-	if !slices.Contains(detectors, "cleartext_audit") {
-		if o.allowCSV != "" {
-			fmt.Fprintln(stderr, "--allow needs --detectors cleartext_audit")
-			return 1
-		}
-		fmt.Fprintf(stderr, "unsupported stage 1 detector(s): %s\n", strings.Join(detectors, ","))
-		return 1
-	}
-	rep, err := audit.AuditCleartextCapture(ctx, audit.AuditOptions{
-		FilePath:      o.file,
-		Allow:         splitCSV(o.allowCSV),
-		DisplayFilter: o.displayFilter,
-		MaxPackets:    positiveIntPtr(o.maxPackets),
-	})
-	if err != nil {
-		rep.Error = redact.RedactText(rep.Error)
-		if o.asJSON {
-			b, merr := json.MarshalIndent(rep, "", "  ")
-			_ = writeJSONBytes(stdout, stderr, b, merr)
-		} else {
-			fmt.Fprintln(stderr, redact.RedactText(err.Error()))
-		}
-		return 1
-	}
-	if o.asJSON {
-		b, merr := json.MarshalIndent(rep, "", "  ")
-		return writeJSONBytes(stdout, stderr, b, merr)
-	}
-	fmt.Fprintln(stdout, rep.Verdict)
-	return 0
 }
 
 func splitCSV(value string) []string {

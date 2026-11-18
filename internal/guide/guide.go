@@ -146,12 +146,12 @@ func Instructions(tools []ToolSpec) string {
 		wfNames = append(wfNames, wf.Name)
 	}
 
-	sb.WriteString("\nOrder: analyze_network_pcap first, then the tool for the protocol found; audit_cleartext_pcap to gate a link; SIP: quick_quality_check before analyze_pcap. Quote codes and frames.\n\n")
-	sb.WriteString("Decryption keys (keylog_file, users_file, keys_file, sa_file) are paths on the server, never returned; never paste a key.\n\n")
-	sb.WriteString("[LLM] tools: provider SONIC_LLM_PROVIDER, else ollama; a cloud one sends SIP data (auth headers masked) off this machine: ask first.\n\n")
-	sb.WriteString("Tools return JSON; check status (errors are data). Lists stop at max_items (default 25), *_omitted counts the rest; narrow: display_filter, max_packets.\n\n")
-	sb.WriteString("Limits: only what crossed the capture point (capture the WAN to prove encryption); IKEv2 auth failure is a heuristic; NULL ESP looks encrypted.\n\n")
-	fmt.Fprintf(&sb, "More: resources sonic://guide/<topic> (%s); prompts %s.",
+	sb.WriteString("\nOrder: analyze_network_pcap first; audit_cleartext_pcap or evaluate_capture_gate to gate; diff_pcaps to compare captures; SIP: quick_quality_check or diagnose_media_underlay before analyze_pcap. Quote codes/frames.\n\n")
+	sb.WriteString("Key files (keylog_file, users_file, keys_file, sa_file) are server paths; never paste keys.\n\n")
+	sb.WriteString("[LLM] tools: SONIC_LLM_PROVIDER else ollama; cloud sends masked SIP off-box.\n\n")
+	sb.WriteString("JSON status reports errors. Caps: max_items (25), *_omitted; filter: display_filter, max_packets.\n\n")
+	sb.WriteString("Limits: only capture point traffic seen; IKEv2 auth is heuristic; NULL ESP looks encrypted.\n\n")
+	fmt.Fprintf(&sb, "Resources sonic://guide/<topic> (%s); prompts %s.",
 		strings.Join(topicSlugs, ", "), strings.Join(wfNames, ", "))
 	return sb.String()
 }

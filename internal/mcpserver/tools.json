@@ -200,7 +200,7 @@
   {
     "name": "analyze_network_pcap",
     "title": "Analyze any capture with the network detectors",
-    "description": "Analyze any packet capture (not only VoIP) and return deterministic findings as JSON.\nThe first tool on an unknown capture.\n\nNo LLM is used: every verdict comes from decoding the packets (tshark, with scapy as\nthe fallback), in seconds for a typical capture. It reports which protocols are\npresent and runs every detector that applies. For a focused answer use\nanalyze_vpn_pcap (encryption, IPsec, DMVPN) or analyze_routing_pcap (adjacencies,\nfailover); for SIP call quality, quick_quality_check.\n\nDetectors (pass a subset in `detectors`; the default runs all but the last two):\n  - \"ipsec\": IKEv1/IKEv2 negotiation per IKE SA (outcome: established, failed,\n    no_response, auth_likely_failed, ...), the IKEv2 proposals offered and chosen\n    (encryption, PRF, integrity, DH group, weak algorithms), KE groups and\n    INVALID_KE_PAYLOAD retries, NAT detection hashes checked against the wire and\n    the move to UDP 4500, DPD liveness checks, a \"diagnosis\" per SA (ok,\n    proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing,\n    no_reply, liveness_lost, peer_lost_sa), NOTIFY errors, IKE SA collisions, rekeys,\n    ESP flows per SPI (sequence gaps, duplicates, an old SPI still used after a newer\n    one took over), NAT-T, and the encryption verdict: \"encrypted\" or\n    \"cleartext_seen\" for traffic between the same two endpoints.\n  - \"gre_nhrp\": GRE tunnels (keys, inner protocols, key mismatch), NHRP registrations\n    (spoke -> hub, result registered/refused/unanswered), hub and spoke roles,\n    resolution requests/replies, redirects (DMVPN Phase 3), error indications,\n    and spoke-to-spoke tunnels.\n  - \"dmvpn_phase3\": per redirected flow the ordered Phase 3 steps (via_hub, redirect,\n    resolution_request, resolution_reply, direct) with frames and times, the first\n    missing step and why; hub-relayed spoke traffic with no redirect; resolution\n    thrashing; and, with `hubs`, encrypted spoke-to-spoke shortcuts (IKE then direct\n    ESP) when NHRP is hidden inside ESP.\n  - \"routing\": BGP sessions (state, OPEN AS/hold time/router ID/capabilities,\n    keepalive cadence, UPDATE timing, NOTIFICATION code/subcode decoded with a hint,\n    the cause of each drop, the MSS of each SYN and SYN-ACK checked against\n    `expected_mss`, refused TCP 179), OSPF per link (hello/dead/mask/area/auth/MTU\n    mismatches, one-way neighbors, DR/BDR, hello gaps, adjacencies stuck in EXSTART\n    or EXCHANGE), EIGRP (K-value and AS mismatches, goodbyes, hold time expiry, INIT\n    restarts, queries/SIA), plus a failover_timeline.\n  - \"reachability\": ICMP echo loss/RTT per source->destination pair with outage\n    windows, ICMP unreachable/TTL-exceeded with decoded codes, ARP with no reply,\n    duplicate IPs.\n  - \"path_mtu\": ICMP Fragmentation Needed / Packet Too Big (router, next-hop MTU,\n    the probe frame it refers to), PMTUD black holes (large DF probes or TCP\n    segments that vanished with no ICMP while smaller ones got through), IP\n    fragments (complete, incomplete, overlapping), reassembly timeouts.\n  - \"esp_overhead\": per ESP SA, packet sizes against cipher families (AES-GCM,\n    AES-CBC with SHA1/SHA2, 3DES, NULL), inner size bounds, overhead in tunnel and\n    transport-over-GRE mode, tunnel MTU fit, ESP fragmented after encryption.\n    Estimates from sizes only; ESP is encrypted.\n  - \"tcp\": per connection: SYN without SYN-ACK, refused, retransmissions (fast or\n    timeout), gaps, duplicate ACKs, zero window, window full, RSTs, MSS/window\n    scale, RTT and RFC 6298 RTO, and a verdict (no_answer, refused,\n    receiver_buffer_exhausted, loss_on_path, receive_window_limited, reset, healthy).\n  - \"tls\": ClientHello SNI, versions, suites, ALPN, groups; ServerHello choice;\n    TLS 1.2 certificate (subject, issuer, validity at capture time); cleartext\n    alerts; an optional baseline (see options).\n  - \"qos\": DSCP per flow, GRE inner vs outer DSCP, ESP outer DSCP per SA, RTP\n    streams with loss, RFC 3550 jitter, DSCP and an E-model MOS estimate, ECN CE.\n  - \"conversations\": protocol mix by packets and bytes, top conversations, top talkers.\n  - Run only when named: \"cleartext_audit\" (audit_cleartext_pcap) and \"convergence\"\n    (analyze_convergence_pcap).\n\nReturns a JSON object: status \"success\", schema, overall_status (\"ok\", \"warning\",\n\"problem\" or \"not_present\"; the worst detector status, conversations and SIP\nexcluded), protocols_present, detectors_run, verdicts (detector to one sentence),\nissues (severity, stable code, message, Wireshark frame numbers, detector; errors\nfirst), timeline (t in seconds from the first frame, time, protocol, event, detail,\nframe), capture (backend, packets, duration, missing tshark fields, warnings), one\nsection per detector, each with status, verdict and issues, and sip. Lists are cut\nat max_items; issues_omitted and timeline_omitted count the rest. On failure\n{\"status\": \"error\", \"error\": \"...\"}, plus valid_detectors for an unknown detector.\n\nLimits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is\nencrypted, so the child SA proposal, identities and AUTH are never visible: a PSK\nmismatch shows only as a small encrypted IKE_AUTH response or as retransmissions with\nno reply (a labelled heuristic). DPD is recognised by message size; INVALID_SPI\nnormally travels encrypted. ESP with NULL encryption cannot be told apart from real\nencryption without keys. With tunnel protection, GRE, NHRP and BGP are inside ESP on\nthe transport link. OSPFv3 and IS-IS are not decoded.\n\nFor example, analyze_network_pcap(file_path=\"/captures/hub-wan.pcap\") or\nanalyze_network_pcap(file_path=\"/captures/r1-r2.pcap\", detectors=[\"routing\"]).",
+    "description": "Analyze any packet capture (not only VoIP) and return deterministic findings as JSON.\nThe first tool on an unknown capture.\n\nNo LLM is used: every verdict comes from decoding the packets (tshark or pure-Go\ngo-fast L2-L4 decoding), in seconds for a typical capture. It reports which protocols are\npresent and runs every detector that applies. For a focused answer use\nanalyze_vpn_pcap (encryption, IPsec, DMVPN) or analyze_routing_pcap (adjacencies,\nfailover); for SIP call quality, quick_quality_check.\n\nDetectors (pass a subset in `detectors`; the default runs all but the last two):\n  - \"ipsec\": IKEv1/IKEv2 negotiation per IKE SA (outcome: established, failed,\n    no_response, auth_likely_failed, ...), the IKEv2 proposals offered and chosen\n    (encryption, PRF, integrity, DH group, weak algorithms), KE groups and\n    INVALID_KE_PAYLOAD retries, NAT detection hashes checked against the wire and\n    the move to UDP 4500, DPD liveness checks, a \"diagnosis\" per SA (ok,\n    proposal_mismatch, dh_group_mismatch, auth_failed, auth_no_reply, nat_t_missing,\n    no_reply, liveness_lost, peer_lost_sa), NOTIFY errors, IKE SA collisions, rekeys,\n    ESP flows per SPI (sequence gaps, duplicates, an old SPI still used after a newer\n    one took over), NAT-T, and the encryption verdict: \"encrypted\" or\n    \"cleartext_seen\" for traffic between the same two endpoints.\n  - \"gre_nhrp\": GRE tunnels (keys, inner protocols, key mismatch), NHRP registrations\n    (spoke -> hub, result registered/refused/unanswered), hub and spoke roles,\n    resolution requests/replies, redirects (DMVPN Phase 3), error indications,\n    and spoke-to-spoke tunnels.\n  - \"dmvpn_phase3\": per redirected flow the ordered Phase 3 steps (via_hub, redirect,\n    resolution_request, resolution_reply, direct) with frames and times, the first\n    missing step and why; hub-relayed spoke traffic with no redirect; resolution\n    thrashing; and, with `hubs`, encrypted spoke-to-spoke shortcuts (IKE then direct\n    ESP) when NHRP is hidden inside ESP.\n  - \"routing\": BGP sessions (state, OPEN AS/hold time/router ID/capabilities,\n    keepalive cadence, UPDATE timing, NOTIFICATION code/subcode decoded with a hint,\n    the cause of each drop, the MSS of each SYN and SYN-ACK checked against\n    `expected_mss`, refused TCP 179), OSPF per link (hello/dead/mask/area/auth/MTU\n    mismatches, one-way neighbors, DR/BDR, hello gaps, adjacencies stuck in EXSTART\n    or EXCHANGE), EIGRP (K-value and AS mismatches, goodbyes, hold time expiry, INIT\n    restarts, queries/SIA), plus a failover_timeline.\n  - \"reachability\": ICMP echo loss/RTT per source->destination pair with outage\n    windows, ICMP unreachable/TTL-exceeded with decoded codes, ARP with no reply,\n    duplicate IPs.\n  - \"path_mtu\": ICMP Fragmentation Needed / Packet Too Big (router, next-hop MTU,\n    the probe frame it refers to), PMTUD black holes (large DF probes or TCP\n    segments that vanished with no ICMP while smaller ones got through), IP\n    fragments (complete, incomplete, overlapping), reassembly timeouts.\n  - \"esp_overhead\": per ESP SA, packet sizes against cipher families (AES-GCM,\n    AES-CBC with SHA1/SHA2, 3DES, NULL), inner size bounds, overhead in tunnel and\n    transport-over-GRE mode, tunnel MTU fit, ESP fragmented after encryption.\n    Estimates from sizes only; ESP is encrypted.\n  - \"tcp\": per connection: SYN without SYN-ACK, refused, retransmissions (fast or\n    timeout), gaps, duplicate ACKs, zero window, window full, RSTs, MSS/window\n    scale, RTT and RFC 6298 RTO, and a verdict (no_answer, refused,\n    receiver_buffer_exhausted, loss_on_path, receive_window_limited, reset, healthy).\n  - \"tls\": ClientHello SNI, versions, suites, ALPN, groups; ServerHello choice;\n    TLS 1.2 certificate (subject, issuer, validity at capture time); cleartext\n    alerts; an optional baseline (see options).\n  - \"qos\": DSCP per flow, GRE inner vs outer DSCP, ESP outer DSCP per SA, RTP\n    streams with loss, RFC 3550 jitter, DSCP and an E-model MOS estimate, ECN CE.\n  - \"conversations\": protocol mix by packets and bytes, top conversations, top talkers.\n  - Run only when named: \"cleartext_audit\" (audit_cleartext_pcap) and \"convergence\"\n    (analyze_convergence_pcap).\n\nReturns a JSON object: status \"success\", schema, overall_status (\"ok\", \"warning\",\n\"problem\" or \"not_present\"; the worst detector status, conversations and SIP\nexcluded), protocols_present, detectors_run, verdicts (detector to one sentence),\nissues (severity, stable code, message, Wireshark frame numbers, detector; errors\nfirst), timeline (t in seconds from the first frame, time, protocol, event, detail,\nframe), capture (backend, packets, duration, missing tshark fields, warnings), one\nsection per detector, each with status, verdict and issues, and sip. Lists are cut\nat max_items; issues_omitted and timeline_omitted count the rest. On failure\n{\"status\": \"error\", \"error\": \"...\"}, plus valid_detectors for an unknown detector.\n\nLimits: a verdict covers only what crossed the capture point. IKEv2 IKE_AUTH is\nencrypted, so the child SA proposal, identities and AUTH are never visible: a PSK\nmismatch shows only as a small encrypted IKE_AUTH response or as retransmissions with\nno reply (a labelled heuristic). DPD is recognised by message size; INVALID_SPI\nnormally travels encrypted. ESP with NULL encryption cannot be told apart from real\nencryption without keys. With tunnel protection, GRE, NHRP and BGP are inside ESP on\nthe transport link. OSPFv3 and IS-IS are not decoded.\n\nFor example, analyze_network_pcap(file_path=\"/captures/hub-wan.pcap\") or\nanalyze_network_pcap(file_path=\"/captures/r1-r2.pcap\", detectors=[\"routing\"]).",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -271,6 +271,42 @@
           "default": 25,
           "type": "integer",
           "description": "Cap on the length of each list in the result (default 25)."
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional start Unix epoch seconds window bound."
+        },
+        "until": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional end Unix epoch seconds window bound."
+        },
+        "fast_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Pure-Go L2-L4 decoder mode: \"auto\", \"always\", or \"never\"."
         },
         "options": {
           "anyOf": [
@@ -1324,6 +1360,284 @@
     },
     "annotations": {
       "title": "Decrypt IPsec ESP with SA keys and analyze the inner traffic",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "diagnose_media_underlay",
+    "title": "Correlate VoIP quality with underlay and tunnel faults",
+    "description": "Run deterministic SIP/RTP quality, MOS, post-200 OK clipping, and RFC 4733 DTMF scoring alongside all network, VPN, routing, and data-plane detectors, and link media impairments directly to co-occurring underlay faults. Deterministic, no LLM, runs both passes concurrently.\n\nReturns a JSON object with status, file, voip (quality_analysis, mos_analysis, media_clipping, dtmf_events), network (full detector verdicts and issues), cross_layer_links (media_symptom, underlay_area, severity, summary, issue_codes, frames), correlated_causes, and verdict. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: correlates faults within the same capture window and relies on packet timestamps and IP/SDP endpoints matching the capture point.\n\nFor example, diagnose_media_underlay(file_path=\"/captures/voip_over_vpn.pcap\", peers=[\"192.0.2.1\", \"198.51.100.2\"]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "peers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional VPN peer IP addresses."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional start Unix epoch seconds window bound."
+        },
+        "until": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional end Unix epoch seconds window bound."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Correlate VoIP quality with underlay and tunnel faults",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "diff_pcaps",
+    "title": "Diff a baseline capture against a broken capture",
+    "description": "Compare a known-good baseline capture against a broken target capture concurrently using deterministic network and SIP analyzers without calling an LLM.\n\nReturns a JSON object with status, baseline_file, target_file, overall_status_delta, baseline_packets, target_packets, protocols_added, protocols_removed, issues_added, issues_resolved, tls_deltas (versions, ciphers, alpns, handshakes_delta), tcp_and_mtu_deltas (MSS offered), qos_dscp_deltas, sip_deltas (score, MOS, clipping, DTMF), highlights, and verdict. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: compares deterministic detector outputs at each capture point rather than packet-by-packet wire matching (use correlate_pcaps for hop-by-hop tracking).\n\nFor example, diff_pcaps(baseline_path=\"/captures/good.pcap\", target_path=\"/captures/broken.pcap\").",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_path": {
+          "type": "string",
+          "description": "Absolute path to the baseline (working) pcap/pcapng capture."
+        },
+        "target_path": {
+          "type": "string",
+          "description": "Absolute path to the target (broken) pcap/pcapng capture."
+        },
+        "detectors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional detector subset."
+        },
+        "peers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional VPN peer IP addresses."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        }
+      },
+      "required": [
+        "baseline_path",
+        "target_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Diff a baseline capture against a broken capture",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "evaluate_capture_gate",
+    "title": "Evaluate CI network and security policy gates on a capture",
+    "description": "Evaluate deterministic CI/CD network and security policy rules over a capture without an LLM. Built-in policies: zero-cleartext, no-weak-crypto, no-critical-issues, mos-min=<float>, and max-clipping-ms=<float>. Defaults to zero-cleartext, no-weak-crypto, and no-critical-issues when policies is omitted.\n\nReturns a JSON object with status, file, passed, exit_code (0 pass, 3 policy violation), policies_applied, results (name, passed, summary, violations with code, detector, severity, message, frames), violation_count, and verdict. On failure {\"status\": \"error\", \"error\": \"...\"}.\n\nLimits: judges only traffic observed at the capture point; encrypted tunnels require the WAN link capture to verify.\n\nFor example, evaluate_capture_gate(file_path=\"/captures/smoke.pcap\", policies=[\"zero-cleartext\", \"no-weak-crypto\", \"mos-min=3.8\"]).",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Absolute path to a pcap/pcapng file on the machine running this server."
+        },
+        "policies": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Policy rule list (default [\"zero-cleartext\", \"no-weak-crypto\", \"no-critical-issues\"])."
+        },
+        "allow": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional allowlist tokens passed to zero-cleartext."
+        },
+        "peers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional VPN peer IP addresses."
+        },
+        "display_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional Wireshark display filter."
+        },
+        "max_packets": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional cap on frames read."
+        }
+      },
+      "required": [
+        "file_path"
+      ],
+      "type": "object"
+    },
+    "outputSchema": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "annotations": {
+      "title": "Evaluate CI network and security policy gates on a capture",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,

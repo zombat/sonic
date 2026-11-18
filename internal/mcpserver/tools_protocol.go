@@ -46,6 +46,9 @@ func NewWithDeps(deps ai.Deps) (*Server, error) {
 		"analyze_snmp_pcap":              handleAnalyzeSNMPPcap,
 		"analyze_aaa_pcap":               handleAnalyzeAAAPcap,
 		"analyze_esp_pcap":               handleAnalyzeESPPcap,
+		"diagnose_media_underlay":        handleDiagnoseMediaUnderlay,
+		"diff_pcaps":                     handleDiffPcaps,
+		"evaluate_capture_gate":          handleEvaluateCaptureGate,
 	})
 }
 

@@ -93,8 +93,8 @@ func TestServerRegistrationValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDefault error: %v", err)
 	}
-	if len(srv.tools) != 18 {
-		t.Fatalf("expected 18 tools, got %d", len(srv.tools))
+	if len(srv.tools) != 21 {
+		t.Fatalf("expected 21 tools, got %d", len(srv.tools))
 	}
 
 	full := make(map[string]Handler, len(srv.tools)+1)
@@ -176,8 +176,8 @@ func TestProtocolLifecycleAndErrors(t *testing.T) {
 	if err := json.Unmarshal(resps[7].Result, &listOut); err != nil {
 		t.Fatal(err)
 	}
-	if len(listOut.Tools) != 18 {
-		t.Fatalf("expected 18 listed tools, got %d", len(listOut.Tools))
+	if len(listOut.Tools) != 21 {
+		t.Fatalf("expected 21 listed tools, got %d", len(listOut.Tools))
 	}
 	if len(initPrev.Instructions) == 0 || len(initPrev.Instructions) >= 2048 {
 		t.Fatalf("instructions length %d outside bounds (1..2047)", len(initPrev.Instructions))
@@ -653,5 +653,41 @@ func TestLLMToolsOverStdio(t *testing.T) {
 	t.Setenv("SONIC_ENV_FILE", "/nonexistent/sonic.env")
 	if _, err := NewDefault(); err == nil {
 		t.Fatal("expected NewDefault error on missing SONIC_ENV_FILE")
+	}
+
+	// 6. v4.0 workflow tools: diagnose_media_underlay, diff_pcaps, evaluate_capture_gate.
+	sipFix := "testdata/fixtures/sip_minimal.pcap"
+	bgpGood := "testdata/fixtures/bgp_session.pcap"
+	bgpBad := "testdata/fixtures/bgp_failover.pcap"
+	tlsOK := "testdata/fixtures/grpc_tls13_hrr.pcap"
+
+	muArgs, _ := json.Marshal(map[string]any{"file_path": sipFix})
+	if muRes := callToolRPC(t, srv, 11, "diagnose_media_underlay", muArgs); muRes.IsError || !strings.Contains(string(muRes.StructuredContent), `"status":"success"`) {
+		t.Fatalf("diagnose_media_underlay failed: %+v", muRes)
+	}
+	diffArgs, _ := json.Marshal(map[string]any{"baseline_path": bgpGood, "target_path": bgpBad})
+	if dRes := callToolRPC(t, srv, 12, "diff_pcaps", diffArgs); dRes.IsError || !strings.Contains(string(dRes.StructuredContent), `"status":"success"`) {
+		t.Fatalf("diff_pcaps failed: %+v", dRes)
+	}
+	gateArgs, _ := json.Marshal(map[string]any{"file_path": tlsOK, "policies": []string{"no-weak-crypto", "no-critical-issues"}})
+	if gRes := callToolRPC(t, srv, 13, "evaluate_capture_gate", gateArgs); gRes.IsError || !strings.Contains(string(gRes.StructuredContent), `"passed":true`) {
+		t.Fatalf("evaluate_capture_gate failed: %+v", gRes)
+	}
+	for _, tc := range []struct {
+		tool string
+		args string
+	}{
+		{"diagnose_media_underlay", `{"file_path":123}`},
+		{"diagnose_media_underlay", `{"file_path":"/nonexistent/a.pcap"}`},
+		{"diff_pcaps", `{"baseline_path":123}`},
+		{"diff_pcaps", `{"baseline_path":"/nonexistent/a.pcap","target_path":"testdata/fixtures/sip_minimal.pcap"}`},
+		{"diff_pcaps", `{"baseline_path":"testdata/fixtures/sip_minimal.pcap","target_path":"/nonexistent/b.pcap"}`},
+		{"evaluate_capture_gate", `{"file_path":123}`},
+		{"evaluate_capture_gate", `{"file_path":"/nonexistent/c.pcap"}`},
+	} {
+		r := callToolRPC(t, srv, 14, tc.tool, json.RawMessage(tc.args))
+		if !r.IsError && !strings.Contains(r.Content[0].Text, `"status":"error"`) {
+			t.Fatalf("expected error on %s(%s), got %+v", tc.tool, tc.args, r)
+		}
 	}
 }

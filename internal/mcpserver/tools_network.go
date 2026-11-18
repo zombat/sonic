@@ -22,6 +22,9 @@ type networkArgs struct {
 	Peers         []string                   `json:"peers"`
 	DisplayFilter string                     `json:"display_filter"`
 	MaxPackets    *int                       `json:"max_packets"`
+	Since         *float64                   `json:"since"`
+	Until         *float64                   `json:"until"`
+	FastPath      string                     `json:"fast_path"`
 	IncludeSIP    *bool                      `json:"include_sip"`
 	MaxItems      *int                       `json:"max_items"`
 	Options       map[string]json.RawMessage `json:"options"`
@@ -51,6 +54,9 @@ func handleAnalyzeNetworkPcap(ctx context.Context, raw json.RawMessage) ([]byte,
 		Peers:         a.Peers,
 		DisplayFilter: a.DisplayFilter,
 		MaxPackets:    a.MaxPackets,
+		Since:         a.Since,
+		Until:         a.Until,
+		FastPath:      a.FastPath,
 		IncludeSIP:    &incSIP,
 		MaxItems:      clampMaxItems(a.MaxItems),
 		DetectorOpts:  detOpts,

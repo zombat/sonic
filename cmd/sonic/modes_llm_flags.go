@@ -69,6 +69,7 @@ func configureCLIUsage(fs *flag.FlagSet, errOut io.Writer) {
 	fs.Usage = func() {
 		fmt.Fprintln(errOut, "Usage of sonic:")
 		fs.PrintDefaults()
+		fmt.Fprintln(errOut, "\nSubcommands: gate, diff, tui, dump")
 		fmt.Fprintf(errOut, "\nProviders:\n  ollama (local default), anthropic, openai, azure (via %s / --env-file / %s)\n",
 			llm.ProviderVariable, redact.EnvFileVariable)
 	}
@@ -87,6 +88,7 @@ func hasVisitedFlag(fs *flag.FlagSet, name string) bool {
 func isDeterministicMode(o cliOptions, fs *flag.FlagSet) bool {
 	return o.grpcMode || o.restconfMode || o.snmpMode || o.aaaMode ||
 		o.espDecrypt || o.qualityOnly || o.networkOnly ||
+		o.correlateMedia || o.diffPair != "" || o.tuiMode ||
 		hasVisitedFlag(fs, "detectors") || o.allowCSV != ""
 }
 

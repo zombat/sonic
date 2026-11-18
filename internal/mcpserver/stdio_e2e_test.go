@@ -196,8 +196,8 @@ func TestMcpStdioHandshakeGuidanceAndPurity(t *testing.T) {
 	if err := json.Unmarshal(toolsResp["result"], &listed); err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Tools) != 18 {
-		t.Fatalf("expected 18 tools, got %d", len(listed.Tools))
+	if len(listed.Tools) != 21 {
+		t.Fatalf("expected 21 tools, got %d", len(listed.Tools))
 	}
 
 	promptResp := srv.request(t, 3, "prompts/get", map[string]any{

@@ -30,8 +30,17 @@ func DefaultCLIFlags() []CLIOptionSpec {
 		{Flags: "--allow", Values: "RULES", Help: "comma-separated allowlist tokens for cleartext_audit"},
 		{Flags: "--display-filter", Values: "FILTER", Help: "wireshark display filter"},
 		{Flags: "--max-packets", Values: "N", Help: "maximum frames to read"},
+		{Flags: "--since", Values: "EPOCH", Help: "filter packets at or after Unix epoch seconds"},
+		{Flags: "--until", Values: "EPOCH", Help: "filter packets at or before Unix epoch seconds"},
+		{Flags: "--fast-path", Values: "MODE", Default: "auto", Help: "pure-Go L2-L4 decoder mode: auto, always, or never"},
 		{Flags: "--json", Values: "flag", Help: "emit machine-readable JSON"},
+		{Flags: "--html", Values: "FILE", Help: "write self-contained offline HTML5 report to FILE"},
+		{Flags: "--tui", Values: "flag", Help: "open interactive ANSI terminal report viewer"},
+		{Flags: "--redact-audit", Values: "flag", Help: "include per-category secret redaction counts"},
 		{Flags: "--verbose", Values: "flag", Help: "emit detailed progress to stderr"},
+		{Flags: "--correlate-media", Values: "flag", Help: "correlate SIP/RTP quality, clipping, and DTMF with underlay faults"},
+		{Flags: "--diff", Values: "BASE,TARGET", Help: "compare baseline capture against target capture (or `sonic diff`)"},
+		{Flags: "--version", Values: "flag", Help: "print sonic version and commit and exit"},
 		{Flags: "--grpc", Values: "flag", Help: "run gRPC/gNMI/gNOI inspection"},
 		{Flags: "--restconf", Values: "flag", Help: "run RESTCONF/REST HTTP inspection"},
 		{Flags: "--snmp", Values: "flag", Help: "run SNMP inspection"},
@@ -69,8 +78,12 @@ Protocol deep inspection:
   sonic --file aaa.pcap --aaa --aaa-secrets /path/to/aaa-keys.txt
   sonic --file tunnel.pcap --esp-decrypt --esp-sa /path/to/xfrm.txt
 
-SIP quality (deterministic):
-  sonic --file call.pcap --quality-only --json`
+SIP quality and workflows (deterministic):
+  sonic --file call.pcap --quality-only --json
+  sonic --file call.pcap --correlate-media --html report.html
+  sonic diff --baseline good.pcap --target broken.pcap
+  sonic gate --file hub-wan.pcap --policy zero-cleartext,no-weak-crypto --format sarif
+  sonic tui --file hub-wan.pcap`
 
 // ExtractOptionalFlag strips optional-argument flagName [VALUE] occurrences before Go's
 // flag.FlagSet parses remaining options, matching argparse nargs='?'.

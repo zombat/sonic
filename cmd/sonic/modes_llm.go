@@ -20,10 +20,10 @@ func finishLLMReport(raw []byte, merr error, md, summary string, o cliOptions, c
 		raw = []byte(creds.Redact(string(raw)))
 	}
 	var saveErr error
-	if o.saveFile != "" {
+	if o.saveFile != "" && !isHTMLPath(o.saveFile) {
 		saveErr = report.SaveRawReport(raw, merr, md, o.saveFile)
 	}
-	return finishReport(raw, merr, saveErr, o.saveFile != "", summary, o.asJSON, stdout, stderr)
+	return deliverArtifacts(raw, merr, o.saveFile, saveErr, "S.O.N.I.C. SIP LLM Diagnosis", o.file, summary, o, strings.NewReader("q"), stdout, stderr)
 }
 
 func runFetchProtos(ctx context.Context, dest string, asJSON bool, deps llmRuntimeDeps, stdout, stderr io.Writer) int {
