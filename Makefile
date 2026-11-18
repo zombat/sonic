@@ -39,6 +39,14 @@ container:
 container-up: container
 	@$(CONTAINER_ENGINE) rm -f "$(CONTAINER_NAME)" >/dev/null 2>&1 || true
 	$(CONTAINER_ENGINE) run -d --name "$(CONTAINER_NAME)" --entrypoint /bin/sh -v "$(CAPTURES_DIR):/captures:ro" "$(CONTAINER_IMAGE)" -c "trap 'exit 0' TERM INT; while :; do sleep 3600 & wait $$!; done"
+	@printf "\nS.O.N.I.C. container running (no web UI; CLI + MCP stdio only):\n"
+	@printf "  Engine:    %s\n" "$(CONTAINER_ENGINE)"
+	@printf "  Container: %s (%s)\n" "$(CONTAINER_NAME)" "$(CONTAINER_IMAGE)"
+	@printf "  Captures:  %s -> /captures (ro)\n" "$(CAPTURES_DIR)"
+	@printf "  CLI:       %s exec %s sonic --file /captures/<file.pcap> --network-only\n" "$(CONTAINER_ENGINE)" "$(CONTAINER_NAME)"
+	@printf "  MCP stdio: %s exec -i %s sonic-mcp\n" "$(CONTAINER_ENGINE)" "$(CONTAINER_NAME)"
+	@printf "  Shell:     %s exec -it %s /bin/sh\n" "$(CONTAINER_ENGINE)" "$(CONTAINER_NAME)"
+	@printf "  Stop:      make container-down\n"
 
 container-down:
 	@if [ -z "$(CONTAINER_ENGINE)" ]; then echo "error: neither docker nor podman found on PATH" >&2; exit 1; fi
