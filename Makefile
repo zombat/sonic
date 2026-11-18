@@ -16,10 +16,14 @@ COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 LDFLAGS ?= -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 GO_FLAGS ?= -trimpath -ldflags="$(LDFLAGS)"
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
+CONTAINER_ENGINE ?= $(shell if command -v docker >/dev/null 2>&1; then echo docker; elif command -v podman >/dev/null 2>&1; then echo podman; fi)
+CONTAINER_IMAGE ?= sonic:$(VERSION)
+CONTAINER_NAME ?= sonic
+CAPTURES_DIR ?= $(CURDIR)/testdata/fixtures
 
 .DEFAULT_GOAL := build
 
-.PHONY: all build install uninstall release docker clean fmt vet test fuzz parity update-golden help
+.PHONY: all build install uninstall release container container-up container-down clean fmt vet test fuzz parity update-golden help
 
 all: build
 
@@ -28,8 +32,17 @@ build:
 	CGO_ENABLED=0 $(GOENV) go build $(GO_FLAGS) -o "$(BUILD_DIR)/sonic" ./cmd/sonic
 	CGO_ENABLED=0 $(GOENV) go build $(GO_FLAGS) -o "$(BUILD_DIR)/sonic-mcp" ./cmd/sonic-mcp
 
-docker:
-	docker build --build-arg VERSION="$(VERSION)" --build-arg COMMIT="$(COMMIT)" -t "sonic:$(VERSION)" .
+container:
+	@if [ -z "$(CONTAINER_ENGINE)" ]; then echo "error: neither docker nor podman found on PATH" >&2; exit 1; fi
+	$(CONTAINER_ENGINE) build --build-arg VERSION="$(VERSION)" --build-arg COMMIT="$(COMMIT)" -t "$(CONTAINER_IMAGE)" .
+
+container-up: container
+	@$(CONTAINER_ENGINE) rm -f "$(CONTAINER_NAME)" >/dev/null 2>&1 || true
+	$(CONTAINER_ENGINE) run -d --name "$(CONTAINER_NAME)" --entrypoint /bin/sh -v "$(CAPTURES_DIR):/captures:ro" "$(CONTAINER_IMAGE)" -c "trap 'exit 0' TERM INT; while :; do sleep 3600 & wait $$!; done"
+
+container-down:
+	@if [ -z "$(CONTAINER_ENGINE)" ]; then echo "error: neither docker nor podman found on PATH" >&2; exit 1; fi
+	-$(CONTAINER_ENGINE) rm -f "$(CONTAINER_NAME)"
 
 install: build
 	install -d "$(PREFIX)"
@@ -107,5 +120,7 @@ help:
 	@printf "  fuzz           Run 1s fuzz smoke tests across all 20 fuzz targets\n"
 	@printf "  parity         Run Go golden JSON parity tests against testdata/golden/\n"
 	@printf "  update-golden  Regenerate golden JSON snapshots via go test -update\n"
-	@printf "  docker         Build minimal rootless container image bundling sonic, sonic-mcp, and headless tshark\n"
+	@printf "  container      Build minimal rootless container image using docker or podman\n"
+	@printf "  container-up   Start background container with CAPTURES_DIR mounted at /captures\n"
+	@printf "  container-down Stop and remove the running container\n"
 	@printf "  clean          Remove build/ artifacts\n"

@@ -1195,7 +1195,7 @@ make update-golden    # regenerate golden JSON snapshots via go test -update
 
 **Real captures.** Optional proto dissector enrichment reads `SONIC_PROTO_PATH` when set (`sonic --fetch-grpc-protos`).
 
-**Container builds.** Build a minimal rootless Alpine container bundling static `sonic`, `sonic-mcp`, and headless `tshark` with `make docker` (defined in [Dockerfile](Dockerfile)).
+**Container builds.** Build and manage a minimal rootless Alpine container bundling static `sonic`, `sonic-mcp`, and headless `tshark` (auto-detecting `docker` or `podman`) with `make container`, `make container-up`, and `make container-down` (defined in [Dockerfile](Dockerfile)).
 
 **Continuous integration.** [.github/workflows/ci.yml](.github/workflows/ci.yml) runs `gofmt -l .`, cross-OS `go vet` across 6 targets (`linux`, `darwin`, `windows` x `amd64`/`arm64`), `make test`, `make fuzz`, and `make build release`, while [.github/workflows/release.yml](.github/workflows/release.yml) publishes release archives and `SHA256SUMS` on `v*` tags.
 
